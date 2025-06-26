@@ -25,6 +25,7 @@ use smallvec::SmallVec;
 use tracing::debug;
 use xxhash_rust::xxh3::xxh3_64;
 
+use crate::rule_profiling::RuleTimer;
 use crate::{
     blob::{Blob, BlobId, BlobIdMap},
     entropy::calculate_shannon_entropy,
@@ -386,6 +387,8 @@ impl<'a> Matcher<'a> {
                 origin,
                 None,
                 redact,
+                &filename,
+                self.profiler.as_ref(),
             );
         }
         // If tree-sitter produced base64-decoded matches, try them against all rules
@@ -407,6 +410,8 @@ impl<'a> Matcher<'a> {
                             origin,
                             Some(ts_match.clone()),
                             redact,
+                            &filename,
+                            self.profiler.as_ref(),
                         );
                     }
                 }
@@ -456,7 +461,21 @@ fn filter_match<'b>(
     _origin: &OriginSet,
     ts_match: Option<String>,
     redact: bool,
+    filename: &str,
+    profiler: Option<&Arc<ConcurrentRuleProfiler>>,
 ) {
+    let mut timer = profiler.map(|p| {
+        RuleTimer::new(
+            p,
+            rule.id(),
+            rule.name(),
+            &rule.syntax.pattern,
+            filename,
+        )
+    });
+
+    let initial_len = matches.len();
+
     // Use Cow to avoid unnecessary copying when ts_match is None
     let byte_slice: Cow<[u8]> = match ts_match {
         Some(ts_match_value) => Cow::Owned(ts_match_value.into_bytes()),
@@ -514,6 +533,10 @@ fn filter_match<'b>(
             calculated_entropy,
         });
         previous_matches.push((rule_id, matching_input_offset_span));
+    }
+    if let Some(t) = timer.take() {
+        let new_count = (matches.len() - initial_len) as u64;
+        t.end(new_count > 0, new_count, 0);
     }
 }
 fn get_language_and_queries(lang: &str) -> Option<(Language, FxHashMap<String, String>)> {

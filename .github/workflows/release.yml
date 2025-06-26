@@ -80,6 +80,8 @@ jobs:
 
       - name: Build Darwin x64
         run: make darwin-x64
+      - name: Run tests
+        run: make tests
 
       - name: Move artifacts to dist
         shell: bash
@@ -109,6 +111,8 @@ jobs:
 
       - name: Build Darwin arm64
         run: make darwin-arm64
+      - name: Run tests
+        run: make tests
 
       - name: Move artifacts to dist
         shell: bash
@@ -171,13 +175,12 @@ jobs:
           name: kingfisher-windows-x64
           path: dist/kingfisher-*windows-x64*.*
 
-    # ──────────────── Draft public release ────────────────
   release:
     name: Public GitHub Release
-    needs: [linux-x64, linux-arm64, windows, macos-x64, macos-arm64] # wait for all builds to finish
+    needs: [linux-x64, linux-arm64, windows, macos-x64, macos-arm64]
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # allow release upload
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Read version from Cargo.toml
@@ -189,11 +192,23 @@ jobs:
         with:
           path: target/release/kingfisher-*
           merge-multiple: true
+      - name: Extract latest changelog section
+        run: |
+          awk '
+            BEGIN            { grabbing = 0 }
+            /^## \[/         { 
+                               if (grabbing) exit;  # already grabbed latest entry
+                               grabbing = 1
+                             }
+            grabbing         { print }
+          ' CHANGELOG.md > .latest_changelog.md
+
+      # ── create the release using just that snippet ─────────────────────
       - name: Create release & upload assets
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ steps.version.outputs.version }}
           name: "Kingfisher v${{ steps.version.outputs.version }}"
-          bodyFile: CHANGELOG.md       # use existing changelog
-          generateReleaseNotes: false  # turn off auto-notes
+          bodyFile: .latest_changelog.md      # ← only the most-recent entry
+          generateReleaseNotes: false
           artifacts: target/release/**

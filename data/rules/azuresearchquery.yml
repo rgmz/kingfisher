@@ -9,7 +9,7 @@ rules:
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       (
-        [0-9a-zA-Z]{52}
+        [0-9A-Z]{52}
       )
       \b
    min_entropy: 3.3

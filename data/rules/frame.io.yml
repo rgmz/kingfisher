@@ -12,7 +12,6 @@ rules:
     confidence: medium
     examples:
       - fio-u-TaWoPIBovaGCbBkUtGPKWS0D3cu254VA33IFCCrtwl8J2Dtq2pMJ9MvNHmNoL2XX
-      - ffio-u-TaWoPIBovaGCbBkUtGPKWS0D3cu254VA33IFCCrtwl8J2Dtq2pMJ9MvNHmNoL2XX
     references:
       - https://developer.frame.io/api/reference/operation/getMe/
     validation:

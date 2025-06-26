@@ -1,0 +1,36 @@
+rules:
+  - name: PagerDuty API Key
+    id: kingfisher.pagerduty.1
+    pattern: |
+      (?xi)
+      \b
+      (?:pagerduty|pager[_-]duty|pd[-_\]=\)]|pd\.webhook?)
+      (?:.|[\n\r]){0,16}?
+      (
+        u\+[A-Z0-9_+-]{18}        # new personal tokens
+        |
+        [A-Z0-9_-]{20}            # legacy personal tokens
+        |
+        [A-F0-9]{32}                 # integration keys / routing keys
+      )
+      \b
+    min_entropy: 3.3
+    confidence: medium
+    examples:
+      - pagerduty_key = u+Lyhd2_N2MCy+ZoH-S5
+      - pd_key = u+3xVszZ-b4m+T6d23KA
+    validation:
+      type: Http
+      content:
+        request:
+          method: GET
+          url: https://api.pagerduty.com/abilities 
+          headers:
+            Authorization: Token token={{ TOKEN }}
+            Accept: application/vnd.pagerduty+json;version=2
+        response_matcher:
+          - report_response: true
+          - type: StatusMatch
+            status: [200]
+          - type: WordMatch
+            words: ['"abilities":'] 

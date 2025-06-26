@@ -75,7 +75,7 @@ pub async fn run_async_scan(
         progress_enabled,
         rules_db,
         enable_profiling,
-        shared_profiler,
+        Arc::clone(&shared_profiler),
         &matcher_stats,
     )?;
 
@@ -117,7 +117,15 @@ pub async fn run_async_scan(
     // // Call cmd_report here
     crate::reporter::run(global_args, Arc::clone(&datastore), args)
         .context("Failed to run report command")?;
-    print_scan_summary(start_time, &datastore, global_args, args, rules_db, &matcher_stats);
+    print_scan_summary(
+        start_time,
+        &datastore,
+        global_args,
+        args,
+        rules_db,
+        &matcher_stats,
+        if enable_profiling { Some(shared_profiler.as_ref()) } else { None },
+    );
     Ok(())
 }
 

@@ -28,4 +28,4 @@ rules:
               type: StatusMatch
             - type: WordMatch
               words:
-                - '"username":"kingfishermdb"'
+                - '"username"'

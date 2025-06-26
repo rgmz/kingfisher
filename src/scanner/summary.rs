@@ -17,6 +17,7 @@ use crate::{
     },
     findings_store,
     matcher::MatcherStats,
+    rule_profiling::ConcurrentRuleProfiler,
     rules_database::RulesDatabase,
 };
 
@@ -42,6 +43,7 @@ pub fn print_scan_summary(
     // inputs: &FilesystemEnumeratorResult,
     rules_db: &RulesDatabase,
     matcher_stats: &Mutex<MatcherStats>,
+    profiler: Option<&ConcurrentRuleProfiler>,
 ) {
     // let duration = start_time.elapsed();
     let ds = datastore.lock().unwrap();
@@ -152,6 +154,47 @@ pub fn print_scan_summary(
             humantime::format_duration(duration)
         );
     }
+
+    if args.rule_stats {
+        if let Some(prof) = profiler {
+            let stats = prof.generate_report();
+            if !stats.is_empty() {
+                // Calculate dynamic column widths
+                let name_w = stats.iter().map(|s| s.rule_name.len()).max().unwrap_or(4);
+                let id_w   = stats.iter().map(|s| s.rule_id.len()).max().unwrap_or(2);
+
+                // Header
+                safe_println!("\n{:-^1$}", " Rule Performance Stats ", name_w + id_w + 47);
+                safe_println!(
+                    "{: <name_w$}  {: <id_w$}  {: >8}  {: >15}  {: >15}",
+                    "Rule",
+                    "ID",
+                    "Matches",
+                    "Slowest",
+                    "Average",
+                    name_w = name_w,
+                    id_w   = id_w
+                );
+                safe_println!("{:-<width$}", "", width = name_w + id_w + 49);
+
+                // Rows
+                for rs in stats {
+                    safe_println!(
+                        "{: <name_w$}  {: <id_w$}  {: >8}  {: >15?}  {: >15?}",
+                        rs.rule_name,
+                        rs.rule_id,
+                        rs.total_matches,
+                        rs.slowest_match_time,
+                        rs.average_match_time,
+                        name_w = name_w,
+                        id_w   = id_w
+                    );
+                }
+            }
+        }
+    }
+
+
     debug!("\nAll Rules with Matches:");
     debug!("=======================");
     let max_rule_length = sorted_findings.iter().map(|(rule, _)| rule.len()).max().unwrap_or(0);

@@ -13,7 +13,7 @@ rules:
     min_entropy: 3
     confidence: medium
     examples:
-      - azure devops pat = FBdFol081crwkIHWJH2yiqDDyrFjVSi7HWl22hN2hTYfsB8NlGDpJQQJ77BAACAAAAAAAAAAAAASAZDOBucT
+      - azure devops pat = FBdFol081crwkIHWJH2yiqDDyrFjVSi7HWl22hN2hTYfsB8NlGDpJQQJ77BAACAAAAAAAAAAAAASAZDOBucTj
     references:
       - https://learn.microsoft.com/en-us/rest/api/azure/devops/profile/profiles/get?view=azure-devops-rest-7.1&tabs=HTTP
       - https://learn.microsoft.com/en-us/azure/devops/release-notes/2024/general/sprint-241-update

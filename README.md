@@ -122,6 +122,11 @@ cat /path/to/file.py | kingfisher scan -
 kingfisher scan /path/to/repo --rule kingfisher.aws
 ```
 
+### Display rule performance statistics
+```bash
+kingfisher scan /path/to/repo --rule-stats
+```
+
 ---
 ## Scanning GitHub
 
@@ -242,6 +247,10 @@ kingfisher github repos list --organization my-org
 
 The document below  details the four-field formula (rule SHA-1, origin label, start & end offsets) hashed with XXH3-64 to create Kingfisher’s 64-bit finding fingerprint, and explains how this ID powers safe deduplication; plus how `--no-dedup` can be used shows every raw match.
 See ([docs/FINGERPRINT.md](docs/FINGERPRINT.md))
+
+
+## Rule Performance Profiling
+Use `--rule-stats` to collect timing information for every rule. After scanning, the summary prints a **Rule Performance Stats** section showing how many matches each rule produced along with its slowest and average match times. Useful when creating rules or debugging rules.
 
 
 ## CLI Options
