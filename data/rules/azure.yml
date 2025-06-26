@@ -42,10 +42,10 @@ rules:
   - name: Azure App Configuration Connection String
     id: kingfisher.azure.2
     pattern: |
-      (?x)
-      (https://[a-zA-Z0-9-]+\.azconfig\.io);
-      Id=(.{4}-.{2}-.{2}:[a-zA-Z0-9+/]{18,22});
-      Secret=([a-zA-Z0-9+/]{36,50}=)
+      (?xi)
+      (https://[A-Z0-9-]+\.azconfig\.io);
+      Id=(.{4}-.{2}-.{2}:[A-Z0-9+/]{18,22});
+      Secret=([A-Z0-9+/]{36,50}=)
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -69,7 +69,7 @@ rules:
   - name: Azure Personal Access Token
     id: kingfisher.azure.3
     pattern: |
-      (?x)
+      (?xi)
       (?i: ADO_PAT | pat_token | personal_?access_?token | \$token )
       \s* = \s*
       ["']

@@ -2,7 +2,7 @@ rules:
   - name: LinkedIn Client ID
     id: kingfisher.linkedin.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       linkedin
       .?
       (?: api | app | application | client | consumer | customer )?
@@ -36,7 +36,7 @@ rules:
   - name: LinkedIn Secret Key
     id: kingfisher.linkedin.2
     pattern: |
-      (?x)(?i)
+      (?xi)
       linkedin
       .?
       (?: api | app | application | client | consumer | customer | secret | key )

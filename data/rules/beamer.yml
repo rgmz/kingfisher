@@ -8,7 +8,7 @@ rules:
       (?:.|[\n\r]){0,64}?
       \b
       (
-        b_[a-zA-Z0-9=_\\/\\\-+]{44}
+        b_[A-Z0-9=_\\/\\\-+]{44}
       )                   
     min_entropy: 3.0
     confidence: medium

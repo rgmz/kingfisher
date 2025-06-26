@@ -2,11 +2,10 @@ rules:
   - name: Artifactory Access Token
     id: kingfisher.artifactory.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       (
-        AKC[a-zA-Z0-9]{64,74}
+        AKC[A-Z0-9]{64,74}
       )
       \b
     min_entropy: 3.5
@@ -37,7 +36,7 @@ rules:
   - name: Artifactory JFrog URL
     id: kingfisher.artifactory.2
     pattern: |
-      (?x)                       
+      (?xi)                       
       \b                         
       (                          
         [a-z0-9]

@@ -2,8 +2,7 @@ rules:
   - name: PlanetScale API Token
     id: kingfisher.planetscale.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       (
         pscale_tkn_[a-z0-9-_]{43}
@@ -37,8 +36,7 @@ rules:
   - name: PlanetScale Username
     id: kingfisher.planetscale.2
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       (?:pscale|planetscale)
       (?:.|[\n\r]){0,16}?
       (?:USER|ID|NAME)

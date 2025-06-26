@@ -2,8 +2,7 @@ rules:
   - name: Asana Client ID
     id: kingfisher.asana.1
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       asana
       (?:.|[\n\r]){0,32}?
@@ -25,8 +24,7 @@ rules:
   - name: Asana Client Secret
     id: kingfisher.asana.2
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       asana
       (?:.|[\n\r]){0,64}?
@@ -44,8 +42,7 @@ rules:
   - name: Asana OAuth / Personal Access Token
     id: kingfisher.asana.3
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       asana
       (?:.|[\n\r]){0,64}?

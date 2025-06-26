@@ -2,8 +2,7 @@ rules:
   - name: Baremetrics API Key
     id: kingfisher.baremetrics.1
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       baremetrics
       (?:.|[\n\r]){0,32}?

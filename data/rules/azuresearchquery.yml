@@ -37,7 +37,7 @@ rules:
  - name: Azure Search URL
    id: kingfisher.azuresearch.url.1
    pattern: |
-     (?x)
+     (?xi)
      \b
      azure
      (?:.|[\n\r]){0,32}?

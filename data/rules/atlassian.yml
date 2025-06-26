@@ -2,8 +2,7 @@ rules:
   - name: Atlassian API token
     id: kingfisher.atlassian.1
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       atlassian
       (?:.|[\n\r]){0,32}?

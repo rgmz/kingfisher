@@ -2,14 +2,14 @@ rules:
   - name: Airbrake User Key
     id: kingfisher.airbrake.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b
       airbrake
       (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,16}?
       (
-        [a-zA-Z0-9-]{40}
+        [A-Z0-9-]{40}
       )
       \b                 
     min_entropy: 4.5

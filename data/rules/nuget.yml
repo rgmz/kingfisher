@@ -2,7 +2,7 @@ rules:
   - name: NuGet API Key
     id: kingfisher.nuget.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
         oy2[a-z0-9]{43}

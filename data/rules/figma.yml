@@ -2,10 +2,10 @@ rules:
   - name: Figma Personal Access Token
     id: kingfisher.figma.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
-        figd_[A-Za-z0-9_-]{38,42}
+        figd_[A-Z0-9_-]{38,42}
       )
       \b
     min_entropy: 3.5
@@ -33,7 +33,7 @@ rules:
   - name: Figma Personal Access Header Token
     id: kingfisher.figma.2
     pattern: |
-      (?x)(?i)
+      (?xi)
       figma
       (?:.|[\n\r]){0,32}?
       \b

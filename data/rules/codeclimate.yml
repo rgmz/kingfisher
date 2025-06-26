@@ -2,7 +2,7 @@ rules:
   - name: CodeClimate Reporter ID
     id: kingfisher.codeclimate.1
     pattern: |
-      (?x)
+      (?xi)
       (?: CODECLIMATE| CC_TEST_REPORTER_ID)
       (?:.|[\n\r]){0,64}?
       (

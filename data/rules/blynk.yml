@@ -2,9 +2,9 @@ rules:
   - name: Blynk Device Access Token
     id: kingfisher.blynk.1
     pattern: |
-      (?x)
-      https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/external/api/[a-zA-Z0-9/]*\?token=
-      ([a-zA-Z0-9_\-]{32})
+      (?xi)
+      https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/external/api/[A-Z0-9/]*\?token=
+      ([A-Z0-9_\-]{32})
       &
     min_entropy: 3.3
     confidence: medium
@@ -16,10 +16,10 @@ rules:
   - name: Blynk Organization Access Token
     id: kingfisher.blynk.2
     pattern: |
-      (?x)
-      https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/api/[a-zA-Z0-9_\-\s/\\]*
+      (?xi)
+      https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/api/[A-Z0-9_\-\s/\\]*
       -H\s*"Authorization:\s*Bearer\s*
-      ([a-zA-Z0-9_\-]{40})
+      ([A-Z0-9_\-]{40})
       "
     min_entropy: 3.3
     confidence: medium
@@ -31,9 +31,9 @@ rules:
   - name: Blynk Organization Access Token
     id: kingfisher.blynk.3
     pattern: |
-      (?x)
+      (?xi)
       -H\s*"Authorization:\s*Bearer\s*
-      ([a-zA-Z0-9_\-]{40})
+      ([A-Z0-9_\-]{40})
       "[\s\\]*https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/api
     min_entropy: 3.3
     confidence: medium
@@ -45,11 +45,11 @@ rules:
   - name: Blynk Organization Client Credentials
     id: kingfisher.blynk.8
     pattern: |
-      (?x)
-      https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/oauth2/[a-zA-Z0-9_\-\s/\\?=&]*
-      (oa2-client-id_[a-zA-Z0-9_\-]{32})
+      (?xi)
+      https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/oauth2/[A-Z0-9_\-\s/\\?=&]*
+      (oa2-client-id_[A-Z0-9_\-]{32})
       (?: : | &client_secret= )
-      ([a-zA-Z0-9_\-]{40})
+      ([A-Z0-9_\-]{40})
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -61,10 +61,10 @@ rules:
   - name: Blynk Organization Client Credentials
     id: kingfisher.blynk.9
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (oa2-client-id_[a-zA-Z0-9_\-]{32})
-      :([a-zA-Z0-9_\-]{40})
+      (oa2-client-id_[A-Z0-9_\-]{32})
+      :([A-Z0-9_\-]{40})
       [\s\\]*https://(fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/oauth2
     min_entropy: 3.3
     confidence: medium

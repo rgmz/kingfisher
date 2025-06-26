@@ -2,9 +2,9 @@ rules:
   - name: Doppler CLI Token
     id: kingfisher.doppler.1
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (dp\.ct\.[a-zA-Z0-9]{40,44})
+      (dp\.ct\.[A-Z0-9]{40,44})
       \b
     min_entropy: 3.3
     confidence: medium
@@ -31,9 +31,9 @@ rules:
   - name: Doppler Personal Token
     id: kingfisher.doppler.2
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (dp\.pt\.[a-zA-Z0-9]{40,44})
+      (dp\.pt\.[A-Z0-9]{40,44})
       \b
     min_entropy: 3.3
     confidence: medium
@@ -61,9 +61,9 @@ rules:
   - name: Doppler Service Token
     id: kingfisher.doppler.3
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (dp\.st\.(?:[a-z0-9\-_]{2,35}\.)?[a-zA-Z0-9]{40,44})
+      (dp\.st\.(?:[a-z0-9\-_]{2,35}\.)?[A-Z0-9]{40,44})
       \b
     min_entropy: 3.3
     confidence: medium
@@ -91,9 +91,9 @@ rules:
   - name: Doppler Service Account Token
     id: kingfisher.doppler.4
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (dp\.sa\.[a-zA-Z0-9]{40,44})
+      (dp\.sa\.[A-Z0-9]{40,44})
       \b
     min_entropy: 3.3
     confidence: medium
@@ -121,9 +121,9 @@ rules:
   - name: Doppler SCIM Token
     id: kingfisher.doppler.5
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (dp\.scim\.[a-zA-Z0-9]{40,44})
+      (dp\.scim\.[A-Z0-9]{40,44})
       \b
     min_entropy: 3.3
     confidence: medium
@@ -151,9 +151,9 @@ rules:
   - name: Doppler Audit Token
     id: kingfisher.doppler.6
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (dp\.audit\.[a-zA-Z0-9]{40,44})
+      (dp\.audit\.[A-Z0-9]{40,44})
       \b
     min_entropy: 3.3
     confidence: medium

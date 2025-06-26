@@ -2,8 +2,7 @@ rules:
   - name: Anypoint API Key
     id: kingfisher.anypoint.1
     pattern: |
-      (?x)                    
-      (?i)               
+      (?xi)               
       anypoint
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)

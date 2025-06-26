@@ -117,8 +117,7 @@ rules:
   - name: Algolia Admin API Key
     id: kingfisher.algolia.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       algolia
       (?:.|[\n\r]){0,32}?
       \b
@@ -151,8 +150,7 @@ rules:
   - name: Algolia Application ID
     id: kingfisher.algolia.2
     pattern: |
-      (?x)                    
-      (?i)
+      (?xi)
       algolia
       (?:.|[\n\r]){0,16}?
       \b
@@ -215,8 +213,7 @@ rules:
   - name: Anthropic API Key
     id: kingfisher.anthropic.1
     pattern: |
-      (?x)                    
-      (?i)                    
+      (?xi)                    
       \b                       
       (                        
         sk-ant-api

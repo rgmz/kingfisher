@@ -2,8 +2,7 @@ rules:
   - name: OpsGenie API Key
     id: kingfisher.opsgenie.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       opsgenie
       (?:.|[\\n\r]){0,32}?

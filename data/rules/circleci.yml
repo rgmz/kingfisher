@@ -2,8 +2,7 @@ rules:
   - name: CircleCI API Personal Access Token
     id: kingfisher.circleci.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       (                      
         CCIPAT_

@@ -9,13 +9,13 @@ rules:
     (?:.|[\n\r]){0,16}?              
     \b
     (                                 
-      A[A-Z0-9_-]{79,99}          
+      A[A-Z0-9_-]{78,99}          
     )                                   
     \b
   min_entropy: 3.5
   visible: false
   examples:
-    - paypal_client_id=AZJ6y8Dpr1TYbqAIdhkPzyhjXoY6m8GplL7C3zZ3lPrkTIdhkPzyhjXo_Dx3
+    - paypal_client_id=AZJ6y8Dpr1TYbqAIdhkPzyhjXoY6mIdhkPzyhjXoY6m8GplL7C3zZ3lPrkTIdhkPzyhjXo_Dx3IdhkPzyhjXoY6m
 
 - name: PayPal OAuth Secret
   id: kingfisher.paypal.2
@@ -27,12 +27,12 @@ rules:
     (?:.|[\n\r]){0,32}?             
     \b
     (
-      [A-Z0-9_.-]{80,120}        
+      [A-Z0-9_.-]{78,120}        
     )
     \b
   min_entropy: 3.5
   examples:
-    - paypal_secret=EDe5J6y8Dpr1TYbqAIdhkPzyhjXoY6m8GplL7C3zZ3lPrkT1XlV6hYPSeJL5b1T1
+    - paypal_secret=EP0uwUsACKVPcbDRaXFYerX2ij6nbsha71cSdynuQWoSt1pIy4qtIs7gJQRmHwKXu5Icv3g1YQZzAywf
 
   validation:
     type: Http

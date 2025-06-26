@@ -2,10 +2,10 @@ rules:
   - name: NPM Access Token (fine-grained)
     id: kingfisher.npm.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
-        npm_[A-Za-z0-9]{36}
+        npm_[A-Z0-9]{36}
       )
       \b
     references:

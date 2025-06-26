@@ -2,8 +2,7 @@ rules:
   - name: MailGun Token
     id: kingfisher.mailgun.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       mailgun
       (?:.|[\n\r]){0,32}?
@@ -11,7 +10,7 @@ rules:
       (?:.|[\n\r]){0,32}?
       \b                     
       (                      
-        (?:[0-9A-Za-z-]{24}){3}
+        (?:[0-9A-Z-]{24}){3}
       )              
     min_entropy: 3.5
     confidence: medium
@@ -34,8 +33,7 @@ rules:
   - name: MailGun Primary Key
     id: kingfisher.mailgun.2
     pattern: |
-      (?x)                  
-      (?i)
+      (?xi)
       (?:mailgun|mg)
       (?:.|[\n\r]){0,64}?
       \b

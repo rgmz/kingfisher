@@ -2,8 +2,7 @@ rules:
   - name: Cloudflare API Token
     id: kingfisher.cloudflare.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       cloudflare
       (?:.|[\n\r]){0,32}?

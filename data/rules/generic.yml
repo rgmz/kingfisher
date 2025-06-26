@@ -87,7 +87,7 @@ rules:
   - name: Generic Password
     id: kingfisher.generic.5
     pattern: |
-      (?x)(?i)
+      (?xi)
       password
       \b
       (?:.|[\n\r]){0,16}?

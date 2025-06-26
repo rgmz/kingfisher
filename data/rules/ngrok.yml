@@ -2,7 +2,7 @@ rules:
   - name: Ngrok API Key
     id: kingfisher.ngrok.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       ngrok
       (?:.|[\\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)

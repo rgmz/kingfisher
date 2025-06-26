@@ -6,7 +6,7 @@ rules:
       \b
       (
         aio_
-        [a-zA-Z0-9]{28}
+        [A-Z0-9]{28}
       )
       \b
     min_entropy: 3.5

@@ -2,18 +2,18 @@ rules:
   - name: Microsoft Teams Webhook
     id: kingfisher.microsoftteamswebhook.1
     pattern: |
-      (?x)
-      https://[a-zA-Z0-9]+\.webhook\.office\.com/webhookb2
+      (?xi)
+      https://[A-Z0-9]+\.webhook\.office\.com/webhookb2
       /
-      [a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}
+      [A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}
       @
-      [a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}
+      [A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}
       /
       IncomingWebhook
       /
-      [a-zA-Z0-9]{32}
+      [A-Z0-9]{32}
       /
-      [a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}
+      [A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}
     min_entropy: 3.3
     confidence: medium
     examples:

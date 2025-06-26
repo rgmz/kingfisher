@@ -2,8 +2,7 @@ rules:
   - name: Auth0 Client ID
     id: kingfisher.auth0.1
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       auth0
       (?:.|[\n\r]){0,32}?
@@ -24,8 +23,7 @@ rules:
   - name: Auth0 Client Secret
     id: kingfisher.auth0.2
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       auth0
       (?:.|[\n\r]){0,16}?
@@ -66,8 +64,7 @@ rules:
   - name: Auth0 Domain
     id: kingfisher.auth0.3
     pattern: |
-      (?x)                       
-      (?i)                       
+      (?xi)                       
       \b                         
       (                          
         [a-z0-9]

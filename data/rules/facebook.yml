@@ -2,8 +2,7 @@ rules:
   - name: Facebook App ID
     id: kingfisher.facebook.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       (?:facebook|fb)
       (?:.|[\n\r]){0,8}?
@@ -25,7 +24,7 @@ rules:
   - name: Facebook Secret Key
     id: kingfisher.facebook.2
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b (?: facebook | fb )
       .?
       (?: api | app | application | client | consumer | customer | secret | key )
@@ -62,7 +61,7 @@ rules:
   - name: Facebook Access Token
     id: kingfisher.facebook.3
     pattern: |
-      (?x)
+      (?xi)
       (?:
         \b
         (?:facebook|fb\b)
@@ -71,7 +70,7 @@ rules:
         (?:.|[\n\r]){0,32}?
       )?
       \b
-      (EAACEdEose0cBA[a-zA-Z0-9]{20,})
+      (EAACEdEose0cBA[A-Z0-9]{20,})
       \b
     min_entropy: 3.3
     confidence: medium

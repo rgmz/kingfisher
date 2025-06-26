@@ -2,8 +2,7 @@ rules:
   - name: Bitbucket Client ID
     id: kingfisher.bitbucket.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       bitbucket
       (?:.|[\n\r]){0,16}?
@@ -34,8 +33,7 @@ rules:
   - name: Bitbucket Secret
     id: kingfisher.bitbucket.3
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       bitbucket
       (?:.|[\n\r]){0,32}?

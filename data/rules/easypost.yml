@@ -6,7 +6,7 @@ rules:
       \b
       (
         EZ[AT]K
-        [a-zA-Z0-9]{54}
+        [A-Za-z0-9]{54}
       )
       \b
     min_entropy: 3.5
@@ -14,9 +14,6 @@ rules:
     examples:
       - '"EZTKXxNbJDeDLDyrXuIgHd3cr1YmP7MFqY9cHAPYMOXhUN8nJ671JKaGME"'
       - EZAK1234abcd5678efgh9012ijkl3456mnop7890qrst1234uvwx5678yz
-    categories:
-      - api
-      - secret
     validation:
       type: Http
       content:

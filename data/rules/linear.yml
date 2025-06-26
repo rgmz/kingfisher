@@ -2,12 +2,11 @@ rules:
   - name: Linear API Key
     id: kingfisher.linear.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       (                      
         lin_api_
-        (?:[0-9A-Za-z]{8}){5}
+        (?:[0-9A-Z]{8}){5}
       )                      
       \b                     
     min_entropy: 3.5

@@ -2,8 +2,7 @@ rules:
   - name: Anthropic API Key
     id: kingfisher.anthropic.1
     pattern: |
-      (?x)                    
-      (?i)                    
+      (?xi)                    
       \b                       
       (                        
         sk-ant-api

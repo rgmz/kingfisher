@@ -1,7 +1,13 @@
 rules:
   - name: Dependency-Track API Key
     id: kingfisher.dtrack.1
-    pattern: '\b(odt_[A-Za-z0-9]{32,255})\b'
+    pattern: |
+      (?xi)
+      \b
+      (
+        odt_[A-Z0-9]{32,255}
+      )
+      \b
     min_entropy: 3.3
     confidence: medium
     examples:

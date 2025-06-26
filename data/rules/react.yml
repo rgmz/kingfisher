@@ -2,7 +2,7 @@ rules:
   - name: React App Username
     id: kingfisher.reactapp.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b
       REACT_APP (?: _[A-Z0-9]+)* _USER (?: NAME)?          (?# variable name )
       \s* = \s*
@@ -28,7 +28,7 @@ rules:
   - name: React App Password
     id: kingfisher.reactapp.2
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b
       REACT_APP (?: _[A-Z0-9]+)* _PASS (?: WORD)?          (?# variable name )
       \s* = \s*

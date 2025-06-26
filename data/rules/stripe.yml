@@ -5,11 +5,12 @@ rules:
     pattern: |
       (?xi)
       (?:stripe|strp)
+      (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
-      (?:.|[\n\r]){0,32}?
+      (?:.|[\n\r]){0,16}?
       (                                               
         pk_live_                                  
-        (?:[0-9A-Za-z]{6}){4,30}
+        (?:[0-9A-Z]{6}){4,30}
       )                                 
     min_entropy: 3.3
     confidence: medium
@@ -21,16 +22,16 @@ rules:
     id: kingfisher.stripe.2
 
     pattern: |
-      (?ix)
-      (?:^|[\s"'=])
+      (?xi)
       (?:stripe|strp)
+      (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
-      (?:.|[\n\r]){0,32}?
+      (?:.|[\n\r]){0,16}?
       (
         (?:                                           
           sk|rk                                        
         )_live_
-        (?:[0-9A-Za-z]{8}){3,25}                    
+        (?:[0-9A-Z]{8}){3,25}                    
       )
     min_entropy: 3.3
     confidence: medium

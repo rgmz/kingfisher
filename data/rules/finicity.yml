@@ -35,8 +35,7 @@ rules:
   - name: Finicity client secret
     id: kingfisher.finicity.2
     pattern: |
-      (?x)                     
-      (?i)                     
+      (?xi)                     
       \b                       
       finicity
       (?:.|[\n\r]){0,64}?

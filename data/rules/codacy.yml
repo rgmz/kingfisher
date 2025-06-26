@@ -10,7 +10,7 @@ rules:
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [0-9A-Za-z]{20,24}
+        [0-9A-Z]{20,24}
       )
     min_entropy: 3.5
     confidence: medium

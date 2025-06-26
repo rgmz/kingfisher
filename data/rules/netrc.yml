@@ -2,7 +2,7 @@ rules:
   - name: netrc Credentials
     id: kingfisher.netrc.1
     pattern: |
-      (?x)
+      (?xi)
       ( machine \s+ [^\s]+ | default )
       \s+
       login \s+ ([^\s]+)

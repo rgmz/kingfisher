@@ -2,8 +2,7 @@ rules:
   - name: Line Messaging API Token
     id: kingfisher.line.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       line
       (?:.|[\n\r]){0,32}?
@@ -11,7 +10,7 @@ rules:
       (?:.|[\n\r]){0,32}?
       \b                     
       (                      
-        (?:[0-9A-Za-z+/]{57}){3}=? 
+        (?:[0-9A-Z+/]{57}){3}=? 
       )
     min_entropy: 3.5
     confidence: medium

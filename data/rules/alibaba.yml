@@ -2,8 +2,7 @@ rules:
   - name: Alibaba Access Key ID
     id: kingfisher.alibabacloud.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       (
         LTAI[a-z0-9]{17,21}
@@ -17,8 +16,7 @@ rules:
   - name: Alibaba Access Key Secret
     id: kingfisher.alibabacloud.2
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       alibaba
       (?:.|[\n\r]){0,16}?

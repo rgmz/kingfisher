@@ -1,7 +1,13 @@
 rules:
   - name: crates.io API Key
     id: kingfisher.cratesio.1
-    pattern: '\b(cio[a-zA-Z0-9]{32})\b'
+    pattern: |
+      (?xi)
+      \b
+      (
+        cio[A-Z0-9]{32}
+      )
+      \b
     min_entropy: 3.3
     confidence: medium
     examples:

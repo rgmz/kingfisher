@@ -2,8 +2,7 @@ rules:
   - name: Slack App Token
     id: kingfisher.slack.1
     pattern: |
-      (?x)                      
-      (?i)
+      (?xi)
       (?:
         .{0,24}[=:]
         \s{0,8}
@@ -37,8 +36,7 @@ rules:
   - name: Slack Token
     id: kingfisher.slack.2
     pattern: |
-      (?x)                      
-      (?i)
+      (?xi)
       \b                         
       (
         xox[pbarose]
@@ -83,8 +81,7 @@ rules:
   - name: Slack Webhook
     id: kingfisher.slack.4
     pattern: |
-      (?x)                      
-      (?i)
+      (?xi)
       \b
       (
         https://hooks\.slack\.com/services/

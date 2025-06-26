@@ -16,9 +16,9 @@ async fn detects_new_release() {
     let server = MockServer::start().await;
 
     let body = serde_json::json!({
-        "tag_name": "v1.99.0",
+        "tag_name": "v99.999.0",
         "created_at": "2025-01-01T00:00:00Z",
-        "name": "Kingfisher 1.99.0",
+        "name": "Kingfisher 99.999.0",
         "body": "",
         "assets": [{"url": "http://example.com/bin", "name": "bin"}]
     });
@@ -42,5 +42,5 @@ async fn detects_new_release() {
     .expect("blocking task panicked")
     .expect("update checker returned None");
 
-    assert!(msg.contains("1.99.0"));
+    assert!(msg.contains("99.999.0"));
 }

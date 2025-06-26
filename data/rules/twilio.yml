@@ -2,10 +2,10 @@ rules:
   - name: Twilio API ID
     id: kingfisher.twilio.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
-        (?:SK|AC)[a-fA-F0-9]{32}
+        (?:SK|AC)[A-F0-9]{32}
       )
       \b
     min_entropy: 3.5
@@ -21,8 +21,7 @@ rules:
   - name: Twilio API Key
     id: kingfisher.twilio.2
     pattern: |
-      (?x)               
-      (?i)                
+      (?xi)                
       \b                  
       twilio
       (?:.|[\n\r]){0,32}?

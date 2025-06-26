@@ -2,11 +2,11 @@ rules:
   - name: particle.io Access Token
     id: kingfisher.particleio.1
     pattern: |
-      (?x)
-      https://api\.particle\.io/v1/[a-zA-Z0-9_\-\s/"\\?]*
+      (?xi)
+      https://api\.particle\.io/v1/[A-Z0-9_\-\s/"\\?]*
       (?:access_token=|Authorization:\s*Bearer\s*)
       \b
-      ([a-zA-Z0-9]{40})
+      ([A-Z0-9]{40})
       \b
     min_entropy: 3.3
     confidence: medium
@@ -40,10 +40,10 @@ rules:
   - name: particle.io Access Token
     id: kingfisher.particleio.2
     pattern: |
-      (?x)
+      (?xi)
       (?:access_token=|Authorization:\s*Bearer\s*)
       \b
-      ([a-zA-Z0-9]{40})
+      ([A-Z0-9]{40})
       \b
       [\s"\\]*https://api\.particle\.io/v1
     min_entropy: 3.3

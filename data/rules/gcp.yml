@@ -2,10 +2,7 @@ rules:
   - name: GCP API Token
     id: kingfisher.gcp.1
     pattern: |
-      (?x)                   
-      (?m)
-      (?i)
-      (?s)
+      (?xims)
       (
         \{[^{}]*
         \"auth_provider_x509_cert_url\":
@@ -40,8 +37,7 @@ rules:
   - name: GCP Private Key ID
     id: kingfisher.gcp.3
     pattern: |
-      (?x)                   
-      (?i)
+      (?xi)
       \b                     
       gcp
       (?:

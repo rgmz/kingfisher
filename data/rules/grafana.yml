@@ -50,9 +50,11 @@ rules:
   - name: Grafana Service Account Token
     id: kingfisher.grafana.3
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (glsa_[a-zA-Z0-9]{32}_[a-fA-F0-9]{8})
+      (
+        glsa_[A-Z0-9]{32}_[A-F0-9]{8}
+      )
       \b
     min_entropy: 3.3
     confidence: medium
@@ -93,8 +95,8 @@ rules:
     pattern: |
       (?xi)                                
       (?:https?://)?              
-      (?:[A-Za-z0-9-]+\.)*                 
-      grafana\.[A-Za-z0-9.-]+           
+      (?:[A-Z0-9-]+\.)*                 
+      grafana\.[A-Z0-9.-]+           
       (?::\d{2,5})?                        
       (?:[/?\#]\S*)?        
     min_entropy: 3.0               

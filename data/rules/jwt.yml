@@ -5,13 +5,13 @@ rules:
       (?x)
       \b
       (
-        ey[a-zA-Z0-9_-]{12,}  (?# header )
+        ey[A-Za-z0-9_-]{12,}  (?# header )
         \.
-        ey[a-zA-Z0-9_-]{12,}  (?# payload )
+        ey[A-Za-z0-9_-]{12,}  (?# payload )
         \.
-        [a-zA-Z0-9_-]{12,}    (?# signature )
+        [A-Za-z0-9_-]{12,}    (?# signature )
       )
-      (?:[^a-zA-Z0-9_-]|$)   (?# this instead of a \b anchor because that doesn't play nicely with `-` )
+      (?:[^A-Z0-9_-]|$)   (?# this instead of a \b anchor because that doesn't play nicely with `-` )
     min_entropy: 3.3
     confidence: medium
     examples:

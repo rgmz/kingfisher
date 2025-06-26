@@ -2,11 +2,11 @@ rules:
   - name: GitLab Private Token
     id: kingfisher.gitlab.1
     pattern: |
-      (?x)                     
+      (?xi)                     
       \b                       
       (                        
         glpat-
-        [0-9a-zA-Z_-]{20}
+        [0-9A-Z_-]{20}
       )                        
       (?:\b|$)
     min_entropy: 3.5
@@ -18,7 +18,8 @@ rules:
         -f Dockerfile \
         --build-arg 'GO_REPO_TOKEN=glpat-tFrjFXD7soVU2fqxuDMh' \
     references:
-      - https://docs.gitlab.com/api/users/#get-your-user-status
+      - https://github.com/diffblue/gitlab/blob/39c63ee83369bf5353256a6b95f3116728edd102/doc/api/personal_access_tokens.md
+      - https://docs.gitlab.com/api/personal_access_tokens/
     validation:
       type: Http
       content:
@@ -30,12 +31,18 @@ rules:
             - report_response: true
             - type: WordMatch
               words:
-                - '"message"'
-          url: https://gitlab.com/api/v4/user/status
+                - '"id"'
+          url: https://gitlab.com/api/v4/personal_access_tokens/self
 
   - name: GitLab Runner Registration Token
     id: kingfisher.gitlab.2
-    pattern: '\b(GR1348941[0-9a-zA-Z_-]{20})(?:\b|$)'
+    pattern: |
+      (?xi)
+      \b
+      (
+        GR1348941[0-9A-Z_-]{20}
+      )
+      \b
     examples:
       - |
         sudo gitlab-runner register \
@@ -49,6 +56,8 @@ rules:
         --run-untagged="true" \
         --locked="false" \
         --access-level="not_protected"
+    references:
+      - https://docs.gitlab.com/api/runners/
     validation:
       type: Http
       content:
@@ -61,12 +70,18 @@ rules:
           response_matcher:
             - report_response: true
             - type: StatusMatch
-              status: [200, 201]
+              status: 200
           url: https://gitlab.com/api/v4/runners/verify
 
   - name: GitLab Pipeline Trigger Token
     id: kingfisher.gitlab.3
-    pattern: '\b(glptt-[0-9a-f]{40})\b'
+    pattern: |
+      (?xi)
+      \b
+      (
+        glptt-[0-9a-f]{40}
+      )
+      \b
     examples:
       - |
         curl    \
@@ -75,6 +90,8 @@ rules:
         --no-progress-meter \
         -F token=glptt-0d66598d696a02da33fb65e2a041f607c68ea50d \
         -F ref=main
+    references:
+      - https://docs.gitlab.com/api/pipeline_triggers/
     validation:
       type: Http
       content:
@@ -85,5 +102,6 @@ rules:
           response_matcher:
             - report_response: true
             - type: StatusMatch
-              status: [200]
+              status: 
+                - 200
           url: https://gitlab.com/api/v4/ci/pipeline_triggers/{{ TOKEN }}

@@ -2,7 +2,7 @@ rules:
   - name: Postman API Key
     id: kingfisher.postman.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
         PMAK-[A-Z0-9]{24}-[A-Z0-9]{34}

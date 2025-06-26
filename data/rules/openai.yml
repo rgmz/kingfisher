@@ -2,10 +2,10 @@ rules:
   - name: OpenAI API Key
     id: kingfisher.openai.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
-        sk-[a-zA-Z0-9]{48}
+        sk-[A-Z0-9]{48}
       )
       \b
     min_entropy: 3.3

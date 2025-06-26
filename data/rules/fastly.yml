@@ -2,7 +2,7 @@ rules:
   - name: Fastly API token
     id: kingfisher.fastly.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b
       fastly
       (?:.|[\n\r]){0,32}?

@@ -2,7 +2,7 @@ rules:
   - name: Contains encrypted RSA private key
     id: kingfisher.privkey.1
     pattern: |
-      (?x)                   
+      (?xi)                   
       (?msi)
       (
         -----BEGIN\s
@@ -45,7 +45,7 @@ rules:
   - name: Contains Private Key
     id: kingfisher.privkey.2
     pattern: |
-      (?x)                    
+      (?xi)                    
       (?ims)
       (                       
         -----BEGIN\s

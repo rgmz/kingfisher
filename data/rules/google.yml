@@ -14,10 +14,10 @@ rules:
   - name: Google OAuth Client Secret
     id: kingfisher.google.2
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (GOCSPX-[a-zA-Z0-9_-]{28})
-      (?:[^a-zA-Z0-9_-] | $)
+      (GOCSPX-[A-Z0-9_-]{28})
+      (?:[^A-Z0-9_-] | $)
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -26,7 +26,7 @@ rules:
   - name: Google OAuth Client Secret
     id: kingfisher.google.3
     pattern: |
-      (?x)(?i)
+      (?xi)
       client.?secret .{0,10}
       \b
       ([a-z0-9_-]{24})
@@ -41,10 +41,10 @@ rules:
   - name: Google OAuth Access Token
     id: kingfisher.google.4
     pattern: |
-      (?x)
+      (?xi)
       \b
-      (ya29\.[0-9A-Za-z_-]{20,1024})
-      (?: [^0-9A-Za-z_-]|$)
+      (ya29\.[0-9A-Z_-]{20,1024})
+      (?: [^0-9A-Z_-]|$)
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -65,7 +65,7 @@ rules:
   - name: Google OAuth Credentials
     id: kingfisher.google.6
     pattern: |
-      (?x)
+      (?xi)
       \b
       ([0-9]+-[a-z0-9_]{32}\.apps\.googleusercontent\.com)
       (?:
@@ -73,13 +73,13 @@ rules:
       )
       \b
       (?:
-        (GOCSPX-[a-zA-Z0-9_-]{28})
+        (GOCSPX-[A-Z0-9_-]{28})
         |
         (?:
-          (?i) client.?secret .{0,10} \b ([a-zA-Z0-9_-]{24})
+          (?i) client.?secret .{0,10} \b ([A-Z0-9_-]{24})
         )
       )
-      (?:[^a-zA-Z0-9_-] | $)
+      (?:[^A-Z0-9_-] | $)
     min_entropy: 3.3
     confidence: medium
     examples:

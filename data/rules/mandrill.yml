@@ -2,8 +2,7 @@ rules:
   - name: Mandrill API Key
     id: kingfisher.mandrill.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       mandrill
       (?:.|[\n\r]){0,32}?
@@ -11,7 +10,7 @@ rules:
       (?:.|[\n\r]){0,32}?
       \b                     
       (                      
-        (?:[0-9A-Za-z_-]{11}){2}
+        (?:[0-9A-Z_-]{11}){2}
       ) 
     min_entropy: 3.5
     confidence: medium

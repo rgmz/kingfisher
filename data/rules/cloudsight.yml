@@ -2,8 +2,7 @@ rules:
   - name: CloudSight API Key
     id: kingfisher.cloudsight.1
     pattern: |
-      (?x)                   
-      (?i)                   
+      (?xi)                   
       \b                     
       cloudsight
       (?:.|[\n\r]){0,32}?

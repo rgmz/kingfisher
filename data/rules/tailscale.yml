@@ -2,11 +2,10 @@ rules:
   - name: Tailscale API Key
     id: kingfisher.tailscale.1
     pattern: |
-      (?x)
-      (?i)
+      (?xi)
       \b
       (
-        tskey-[a-z]+-[A-Za-z0-9_-]{20,24}
+        tskey-[a-z]+-[A-Z0-9_-]{20,24}
       )
       \b
     min_entropy: 3.0

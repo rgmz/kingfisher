@@ -2,7 +2,7 @@ rules:
   - name: DigitalOcean API Key
     id: kingfisher.digitalocean.1
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
         (?:dop|doo)_v1_
@@ -32,7 +32,7 @@ rules:
   - name: DigitalOcean Refresh Token
     id: kingfisher.digitalocean.2
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
         dor_v1_

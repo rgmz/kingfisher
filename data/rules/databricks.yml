@@ -2,8 +2,7 @@ rules:
   - name: Databricks API token
     id: kingfisher.databricks.1
     pattern: |
-      (?x)          
-      (?i)          
+      (?xi)          
       (             
         dapi
         [a-f0-9]{32}
@@ -54,7 +53,7 @@ rules:
   - name: Databricks Domain
     id: kingfisher.databricks.3
     pattern: |
-      (?x)                
+      (?xi)                
       \b 
       (                   
         [a-z0-9-]+ 

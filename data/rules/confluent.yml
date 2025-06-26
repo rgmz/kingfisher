@@ -2,12 +2,12 @@ rules:
   - name: Confluent Client ID
     id: kingfisher.confluent.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b(?:confluent|ccloud|cpdev|kafka)
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [a-zA-Z0-9]{16}
+        [A-Z0-9]{16}
       )
       \b
     min_entropy: 3
@@ -21,14 +21,14 @@ rules:
   - name: Confluent API Secret
     id: kingfisher.confluent.2
     pattern: |
-      (?x)(?i)
+      (?xi)
       (?:confluent|ccloud|cpdev|kafka)
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [a-zA-Z0-9\+/]{64}
+        [A-Z0-9\+/]{64}
       )
     min_entropy: 3.3
     confidence: medium
