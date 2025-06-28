@@ -269,7 +269,6 @@ pub async fn retry_request(
 }
 
 /// Return `true` when the body is very likely HTML.
-///
 fn body_looks_like_html(body: &str, headers: &HeaderMap) -> bool {
     // ---- 1. header heuristic ---------------------------------------------
     let header_says_html = headers
@@ -289,7 +288,6 @@ fn body_looks_like_html(body: &str, headers: &HeaderMap) -> bool {
     header_says_html && body_looks_htmlish
 }
 
-
 /// Validate the response by checking word and status matchers.
 pub fn validate_response(
     matchers: &[ResponseMatcher],
@@ -298,7 +296,8 @@ pub fn validate_response(
     headers: &HeaderMap,
     html_allowed: bool,
 ) -> bool {
-    // Since match_all_types is always true here, we simply require all word and status conditions to hold.
+    // Since match_all_types is always true here, we simply require all word and status conditions
+    // to hold.
     let word_ok = matchers
         .iter()
         .filter_map(|m| {
@@ -490,7 +489,7 @@ mod tests {
                 r#type: "word-match".to_string(),
                 words: vec!["invalid_token".to_string()],
                 match_all_words: false,
-                negative: true,         // body must *not* contain “invalid_token”
+                negative: true, // body must *not* contain “invalid_token”
             },
         ];
 
@@ -498,10 +497,7 @@ mod tests {
         let body = "invalid_payload";
         let status = StatusCode::BAD_REQUEST; // 400
         let mut headers = HeaderMap::new();
-        headers.insert(
-            header::CONTENT_TYPE,
-            HeaderValue::from_static("text/plain"),
-        );
+        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
 
         // 3️⃣  Call validate_response with html_allowed = false
         let ok = validate_response(&matchers, body, &status, &headers, false);
@@ -509,5 +505,4 @@ mod tests {
         // 4️⃣  It *should* be valid (true) because all matcher conditions hold
         assert!(ok, "Slack webhook response should be considered ACTIVE");
     }
-
 }

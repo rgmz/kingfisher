@@ -389,6 +389,7 @@ mod tests {
         cli::commands::scan::ScanArgs {
             num_jobs: 1,
             no_dedup: false,
+            ignore_tests: false,
             rules: RuleSpecifierArgs {
                 rules_path: Vec::new(),
                 rule: vec!["all".into()],

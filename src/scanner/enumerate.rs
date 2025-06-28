@@ -37,6 +37,7 @@ use crate::{
         util::is_compressed_file,
     },
     scanner_pool::ScannerPool,
+    util::is_test_like_path,
     EnumeratorConfig, EnumeratorFileResult, FileResult, FilesystemEnumerator, FoundInput,
     GitRepoEnumerator, GitRepoResult, GitRepoWithMetadataEnumerator, PathBuf,
 };
@@ -188,11 +189,23 @@ pub fn enumerate_filesystem_inputs(
                     Ok(Some((origin_set, blob_metadata, vec_of_matches))) => {
                         for (_, single_match) in vec_of_matches {
                             // Send each match
-                            send_ds.send((
-                                Arc::new(origin_set.clone()),
-                                Arc::new(blob_metadata.clone()),
-                                single_match,
-                            ))?;
+                            let is_test = if args.ignore_tests {
+                                origin_set
+                                    .iter()
+                                    .filter_map(|o| o.full_path())
+                                    .any(|p| is_test_like_path(&p))
+                            } else {
+                                false
+                            };
+
+                            if !is_test {
+                                // Send each match
+                                send_ds.send((
+                                    Arc::new(origin_set.clone()),
+                                    Arc::new(blob_metadata.clone()),
+                                    single_match,
+                                ))?;
+                            }
                         }
                     }
                     Err(e) => {

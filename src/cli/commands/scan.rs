@@ -88,6 +88,10 @@ pub struct ScanArgs {
     #[arg(long, default_value_t = false)]
     pub no_dedup: bool,
 
+    /// Ignore matches that appear to come from test files
+    #[arg(long, default_value_t = false)]
+    pub ignore_tests: bool,
+
     /// Redact findings values using a secure hash
     #[arg(long, short = 'r', default_value_t = false)]
     pub redact: bool,

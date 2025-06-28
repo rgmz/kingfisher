@@ -7,8 +7,8 @@
 //
 // Version handling logic covers three scenarios:
 //   1. Running version == latest release →                   "up to date".
-//   2. Running version  > latest release → print a notice that the binary is
-//      **newer** than anything on GitHub (e.g. a dev build).
+//   2. Running version  > latest release → print a notice that the binary is **newer** than
+//      anything on GitHub (e.g. a dev build).
 //   3. Latest release  > running version → offer to self‑update.
 //
 // All informational messages are printed with the
@@ -25,10 +25,7 @@ use self_update::{backends::github::Update, cargo_crate_version, errors::Error a
 use semver::Version;
 use tracing::{error, info, warn};
 
-use crate::{
-    cli::global::GlobalArgs,
-    reporter::styles::Styles,
-};
+use crate::{cli::global::GlobalArgs, reporter::styles::Styles};
 
 /// Return `true` when the canonical executable path lives inside a Homebrew Cellar.
 /// Works for Intel macOS (/usr/local/Cellar), Apple‑Silicon macOS (/opt/homebrew/Cellar)
@@ -38,16 +35,13 @@ fn installed_via_homebrew() -> bool {
         std::env::current_exe().ok().and_then(|p| fs::canonicalize(p).ok())
     }
 
-    canonical_exe()
-        .map(|p| p.components().any(|c| c.as_os_str() == "Cellar"))
-        .unwrap_or(false)
+    canonical_exe().map(|p| p.components().any(|c| c.as_os_str() == "Cellar")).unwrap_or(false)
 }
 
 /// Check GitHub for a newer Kingfisher release and optionally self‑update.
 ///
 /// * `base_url` lets tests point at a mock server.
-/// * Self‑update is skipped when the user disabled it **or** the binary is a
-///   Homebrew install.
+/// * Self‑update is skipped when the user disabled it **or** the binary is a Homebrew install.
 pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Option<String> {
     if global_args.no_update_check {
         return None;
@@ -61,14 +55,13 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     if is_brew {
         info!(
             "{}",
-            styles
-                .style_finding_active_heading
-                .apply_to("Homebrew install detected – will notify about updates but not self‑update")
+            styles.style_finding_active_heading.apply_to(
+                "Homebrew install detected – will notify about updates but not self‑update"
+            )
         );
     }
 
-    info!(
-        "{}","Checking for updates…");
+    info!("{}", "Checking for updates…");
 
     let mut builder = Update::configure();
     builder
@@ -124,15 +117,11 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
 
     // Try semantic version comparison.  If parsing fails, fall back to the
     // self‑update code‑path (which will treat the strings lexicographically).
-    if let (Ok(curr), Ok(latest)) = (
-        Version::parse(running_v),
-        Version::parse(&release.version),
-    ) {
+    if let (Ok(curr), Ok(latest)) = (Version::parse(running_v), Version::parse(&release.version)) {
         // ───────── Case 2: running > latest (dev build) ─────────
         if curr > latest {
-            let plain = format!(
-                "Running Kingfisher {curr} which is newer than latest released {latest}"
-            );
+            let plain =
+                format!("Running Kingfisher {curr} which is newer than latest released {latest}");
             info!("{}", styles.style_finding_active_heading.apply_to(&plain));
             return Some(plain);
         }
@@ -171,7 +160,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
             "{}",
             styles
                 .style_finding_active_heading
-            .apply_to("Run `brew upgrade kingfisher` to install the new version.")
+                .apply_to("Run `brew upgrade kingfisher` to install the new version.")
         );
     }
 

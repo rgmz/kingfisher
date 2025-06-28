@@ -4,10 +4,8 @@ use std::process::Command;
 use assert_cmd::prelude::*;
 use predicates::prelude::*;
 
-
 #[test]
 fn check_rules() -> anyhow::Result<()> {
-
     // ── run kingfisher ────────────────────────────────────────────────
     Command::cargo_bin("kingfisher")?
         .args([

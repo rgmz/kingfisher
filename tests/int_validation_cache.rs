@@ -144,6 +144,7 @@ async fn test_validation_cache_and_depvars() -> Result<()> {
         git_repo_timeout: 1800, // 30 minutes
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_dedup: true, // keep duplicates so the cache is stressed
+        ignore_tests: false,
         snippet_length: 128,
     };
 

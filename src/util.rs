@@ -108,6 +108,27 @@ pub fn is_base64(input: &str) -> bool {
             .bytes()
             .all(|b| matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/' | b'='))
 }
+
+/// Heuristic check whether a path points to test files or directories.
+///
+/// Looks for common substrings like "test", "tests", "spec", "fixture", or
+/// "example" in any path component. Case-insensitive.
+pub fn is_test_like_path(path: &Path) -> bool {
+    path.components().any(|c| {
+        if let std::path::Component::Normal(os) = c {
+            if let Some(name) = os.to_str() {
+                let name = name.to_ascii_lowercase();
+                return name.contains("test")
+                    || name.contains("spec")
+                    || name.contains("fixture")
+                    || name.contains("example")
+                    || name.contains("sample");
+            }
+        }
+        false
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -115,7 +136,47 @@ mod tests {
         path::PathBuf,
     };
 
-    use super::*;
+    use super::{is_test_like_path, *};
+
+    /// Paths that **should** be classified as test-like.
+    #[test]
+    fn test_is_test_like_path_positive() {
+        let positives = [
+            "src/tests/helpers.rs",
+            "/project/spec/controllers/user_spec.rb",
+            "C:\\repo\\fixtures\\config.json",
+            "examples/hello_world/main.go",
+            "/home/user/scripts/local-testCert.pem",
+            "samples/data/sample_input.txt",
+        ];
+
+        for p in positives {
+            assert!(
+                is_test_like_path(Path::new(p)),
+                "Path {p:?} was expected to be test-like but was not"
+            );
+        }
+    }
+
+    /// Paths that **should not** be classified as test-like.
+    #[test]
+    fn test_is_test_like_path_negative() {
+        let negatives = [
+            "src/main.rs",
+            "/opt/service/config/production.yml",
+            "C:\\Program Files\\app\\README.md",
+            "docs/architecture/overview.md",
+            "assets/images/logo.png",
+        ];
+
+        for p in negatives {
+            assert!(
+                !is_test_like_path(Path::new(p)),
+                "Path {p:?} was incorrectly classified as test-like"
+            );
+        }
+    }
+
     #[test]
     fn test_counted_display_regular() {
         let single = Counted::regular(1, "rule");

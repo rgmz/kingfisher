@@ -1,6 +1,5 @@
 use std::{
     borrow::Cow,
-    // collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
     io::Write,
     str,
@@ -60,7 +59,6 @@ pub struct OwnedBlobMatch {
     pub blob_id: BlobId,
     /// The unique content-based identifier of this match
     pub finding_fingerprint: u64,
-    // pub matching_input: Vec<u8,>,
     pub matching_input_offset_span: OffsetSpan,
     pub captures: SerializableCaptures,
     pub validation_response_body: String,

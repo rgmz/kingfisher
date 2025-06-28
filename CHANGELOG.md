@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.17.0]
+- Updated README to give proper attribution to Nosey Parker!
+- Added rules for sonarcloud, sonarqube, sourcegraph, shopify, truenas, square, sendgrid, nasa, teamcity, truenas, shopify
+- Introduced `--ignore-tests` flag – skip files/dirs whose path resembles tests (`test`, `spec`, `fixture`, `example`, `sample`), reducing noise.
 ## [1.16.0]
 - Fix: HTML detection now requires both HTML content-type and "<html" tag, fixing webhook false negatives
 - Removed cargo-nextest installation during test running

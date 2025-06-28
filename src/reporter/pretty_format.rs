@@ -312,6 +312,7 @@ fn test_pretty_format_with_nan_entropy_panics() {
         // core execution / performance
         num_jobs: 1,
         no_dedup: false,
+        ignore_tests: false,
 
         // rule selection
         rules: RuleSpecifierArgs {
