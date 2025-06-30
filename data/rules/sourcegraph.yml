@@ -33,12 +33,18 @@ rules:
     pattern: |
       (?xi)
       \b
-      (?:sgp_(?:[a-f0-9]{16}_local_)?[a-f0-9]{40}|[a-f0-9]{40})
+      sourcegraph
+      (?:.|[\n\r]){0,32}?
+      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
+      (?:.|[\n\r]){0,32}?
+      (
+        (?:sgp_(?:[a-f0-9]{16}_local_)?[a-f0-9]{40}|[a-f0-9]{40})
+      )
       \b
     min_entropy: 3.5
     confidence: medium
     examples:
-      - sgp_abcdef1234567890_local_abcdef12345678901234567890abcdef12345678
+      - sourcegraph SECRET sgp_abcdef1234567890_local_0123456789abcdef0123456789abcdef01234567
     validation:
       type: Http
       content:

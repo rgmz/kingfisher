@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.17.1]
+- Fixed broken sourcegraph rule
+- Added test to prevent this and similar issues
+
 ## [1.17.0]
 - Updated README to give proper attribution to Nosey Parker!
 - Added rules for sonarcloud, sonarqube, sourcegraph, shopify, truenas, square, sendgrid, nasa, teamcity, truenas, shopify
