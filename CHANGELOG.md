@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.18.0]
+- Added rules for DeepSeek, xAI
+- Removed branding
+- Added NOTICE file
+
 ## [1.17.1]
 - Fixed broken sourcegraph rule
 - Added test to prevent this and similar issues
