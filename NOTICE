@@ -28,8 +28,4 @@ Additional notices for Kingfisher
 Copyright 2025 MongoDB, Inc.
 https://www.mongodb.com
 
-Kingfisher is a fork of Nosey Parker that adds (at the time of writing):
-  - Live secret validation via cloud-provider APIs
-  - Extra detection rules and tree-sitter parsing
-  - Native GitLab integration and Windows x64 support
 Source repository: https://github.com/mongodb/kingfisher

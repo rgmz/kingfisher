@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [1.18.1]
+- Restored --version cli argument
+- Added test for the argument
+
 ## [1.18.0]
 - Added rules for DeepSeek, xAI
 - Removed branding

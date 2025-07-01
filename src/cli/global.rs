@@ -10,10 +10,11 @@ use crate::cli::commands::{
     github::GitHubArgs, gitlab::GitLabArgs, rules::RulesArgs, scan::ScanArgs,
 };
 
+
 #[deny(missing_docs)]
 #[derive(Parser, Debug)]
-
-/// Kingfisher — Detect and validate secrets across files and full Git history
+#[command(version = env!("CARGO_PKG_VERSION"))]
+/// Kingfisher - Detect and validate secrets across files and full Git history
 pub struct CommandLineArgs {
     /// The command to execute
     #[command(subcommand)]

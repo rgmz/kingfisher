@@ -22,4 +22,14 @@ mod test {
             .success()
             .stdout(contains("kingfisher.aws.").and(contains("pattern")));
     }
+
+    #[test]
+    fn cli_version_flag() {
+        Command::cargo_bin("kingfisher")
+            .unwrap()
+            .arg("--version")
+            .assert()
+            .success()
+            .stdout(contains(env!("CARGO_PKG_VERSION")));
+    }
 }
