@@ -71,6 +71,11 @@ rules:
             - report_response: true
             - type: StatusMatch
               status: 200
+            - type: WordMatch
+              words:
+                - '"token is missing"'
+                - '"403 Forbidden"'
+              negative: true
           url: https://gitlab.com/api/v4/runners/verify
 
   - name: GitLab Pipeline Trigger Token
@@ -104,4 +109,9 @@ rules:
             - type: StatusMatch
               status: 
                 - 200
+            - type: WordMatch
+              words:
+                - '"token is missing"'
+                - '"403 Forbidden"'
+              negative: true
           url: https://gitlab.com/api/v4/ci/pipeline_triggers/{{ TOKEN }}

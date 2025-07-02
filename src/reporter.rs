@@ -80,6 +80,10 @@ impl DetailsReporter {
                     "id": cmd.commit_id.to_string(),
                     "url": format!("{}/commit/{}", repo_url, cmd.commit_id),
                     "date": atime,
+                    "committer": {
+                        "name": String::from_utf8_lossy(&cmd.committer_name),
+                        "email": String::from_utf8_lossy(&cmd.committer_email),
+                    },
                     // "author": {
                     //     "name": String::from_utf8_lossy(&cmd.author_name),
                     //     "email": String::from_utf8_lossy(&cmd.author_email),

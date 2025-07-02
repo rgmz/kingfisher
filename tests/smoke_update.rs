@@ -5,6 +5,11 @@ use wiremock::{
     Mock, MockServer, ResponseTemplate,
 };
 
+use flate2::{write::GzEncoder, Compression};
+use tar::Builder;
+use tempfile::tempdir;
+use std::fs::{self, File};
+
 #[tokio::test]
 async fn no_update_when_flag_set() {
     let args = GlobalArgs { no_update_check: true, ..Default::default() };
