@@ -82,7 +82,7 @@ struct EnumeratorConfig {
     enumerate_git_history: bool,
     collect_git_metadata: bool,
     repo_scan_timeout: Duration,
-    // gitignore: Gitignore,
+    exclude_globset: Option<std::sync::Arc<GlobSet>>,
 }
 
 pub enum FoundInput {
@@ -310,6 +310,10 @@ impl FilesystemEnumerator {
             !matches
         });
         Ok(self)
+    }
+
+    pub fn exclude_globset(&self) -> Option<std::sync::Arc<GlobSet>> {
+        self.exclude_globset.clone()
     }
 
     pub fn gitignore(&self) -> Result<Gitignore> {

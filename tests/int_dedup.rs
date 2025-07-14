@@ -101,7 +101,6 @@ rules:
         git_repo_timeout: 1800, // 30 minutes
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_dedup,
-        ignore_tests: false,
         snippet_length: 64,
         baseline_file: None,
         manage_baseline: false,

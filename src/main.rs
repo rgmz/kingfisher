@@ -300,7 +300,6 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         redact: false,
         git_repo_timeout: 1800,
         no_dedup: false,
-        ignore_tests: false,
         snippet_length: 256,
         baseline_file: None,
         manage_baseline: false,

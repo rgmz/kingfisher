@@ -85,7 +85,6 @@ fn test_gitlab_remote_scan() -> Result<()> {
         git_repo_timeout: 1800, // 30 minutes
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_dedup: true,
-        ignore_tests: false,
         snippet_length: 256,
         baseline_file: None,
         manage_baseline: false,

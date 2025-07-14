@@ -142,7 +142,12 @@ kingfisher scan /path/to/repo --rule-stats
 
 ```bash
 # Scan source but skip likely unit / integration tests
-kingfisher scan ./my-project --ignore-tests
+kingfisher scan ./my-project \
+  --exclude='test' \
+  --exclude='spec' \
+  --exclude='fixture' \
+  --exclude='example' \
+  --exclude='sample'
 ```
 
 ### Exclude specific paths
@@ -304,7 +309,6 @@ kingfisher github repos list --organization my-org
 - `--no-extract-archives`: Do not scan inside archives
 - `--extraction-depth <N>`: Specifies how deep nested archives should be extracted and scanned (default: 2)
 - `--redact`: Replaces discovered secrets with a one-way hash for secure output
-- `--ignore-tests`: Skip files or directories whose path component contains _test_, _spec_, _fixture_, _example_, or _sample_ (case-insensitive)
 - `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax)
 - `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
 - `--manage-baseline`: Create or update the baseline file with current findings
