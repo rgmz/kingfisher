@@ -11,7 +11,8 @@ All notable changes to this project will be documented in this file.
 - Added validation for JWT tokens that checks `exp` and `nbf` claims
 - JWT validation performs OpenID Connect discovery using the `iss` claim and verifies signatures via JWKS
 - Removed `--ignore-tests` argument, because the `--exclude` flag provides more granular functionality
-
+- DigitalOcean rule update
+- Adafruit rule update
 
 ## [1.20.0]
 - Removed confirmation prompt when user provides --self-update flag

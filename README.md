@@ -140,12 +140,14 @@ kingfisher scan /path/to/repo --rule-stats
 
 ### Scan while ignoring likely test files
 
+`--exclude` skips any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
+
 ```bash
 # Scan source but skip likely unit / integration tests
 kingfisher scan ./my-project \
-  --exclude='test' \
+  --exclude='[Tt]est' \
   --exclude='spec' \
-  --exclude='fixture' \
+  --exclude='[Ff]ixture' \
   --exclude='example' \
   --exclude='sample'
 ```
@@ -155,7 +157,7 @@ kingfisher scan ./my-project \
 # Skip all Python files and any directory named tests
 kingfisher scan ./my-project \
   --exclude '*.py' \
-  --exclude tests
+  --exclude '[Tt]ests'
 ```
 
 If you want to know which files are being skipped, enable verbose debugging (-v) when scanning, which will report any files being skipped by the baseline file (or via --exclude):
@@ -309,7 +311,7 @@ kingfisher github repos list --organization my-org
 - `--no-extract-archives`: Do not scan inside archives
 - `--extraction-depth <N>`: Specifies how deep nested archives should be extracted and scanned (default: 2)
 - `--redact`: Replaces discovered secrets with a one-way hash for secure output
-- `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax)
+- `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
 - `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
 - `--manage-baseline`: Create or update the baseline file with current findings
 
