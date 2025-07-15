@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.85.0
+          toolchain: 1.88.0
           profile: minimal
           override: true
 
@@ -43,7 +43,7 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.85.0
+          toolchain: 1.88.0
           profile: minimal
           override: true
 
@@ -72,7 +72,7 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.85.0
+          toolchain: 1.88.0
           profile: minimal
           override: true
 
@@ -103,7 +103,7 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.85.0
+          toolchain: 1.88.0
           profile: minimal
           override: true
 
@@ -134,7 +134,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.85.0
+          toolchain: 1.88.0
           profile: minimal
           override: true
 

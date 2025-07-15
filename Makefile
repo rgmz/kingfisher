@@ -110,11 +110,11 @@ setup-zig:
 ubuntu-x64: setup-zig   # ensures Zig & cargo-zigbuild exist
 	@echo "Checking Rust toolchain…"
 	@$(MAKE) check-rust || { \
-	    echo "🦀  Installing Rust 1.85.0 …"; \
+	    echo "🦀  Installing Rust 1.88.0 …"; \
 	    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
 	    . $$HOME/.cargo/env; \
-	    rustup toolchain install 1.85.0; \
-	    rustup default 1.85.0; \
+	    rustup toolchain install 1.88.0; \
+	    rustup default 1.88.0; \
 	}
 
 	@echo "📦  Installing build dependencies (musl, cmake, etc.)…"
@@ -150,11 +150,11 @@ ubuntu-x64: setup-zig   # ensures Zig & cargo-zigbuild exist
 ubuntu-arm64: setup-zig   # ensures Zig & cargo-zigbuild exist
 	@echo "Checking Rust toolchain…"
 	@$(MAKE) check-rust || { \
-	    echo "🦀  Installing Rust 1.85.0 …"; \
+	    echo "🦀  Installing Rust 1.88.0 …"; \
 	    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
 	    . $$HOME/.cargo/env; \
-	    rustup toolchain install 1.85.0; \
-	    rustup default 1.85.0; \
+	    rustup toolchain install 1.88.0; \
+	    rustup default 1.88.0; \
 	}
 
 	@echo "📦  Installing build dependencies (musl, cmake, etc.)…"
@@ -391,7 +391,7 @@ check-rust:
 	  echo "Rust not found."; \
 	  exit 1; \
 	fi; \
-	required=1.85.0; \
+	required=1.88.0; \
 	if [ $$(printf '%s\n' "$$required" "$$version" | sort -V | head -n1) != "$$required" ]; then \
 	  echo "Rust version $$version is older than required $$required."; \
 	  exit 1; \

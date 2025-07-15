@@ -139,17 +139,13 @@ impl RepositoryIndex {
         let mut num_trees = 0;
         let mut num_blobs = 0;
         let mut num_commits = 0;
-        let count = 0;
-
+        
         for oid in odb
             .iter()
             .context("Failed to iterate object database")?
             .with_ordering(Ordering::PackLexicographicalThenLooseLexicographical)
         {
             let oid = unwrap_ok_or_continue!(oid, |e| debug!("Failed to read object id: {e}"));
-            // if count % 100000 == 0 {
-            //     debug!("Indexed {} objects in RepositoryIndex::new", count);
-            // }
             let hdr = unwrap_ok_or_continue!(odb.header(oid), |e| {
                 debug!("Failed to read object header for {oid}: {e}")
             });
@@ -160,7 +156,6 @@ impl RepositoryIndex {
                 Kind::Tag => num_tags += 1,
             }
         }
-        debug!("Total objects to map in RepositoryIndex::new: {}", count);
 
         let mut trees = ObjectIdBimap::with_capacity(num_trees);
         let mut commits = ObjectIdBimap::with_capacity(num_commits);
