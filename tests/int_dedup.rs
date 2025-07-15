@@ -90,7 +90,7 @@ rules:
             extraction_depth: 1,
             no_binary: true,
             no_extract_archives: false,
-            ignore: Vec::new(),
+            exclude: Vec::new(), // Exclude patterns
         },
         confidence: ConfidenceLevel::Low,
         no_validate: true,
@@ -101,8 +101,9 @@ rules:
         git_repo_timeout: 1800, // 30 minutes
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_dedup,
-        ignore_tests: false,
         snippet_length: 64,
+        baseline_file: None,
+        manage_baseline: false,
     };
 
     let global_args = GlobalArgs {

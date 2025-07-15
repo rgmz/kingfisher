@@ -88,10 +88,6 @@ pub struct ScanArgs {
     #[arg(long, default_value_t = false)]
     pub no_dedup: bool,
 
-    /// Ignore matches that appear to come from test files
-    #[arg(long, default_value_t = false)]
-    pub ignore_tests: bool,
-
     /// Redact findings values using a secure hash
     #[arg(long, short = 'r', default_value_t = false)]
     pub redact: bool,
@@ -106,6 +102,14 @@ pub struct ScanArgs {
     /// Bytes of context before and after each match
     #[arg(long, default_value_t = 256, value_name = "BYTES")]
     pub snippet_length: usize,
+
+    /// Baseline file to filter known secrets
+    #[arg(long, value_name = "FILE")]
+    pub baseline_file: Option<std::path::PathBuf>,
+
+    /// Create or update the baseline file with current findings
+    #[arg(long, default_value_t = false)]
+    pub manage_baseline: bool,
 }
 
 /// Confidence levels for findings

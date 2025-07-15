@@ -73,11 +73,16 @@ pub struct GitBlobMetadata {
 pub struct GitRepoWithMetadataEnumerator<'a> {
     path: &'a Path,
     repo: Repository,
+    exclude_globset: Option<std::sync::Arc<globset::GlobSet>>,
 }
 
 impl<'a> GitRepoWithMetadataEnumerator<'a> {
-    pub fn new(path: &'a Path, repo: Repository) -> Self {
-        Self { path, repo }
+    pub fn new(
+        path: &'a Path,
+        repo: Repository,
+        exclude_globset: Option<std::sync::Arc<globset::GlobSet>>,
+    ) -> Self {
+        Self { path, repo, exclude_globset }
     }
 
     pub fn run(self) -> Result<GitRepoResult> {
@@ -173,12 +178,19 @@ impl<'a> GitRepoWithMetadataEnumerator<'a> {
                         }
                         let filtered = appearances
                             .into_iter()
-                            .filter(|entry| {
-                                // Apply your actual ignore-logic here:
-                                match entry.path.to_path() {
-                                    Ok(_path) => true,
-                                    Err(_) => true,
+                            .filter(|entry| match entry.path.to_path() {
+                                Ok(p) => {
+                                    if let Some(gs) = &self.exclude_globset {
+                                        let m = gs.is_match(p);
+                                        if m {
+                                            debug!("Skipping {} due to --exclude", p.display());
+                                        }
+                                        !m
+                                    } else {
+                                        true
+                                    }
                                 }
+                                Err(_) => true,
                             })
                             .collect::<SmallVec<_>>();
                         if filtered.is_empty() {

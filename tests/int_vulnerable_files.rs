@@ -76,7 +76,7 @@ impl TestContext {
                 extraction_depth: 2,
                 no_binary: true,
                 no_extract_archives: false,
-                ignore: Vec::new(),
+                exclude: Vec::new(), // Exclude patterns
             },
             confidence: ConfidenceLevel::Low,
             no_validate: true,
@@ -87,8 +87,9 @@ impl TestContext {
             git_repo_timeout: 1800, // 30 minutes
             output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
             no_dedup: true,
-            ignore_tests: false,
             snippet_length: 256,
+            baseline_file: None,
+            manage_baseline: false,
         };
 
         let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules)
@@ -140,7 +141,7 @@ impl TestContext {
                 extraction_depth: 2,
                 no_binary: true,
                 no_extract_archives: false,
-                ignore: Vec::new(),
+                exclude: Vec::new(), // Exclude patterns
             },
             confidence: ConfidenceLevel::Low,
             no_validate: true,
@@ -151,8 +152,9 @@ impl TestContext {
             git_repo_timeout: 1800, // 30 minutes
             output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
             no_dedup: true,
-            ignore_tests: false,
             snippet_length: 256,
+            baseline_file: None,
+            manage_baseline: false,
         };
 
         let global_args = GlobalArgs {

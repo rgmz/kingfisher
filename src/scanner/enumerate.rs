@@ -37,7 +37,6 @@ use crate::{
         util::is_compressed_file,
     },
     scanner_pool::ScannerPool,
-    util::is_test_like_path,
     EnumeratorConfig, EnumeratorFileResult, FileResult, FilesystemEnumerator, FoundInput,
     GitRepoEnumerator, GitRepoResult, GitRepoWithMetadataEnumerator, PathBuf,
 };
@@ -82,9 +81,10 @@ pub fn enumerate_filesystem_inputs(
     }()
     .context("Failed to initialize filesystem enumerator")?;
 
-    let (enum_thread, input_recv) = {
+    let (enum_thread, input_recv, exclude_globset) = {
         let fs_enumerator = make_fs_enumerator(args, input_roots.into())
             .context("Failed to initialize filesystem enumerator")?;
+        let exclude_globset = fs_enumerator.as_ref().and_then(|ie| ie.exclude_globset());
         let channel_size = std::cmp::max(args.num_jobs * 128, 1024);
 
         let (input_send, input_recv) = crossbeam_channel::bounded(channel_size);
@@ -97,7 +97,7 @@ pub fn enumerate_filesystem_inputs(
                 Ok(())
             })
             .context("Failed to enumerate filesystem inputs")?;
-        (input_enumerator_thread, input_recv)
+        (input_enumerator_thread, input_recv, exclude_globset)
     };
 
     let enum_cfg = EnumeratorConfig {
@@ -107,6 +107,7 @@ pub fn enumerate_filesystem_inputs(
         },
         collect_git_metadata: args.input_specifier_args.commit_metadata,
         repo_scan_timeout,
+        exclude_globset,
     };
     let (send_ds, recv_ds) = create_datastore_channel(args.num_jobs);
     let datastore_writer_thread =
@@ -189,23 +190,11 @@ pub fn enumerate_filesystem_inputs(
                     Ok(Some((origin_set, blob_metadata, vec_of_matches))) => {
                         for (_, single_match) in vec_of_matches {
                             // Send each match
-                            let is_test = if args.ignore_tests {
-                                origin_set
-                                    .iter()
-                                    .filter_map(|o| o.full_path())
-                                    .any(|p| is_test_like_path(&p))
-                            } else {
-                                false
-                            };
-
-                            if !is_test {
-                                // Send each match
-                                send_ds.send((
-                                    Arc::new(origin_set.clone()),
-                                    Arc::new(blob_metadata.clone()),
-                                    single_match,
-                                ))?;
-                            }
+                            send_ds.send((
+                                Arc::new(origin_set.clone()),
+                                Arc::new(blob_metadata.clone()),
+                                single_match,
+                            ))?;
                         }
                     }
                     Err(e) => {
@@ -246,13 +235,7 @@ fn make_fs_enumerator(
         // Pass no_dedup when enumerating git history
         ie.no_dedup(args.no_dedup);
 
-        // Load any specified ignore files
-        for ignore_path in args.content_filtering_args.ignore.iter() {
-            debug!("Using ignore rules from {}", ignore_path.display());
-            ie.add_ignore(ignore_path).with_context(|| {
-                format!("Failed to load ignore rules from {}", ignore_path.display())
-            })?;
-        }
+        ie.set_exclude_patterns(&args.content_filtering_args.exclude)?;
         // Determine whether to collect git metadata or not
         let collect_git_metadata = false;
         ie.collect_git_metadata(collect_git_metadata);
@@ -610,9 +593,15 @@ impl<'cfg> ParallelBlobIterator for (&'cfg EnumeratorConfig, FoundInput) {
                 // Spawn an enumerator thread so we can time-out cleanly
                 let path_clone = path.to_path_buf();
                 let (tx, rx) = std::sync::mpsc::channel();
+                let exclude_globset = cfg.exclude_globset.clone();
                 let handle = std::thread::spawn(move || {
                     let res = if collect_git_metadata {
-                        GitRepoWithMetadataEnumerator::new(&path_clone, repository).run()
+                        GitRepoWithMetadataEnumerator::new(
+                            &path_clone,
+                            repository,
+                            exclude_globset.clone(),
+                        )
+                        .run()
                     } else {
                         GitRepoEnumerator::new(&path_clone, repository).run()
                     };

@@ -1,9 +1,12 @@
 rules:
   - name: Azure Storage Account Name
-    id: kingfisher.azurestorage.name.1
+    id: kingfisher.azurestorage.1
     pattern: |
       (?xi)
       (?:
+        \b
+        azure
+        (?:.|[\n\r]){0,32}?
         (?i:
           (?:Account|Storage)
           (?:[._-]Account)?
@@ -19,13 +22,16 @@ rules:
     visible: false
     confidence: medium
     examples:
-      - storage_name=mystorageaccount123
+      - azure_storage_name=mystorageaccount123
       - mystorageaccount.blob.core.windows.net
 
   - name: Azure Storage Account Key
-    id: kingfisher.azurestorage.key.1
+    id: kingfisher.azurestorage.2
     pattern: |
       (?xi)
+      \b
+      azure
+      (?:.|[\n\r]){0,32}?
       (?i:(?:Access|Account|Storage)[_.-]?Key)
       (?:.|[\n\r]){0,25}?
       (
@@ -34,9 +40,9 @@ rules:
     min_entropy: 4.0
     confidence: medium
     examples:
-      - AccountKey=Xy9aB8cD7eF6gH5iJ4kL3mN2oP1qR0sT9uV8wX7yZ6aB5cD4eF3gH2iJ1kL0mN9oP8qR7sT6uV5wX4yZ3aB2cD1eF0gH9iJ8kL7mN6oP5q==\
+      - Azure AccountKey=Xy9aB8cD7eF6gH5iJ4kL3mN2oP1qR0sT9uV8wX7yZ6aB5cD4eF3gH2iJ1kL0mN9oP8qR7sT6uV5wX4yZ3aB2cD1eF0gH9iJ8kL7mN6oP5q==\
     validation:
       type: AzureStorage
     depends_on_rule:
-      - rule_id: kingfisher.azurestorage.name.1
+      - rule_id: kingfisher.azurestorage.1
         variable: AZURENAME

@@ -23,3 +23,5 @@ rules:
       - https://en.wikipedia.org/wiki/Base64#URL_applications
       - https://datatracker.ietf.org/doc/html/rfc4648
       - https://developer.okta.com/blog/2018/06/20/what-happens-if-your-jwt-is-stolen
+    validation:
+      type: JWT

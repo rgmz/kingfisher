@@ -27,6 +27,7 @@ mod aws;
 mod azure;
 mod gcp;
 mod httpvalidation;
+mod jwt;
 mod mongodb;
 mod postgres;
 mod utils;
@@ -57,35 +58,6 @@ pub fn init_validation_caches() {
     VALIDATION_CACHE.set(DashMap::new()).ok();
     IN_FLIGHT.set(DashMap::new()).ok();
 }
-
-// #[derive(Clone, FilterReflection, ParseFilter)]
-// #[filter(
-//     name = "b64enc",
-//     description = "Encodes the input string using Base64 encoding",
-//     parsed(B64EncFilter)
-// )]
-// pub struct B64EncFilterParser;
-
-// #[derive(Debug, Default, Clone)]
-// pub struct B64EncFilter;
-
-// impl std::fmt::Display for B64EncFilter {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "b64enc")
-//     }
-// }
-
-// impl Filter for B64EncFilter {
-//     fn evaluate(
-//         &self,
-//         input: &dyn ValueView,
-//         _runtime: &dyn Runtime,
-//     ) -> Result<Value, LiquidError> {
-//         let input_str = input.to_kstr().into_owned();
-//         let encoded = general_purpose::STANDARD.encode(input_str.as_bytes());
-//         Ok(Value::scalar(encoded))
-//     }
-// }
 
 #[derive(Clone)]
 pub struct CachedResponse {
@@ -700,7 +672,36 @@ async fn timed_validate_single_match<'a>(
                 },
             );
         }
+        // ---------------------------------------------------- JWT validator
+        Some(Validation::JWT) => {
+            let token = captured_values
+                .iter()
+                .find(|(n, ..)| n == "TOKEN")
+                .map(|(_, v, ..)| v.clone())
+                .unwrap_or_default();
 
+            if token.is_empty() {
+                m.validation_success = false;
+                m.validation_response_body = "JWT token not found.".to_string();
+                m.validation_response_status = StatusCode::BAD_REQUEST;
+                commit_and_return(m);
+                return;
+            }
+
+            match jwt::validate_jwt(&token).await {
+                Ok((ok, msg)) => {
+                    m.validation_success = ok;
+                    m.validation_response_body = msg;
+                    m.validation_response_status =
+                        if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
+                }
+                Err(e) => {
+                    m.validation_success = false;
+                    m.validation_response_body = format!("JWT validation error: {}", e);
+                    m.validation_response_status = StatusCode::BAD_REQUEST;
+                }
+            }
+        }
         // ---------------------------------------------------- AWS validator
         Some(Validation::AWS) => {
             let secret = captured_values

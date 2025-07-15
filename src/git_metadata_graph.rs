@@ -147,9 +147,9 @@ impl RepositoryIndex {
             .with_ordering(Ordering::PackLexicographicalThenLooseLexicographical)
         {
             let oid = unwrap_ok_or_continue!(oid, |e| debug!("Failed to read object id: {e}"));
-            if count % 100000 == 0 {
-                debug!("Indexed {} objects in RepositoryIndex::new", count);
-            }
+            // if count % 100000 == 0 {
+            //     debug!("Indexed {} objects in RepositoryIndex::new", count);
+            // }
             let hdr = unwrap_ok_or_continue!(odb.header(oid), |e| {
                 debug!("Failed to read object header for {oid}: {e}")
             });

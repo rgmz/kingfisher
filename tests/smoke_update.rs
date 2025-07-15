@@ -1,9 +1,4 @@
-use std::fs::{self, File};
-
-use flate2::{write::GzEncoder, Compression};
 use kingfisher::{cli::global::GlobalArgs, update::check_for_update};
-use tar::Builder;
-use tempfile::tempdir;
 use tokio;
 use wiremock::{
     matchers::{method, path},

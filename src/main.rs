@@ -132,7 +132,18 @@ pub fn determine_exit_code(datastore: &Arc<Mutex<findings_store::FindingsStore>>
     // exit with code 0 if there are NO findings discovered
     let ds = datastore.lock().unwrap();
     // Get all matches
-    let all_matches = ds.get_matches();
+    // let all_matches = ds.get_matches();
+
+    // Only consider visible matches when determining the exit code
+    let all_matches = ds
+        .get_matches()
+        .iter()
+        .filter(|msg| {
+            let (_, _, match_item) = &***msg;
+            match_item.visible
+        })
+        .collect::<Vec<_>>();
+
     if all_matches.is_empty() {
         // No findings discovered
         0
@@ -141,7 +152,7 @@ pub fn determine_exit_code(datastore: &Arc<Mutex<findings_store::FindingsStore>>
         let validated_matches = all_matches
             .iter()
             .filter(|msg| {
-                let (_, _, match_item) = &***msg;
+                let (_, _, match_item) = &****msg;
                 match_item.validation_success
             })
             .count();
@@ -278,7 +289,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             max_file_size_mb: 25.0,
             no_extract_archives: true,
             extraction_depth: 2,
-            ignore: Vec::new(),
+            exclude: Vec::new(), // Exclude patterns
             no_binary: true,
         },
         confidence: ConfidenceLevel::Medium,
@@ -289,8 +300,9 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         redact: false,
         git_repo_timeout: 1800,
         no_dedup: false,
-        ignore_tests: false,
         snippet_length: 256,
+        baseline_file: None,
+        manage_baseline: false,
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
     }
 }

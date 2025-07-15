@@ -140,9 +140,34 @@ kingfisher scan /path/to/repo --rule-stats
 
 ### Scan while ignoring likely test files
 
+`--exclude` skips any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
+
 ```bash
 # Scan source but skip likely unit / integration tests
-kingfisher scan ./my-project --ignore-tests
+kingfisher scan ./my-project \
+  --exclude='[Tt]est' \
+  --exclude='spec' \
+  --exclude='[Ff]ixture' \
+  --exclude='example' \
+  --exclude='sample'
+```
+
+### Exclude specific paths
+```bash
+# Skip all Python files and any directory named tests
+kingfisher scan ./my-project \
+  --exclude '*.py' \
+  --exclude '[Tt]ests'
+```
+
+If you want to know which files are being skipped, enable verbose debugging (-v) when scanning, which will report any files being skipped by the baseline file (or via --exclude):
+
+```bash
+# Skip all Python files and any directory named tests, and report to stderr any skipped files
+kingfisher scan ./my-project \
+  --exclude '*.py' \
+  --exclude tests \
+  -v
 ```
 
 ---
@@ -286,7 +311,32 @@ kingfisher github repos list --organization my-org
 - `--no-extract-archives`: Do not scan inside archives
 - `--extraction-depth <N>`: Specifies how deep nested archives should be extracted and scanned (default: 2)
 - `--redact`: Replaces discovered secrets with a one-way hash for secure output
-- `--ignore-tests`: Skip files or directories whose path component contains _test_, _spec_, _fixture_, _example_, or _sample_ (case-insensitive)
+- `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
+- `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
+- `--manage-baseline`: Create or update the baseline file with current findings
+
+## Build a Baseline / Detect New Secrets
+
+There are situations where a repository already contains checked‑in secrets, but you want to ensure no **new** secrets are introduced. A baseline file lets you document the known findings so future scans only report anything that is not already in that list.
+
+The easiest way to create a baseline is to run a normal scan with the `--manage-baseline` flag (typically at a low confidence level to capture all potential matches):
+
+```bash
+kingfisher scan /path/to/code \
+  --confidence low \
+  --manage-baseline \
+  --baseline-file ./baseline-file.yml
+```
+
+Use the same YAML file with the `--baseline-file` option on future scans to hide all recorded findings:
+
+```bash
+kingfisher scan /path/to/code \
+  --baseline-file /path/to/baseline-file.yaml
+```
+
+See ([docs/BASELINE.md](docs/BASELINE.md)) for full detail.
+
 
 ## Finding Fingerprint
 

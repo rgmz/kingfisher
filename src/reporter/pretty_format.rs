@@ -163,7 +163,9 @@ impl<'a> Display for PrettyFinding<'a> {
         writeln!(f, " |Fingerprint...: {}", rm.m.finding_fingerprint)?;
         writeln!(f, " |Confidence....: {}", rm.match_confidence.to_string())?;
         writeln!(f, " |Entropy.......: {:.2}", rm.m.calculated_entropy)?;
-        let validation_status = if rm.validation_response_status == StatusCode::CONTINUE.as_u16() {
+        let validation_status = if rm.validation_response_status == StatusCode::CONTINUE.as_u16()
+            || rm.validation_response_status == StatusCode::PRECONDITION_REQUIRED.as_u16()
+        {
             "Not Attempted".to_string()
         } else if rm.validation_success {
             "Active Credential".to_string()
@@ -312,7 +314,6 @@ fn test_pretty_format_with_nan_entropy_panics() {
         // core execution / performance
         num_jobs: 1,
         no_dedup: false,
-        ignore_tests: false,
 
         // rule selection
         rules: RuleSpecifierArgs {
@@ -349,7 +350,7 @@ fn test_pretty_format_with_nan_entropy_panics() {
             max_file_size_mb: 25.0,
             no_extract_archives: false,
             extraction_depth: 2,
-            ignore: Vec::new(),
+            exclude: Vec::new(), // Exclude patterns
             no_binary: true,
         },
 
@@ -367,6 +368,8 @@ fn test_pretty_format_with_nan_entropy_panics() {
 
         // display
         snippet_length: 256,
+        baseline_file: None,
+        manage_baseline: false,
     };
 
     // This will panic if the entropy isn't checked for NaN

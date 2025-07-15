@@ -100,6 +100,16 @@ pub async fn run_async_scan(
         ds.replace_matches(deduped_arcs);
     }
 
+    // If baseline management is enabled, apply the baseline
+    if args.baseline_file.is_some() || args.manage_baseline {
+        let path = args
+            .baseline_file
+            .clone()
+            .unwrap_or_else(|| std::path::PathBuf::from("baseline-file.yaml"));
+        let mut ds = datastore.lock().unwrap();
+        crate::baseline::apply_baseline(&mut ds, &path, args.manage_baseline, &input_roots)?;
+    }
+
     // If validation is enabled, run it as a second phase
     if !args.no_validate {
         info!("Starting secret validation phase...");

@@ -1,3 +1,4 @@
+pub mod baseline;
 pub mod binary;
 pub mod blob;
 pub mod bstring_escape;
@@ -43,6 +44,7 @@ use crossbeam_channel::Sender;
 pub use git_repo_enumerator::{GitRepoEnumerator, GitRepoResult, GitRepoWithMetadataEnumerator};
 pub use gix::{self, Repository, ThreadSafeRepository};
 use gix::{open::Options, open_opts};
+use globset::{Glob, GlobSet, GlobSetBuilder};
 pub use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use ignore::{DirEntry, WalkBuilder, WalkState};
 use tokio::time::Duration;
@@ -80,7 +82,7 @@ struct EnumeratorConfig {
     enumerate_git_history: bool,
     collect_git_metadata: bool,
     repo_scan_timeout: Duration,
-    // gitignore: Gitignore,
+    exclude_globset: Option<std::sync::Arc<GlobSet>>,
 }
 
 pub enum FoundInput {
@@ -204,6 +206,7 @@ pub struct FilesystemEnumerator {
     extract_archives: bool,
     extraction_depth: usize,
     no_dedup: bool,
+    exclude_globset: Option<std::sync::Arc<GlobSet>>,
 }
 
 impl FilesystemEnumerator {
@@ -234,6 +237,7 @@ impl FilesystemEnumerator {
             extract_archives: !args.content_filtering_args.no_extract_archives,
             extraction_depth: args.content_filtering_args.extraction_depth as usize,
             no_dedup: args.no_dedup,
+            exclude_globset: None,
         })
     }
 
@@ -285,6 +289,31 @@ impl FilesystemEnumerator {
     {
         self.walk_builder.filter_entry(filter);
         self
+    }
+
+    pub fn set_exclude_patterns(&mut self, patterns: &[String]) -> Result<&mut Self> {
+        if patterns.is_empty() {
+            return Ok(self);
+        }
+        let mut builder = GlobSetBuilder::new();
+        for pat in patterns {
+            builder.add(Glob::new(pat)?);
+        }
+        let globset = std::sync::Arc::new(builder.build()?);
+        self.exclude_globset = Some(globset.clone());
+        self.filter_entry(move |entry| {
+            let path = entry.path();
+            let matches = globset.is_match(path);
+            if matches {
+                debug!("Skipping {} due to --exclude", path.display());
+            }
+            !matches
+        });
+        Ok(self)
+    }
+
+    pub fn exclude_globset(&self) -> Option<std::sync::Arc<GlobSet>> {
+        self.exclude_globset.clone()
     }
 
     pub fn gitignore(&self) -> Result<Gitignore> {

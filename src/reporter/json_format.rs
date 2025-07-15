@@ -383,13 +383,13 @@ mod tests {
         rules::rule::Confidence,
         util::intern,
     };
+
     fn create_default_args() -> cli::commands::scan::ScanArgs {
         use crate::cli::commands::gitlab::GitLabRepoType; // bring enum into scope
 
         cli::commands::scan::ScanArgs {
             num_jobs: 1,
             no_dedup: false,
-            ignore_tests: false,
             rules: RuleSpecifierArgs {
                 rules_path: Vec::new(),
                 rule: vec!["all".into()],
@@ -424,7 +424,7 @@ mod tests {
                 max_file_size_mb: 25.0,
                 no_extract_archives: false,
                 extraction_depth: 2,
-                ignore: Vec::new(),
+                exclude: Vec::new(), // Exclude patterns
                 no_binary: true,
             },
             confidence: ConfidenceLevel::Medium,
@@ -436,6 +436,8 @@ mod tests {
             git_repo_timeout: 1800, // 30 minutes
             output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
             snippet_length: 256,
+            baseline_file: None,
+            manage_baseline: false,
         }
     }
 
