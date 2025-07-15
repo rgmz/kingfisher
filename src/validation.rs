@@ -688,7 +688,7 @@ async fn timed_validate_single_match<'a>(
                 return;
             }
 
-            match jwt::validate_jwt(&token, client).await {
+            match jwt::validate_jwt(&token).await {
                 Ok((ok, msg)) => {
                     m.validation_success = ok;
                     m.validation_response_body = msg;

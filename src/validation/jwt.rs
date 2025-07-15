@@ -46,7 +46,7 @@ struct Claims {
     aud: Option<Aud>,
 }
 
-pub async fn validate_jwt(token: &str, client: &Client) -> Result<(bool, String)> {
+pub async fn validate_jwt(token: &str) -> Result<(bool, String)> {
     // --- insecure payload decode -------------------------------------------------
     let claims: Claims = {
         let payload_b64 = token.split('.').nth(1).ok_or_else(|| anyhow!("invalid JWT format"))?;
@@ -199,16 +199,14 @@ mod tests {
     #[tokio::test]
     async fn valid_token() {
         let token = build_token(60);
-        let client = Client::new();
-        let res = validate_jwt(&token, &client).await.unwrap();
+        let res = validate_jwt(&token).await.unwrap();
         assert!(res.0);
     }
 
     #[tokio::test]
     async fn expired_token() {
         let token = build_token(-60);
-        let client = Client::new();
-        let res = validate_jwt(&token, &client).await.unwrap();
+        let res = validate_jwt(&token).await.unwrap();
         assert!(!res.0);
     }
 }
