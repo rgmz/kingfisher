@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.0]
+- Added rules for Google Gemini AI, Cohere, Stability.ai
+
 ## [1.21.0]
 - Improved Azure Storage rule
 - Added rule to detect TravisCI encrypted values
