@@ -22,9 +22,9 @@ Kingfisher extends Nosey Parker with live secret validation via cloud-provider A
 - **Built-In Validation**: Hundreds of built-in detection rules, many with live-credential validators that call the relevant service APIs (AWS, Azure, GCP, Stripe, etc.) to confirm a secret is active. You can extend or override the library by adding YAML-defined rules on the command line—see [docs/RULES.md](/docs/RULES.md) for details
 - **Git History Scanning**: Scan local repos, remote GitHub/GitLab orgs/users, or arbitrary GitHub/GitLab repos
 
-## Getting Started
+# Getting Started
 
-### Installation
+## Installation
 
 On macOS, you can simply
 
@@ -58,7 +58,22 @@ make darwin-all # builds both x64 and arm64
 make all # builds for every OS and architecture supported
 ```
 
-# Write Custom Rules!
+# 🔐 Detection Rules at a Glance
+
+Kingfisher ships with hundreds of rules that cover everything from classic cloud keys to the latest LLM-API secrets. Below is an overview:
+
+| Category | What we catch |
+|----------|---------------|
+| **AI / LLM APIs** | OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), and more
+| **Cloud Providers** | AWS, Azure, GCP, Alibaba Cloud, DigitalOcean, IBM Cloud, Cloudflare, and more
+| **Dev & CI/CD** | GitHub/GitLab tokens, CircleCI, TravisCI, TeamCity, Docker Hub, npm & PyPI publish token, and more
+| **Messaging & Comms** | Slack, Discord, Microsoft Teams, Twilio, Mailgun/SendGrid/Mailchimp, and more
+| **Databases & Data Ops** | MongoDB Atlas, PlanetScale, Postgres DSNs, Grafana Cloud, Datadog, Dynatrace, and more
+| **Payments & Billing** | Stripe, PayPal, Square, GoCardless, and more
+| **Security & DevSecOps** | Snyk, Dependency-Track, CodeClimate, Codacy, OpsGenie, PagerDuty, and more
+| **Misc. SaaS & Tools** | 1Password, Adobe, Atlassian/Jira, Asana, Netlify, Baremetrics, and more
+
+## Write Custom Rules!
 
 Kingfisher ships with hundreds of rules with HTTP and service‑specific validation checks (AWS, Azure, GCP, etc.) to confirm if a detected string is a live credential.
 
@@ -253,7 +268,7 @@ _If no token is provided Kingfisher still works for public repositories._
 
 ---
 
-### Update Checks
+## Update Checks
 
 Kingfisher automatically queries GitHub for a newer release when it starts and tells you whether an update is available.
 
@@ -264,15 +279,37 @@ Kingfisher automatically queries GitHub for a newer release when it starts and t
 
 - **Disable version checks** – Pass `--no-update-check` to skip both the startup and shutdown checks entirely
 
----
+# Advanced Options
 
-### List Builtin Rules
+## Build a Baseline / Detect New Secrets
+
+There are situations where a repository already contains checked‑in secrets, but you want to ensure no **new** secrets are introduced. A baseline file lets you document the known findings so future scans only report anything that is not already in that list.
+
+The easiest way to create a baseline is to run a normal scan with the `--manage-baseline` flag (typically at a low confidence level to capture all potential matches):
+
+```bash
+kingfisher scan /path/to/code \
+  --confidence low \
+  --manage-baseline \
+  --baseline-file ./baseline-file.yml
+```
+
+Use the same YAML file with the `--baseline-file` option on future scans to hide all recorded findings:
+
+```bash
+kingfisher scan /path/to/code \
+  --baseline-file /path/to/baseline-file.yaml
+```
+
+See ([docs/BASELINE.md](docs/BASELINE.md)) for full detail.
+
+## List Builtin Rules
 
 ```bash
 kingfisher rules list
 ```
 
-### To scan using **only** your own `my_rules.yaml` you could run:
+## To scan using **only** your own `my_rules.yaml` you could run:
 
 ```bash
 kingfisher scan \
@@ -281,7 +318,7 @@ kingfisher scan \
   ./src/
 ```
 
-### To add your rules alongside the built‑ins:
+## To add your rules alongside the built‑ins:
 
 ```bash
 kingfisher scan \
@@ -315,28 +352,6 @@ kingfisher github repos list --organization my-org
 - `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
 - `--manage-baseline`: Create or update the baseline file with current findings
 
-## Build a Baseline / Detect New Secrets
-
-There are situations where a repository already contains checked‑in secrets, but you want to ensure no **new** secrets are introduced. A baseline file lets you document the known findings so future scans only report anything that is not already in that list.
-
-The easiest way to create a baseline is to run a normal scan with the `--manage-baseline` flag (typically at a low confidence level to capture all potential matches):
-
-```bash
-kingfisher scan /path/to/code \
-  --confidence low \
-  --manage-baseline \
-  --baseline-file ./baseline-file.yml
-```
-
-Use the same YAML file with the `--baseline-file` option on future scans to hide all recorded findings:
-
-```bash
-kingfisher scan /path/to/code \
-  --baseline-file /path/to/baseline-file.yaml
-```
-
-See ([docs/BASELINE.md](docs/BASELINE.md)) for full detail.
-
 
 ## Finding Fingerprint
 
@@ -368,42 +383,29 @@ By integrating Kingfisher into your development lifecycle, you can:
 
 ## The Risk of Leaked Secrets
 
-Embedding credentials in code repositories is a pervasive, ever‑present risk that leads directly to data breaches:
+Real breaches show how one exposed key can snowball into a full-scale incident:
 
-1. **Uber (2016)**
+- **Uber (2016):** GitHub-hosted AWS key let attackers access data on 57 M riders and 600 k drivers. [[BBC](https://www.bbc.com/news/technology-42075306)] [[Ars](https://arstechnica.com/tech-policy/2017/11/report-uber-paid-hackers-100000-to-keep-2016-data-breach-quiet/)]
+- **AWS engineer (2020):** Pushed log files with root credentials to GitHub. [[Register](https://www.theregister.com/2020/01/23/aws_engineer_credentials_github/)] [[UpGuard](https://www.upguard.com/breaches/identity-and-access-misstep-how-an-amazon-engineer-exposed-credentials-and-more)]
+- **Infosys (2023):** Full-admin AWS key left in a public PyPI package for a year. [[Stack](https://www.thestack.technology/infosys-leak-aws-key-exposed-on-pypi/)] [[Blog](https://tomforb.es/blog/infosys-leak/)]
+- **Microsoft (2023):** Azure SAS token in an AI repo exposed 38 TB of internal data. [[Wiz](https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers)] [[TechCrunch](https://techcrunch.com/2023/09/18/microsoft-ai-researchers-accidentally-exposed-terabytes-of-internal-sensitive-data/)]
+- **GitHub (2023):** RSA SSH host key briefly went public; company rotated it. [[GitHub](https://github.blog/news-insights/company-news/we-updated-our-rsa-ssh-host-key/)]
 
-   - _Incident_: Attackers stole GitHub credentials, retrieved an AWS key from a developer’s private repo, and accessed data on 57 million riders and 600 000 drivers.
-   - _Sources_: [BBC News](https://www.bbc.com/news/technology-42075306), [Ars Technica](https://arstechnica.com/tech-policy/2017/11/report-uber-paid-hackers-100000-to-keep-2016-data-breach-quiet/)
-
-2. **AWS**
-
-   - _Incident_: An AWS engineer accidentally published log files and CloudFormation templates containing AWS key pairs (including “rootkey.csv”) to a public GitHub repo.
-   - _Sources_: [The Register](https://www.theregister.com/2020/01/23/aws_engineer_credentials_github/), [UpGuard](https://www.upguard.com/breaches/identity-and-access-misstep-how-an-amazon-engineer-exposed-credentials-and-more)
-
-3. **Infosys**
-
-   - _Incident_: Infosys published an internal PyPI package embedding a FullAdminAccess AWS key for a Johns Hopkins data bucket; the key remained active for over a year.
-   - _Sources_: [The Stack](https://www.thestack.technology/infosys-leak-aws-key-exposed-on-pypi/), [Tom Forbes Blog](https://tomforb.es/blog/infosys-leak/)
-
-4. **Microsoft**
-
-   - _Incident_: Microsoft’s AI research GitHub repo included an overly permissive Azure SAS token, exposing 38 TB of private data (workstation backups, 30,000+ Teams messages).
-   - _Sources_: [Wiz Blog](https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers), [TechCrunch](https://techcrunch.com/2023/09/18/microsoft-ai-researchers-accidentally-exposed-terabytes-of-internal-sensitive-data/)
-
-5. **GitHub**
-   - _Incident_: GitHub discovered its RSA SSH host private key was briefly exposed in a public repository and rotated it out of caution.
-   - _Sources_: [GitHub Blog](https://github.blog/news-insights/company-news/we-updated-our-rsa-ssh-host-key/)
-
-Left unchecked, leaked secrets can lead to unauthorized access, pivoting within your environment, regulatory fines, and brand‑damaging incident response costs.
+Leaked secrets fuel unauthorized access, lateral movement, regulatory fines, and brand-damaging incident-response costs.
 
 # Benchmark Results
 
 See ([docs/COMPARISON.md](docs/COMPARISON.md))
 
+
+<p align="center">
+  <img src="docs/runtime-comparison.png" alt="Kingfisher Runtime Comparison" style="vertical-align: center;" />
+</p>
+
+
 # Roadmap
 
 - More rules
-- Auto-updater
 - Packages for Linux (deb, rpm)
 - Please file a [feature request](https://github.com/mongodb/kingfisher/issues) if you have specific features you'd like added
 

@@ -94,3 +94,37 @@ rules:
           client_secret: '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',
           redirect_uri: `http://localhost:${Config.OAUTH_HTTP_PORT}/oauth2callback`
         };
+  - name: Google Gemini API Key
+    id: kingfisher.google.7
+    pattern: |
+      (?xi)           
+      (               
+        AIza          
+        [A-Za-z0-9_-]{35}
+      )
+      \b
+    min_entropy: 3.5
+    confidence: medium
+    examples:
+      - AIzaSyByz6BGQf8QtcQLml8spbyy8x5_327PTow
+      - AIzaSyDhISgbccTi6mfp2GOSmTtqdU__IdevJes
+      - AIzaSyA_uW1h2CF4ak3vHr7si_RFD_yWxM4tMAM
+    references:
+      - https://ai.google.dev/docs/gemini_api_overview
+    validation:
+      type: Http
+      content:
+        request:
+          method: GET
+          url: https://generativelanguage.googleapis.com/v1/models
+          headers:
+            X-goog-api-key: '{{ TOKEN }}'
+          response_matcher:
+            - report_response: true
+            - type: StatusMatch
+              status: [200]
+            - type: WordMatch
+              match_all_words: true
+              words:
+                - '"models"'
+                - '"name"'

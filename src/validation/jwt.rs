@@ -185,7 +185,6 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
 mod tests {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Duration as ChronoDuration, Utc};
-    use reqwest::Client;
 
     use super::validate_jwt;
 

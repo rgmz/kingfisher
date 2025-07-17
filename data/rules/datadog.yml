@@ -5,7 +5,7 @@ rules:
       (?xi) 
       \b
       (?:datadog|dd-|dd_)
-      (?:.|[\n\r]){0,32}?
+      (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b                     
@@ -46,8 +46,7 @@ rules:
       \b                     
       (?:
         dd[_-]?\w{0,8}[_-]?(?:key|secret) |
-        datadog |
-        dog
+        datadog
       )
       (?:.|[\n\r]){0,64}?
       \b

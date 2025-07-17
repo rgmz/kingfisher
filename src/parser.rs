@@ -98,7 +98,7 @@ impl Language {
             Language::Rust => Ok(tree_sitter_rust::LANGUAGE.into()),
             Language::Toml => Ok(tree_sitter_toml_ng::LANGUAGE.into()),
             Language::TypeScript => Ok(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
-            Language::Yaml => Ok(tree_sitter_yaml::language()),
+            Language::Yaml => Ok(tree_sitter_yaml::LANGUAGE.into()),
         }
     }
 }

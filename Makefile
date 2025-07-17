@@ -366,6 +366,13 @@ all: linux darwin
 	@echo -e "\nCombined Checksums:"
 	@cat target/release/CHECKSUMS.txt
 
+dockerfile:
+# Build for the host architecture (default)
+	docker build -f docker/Dockerfile -t kingfisher:latest .
+
+# Cross‑build for arm64 from an x64 machine
+	docker buildx build -f docker/Dockerfile --platform linux/arm64 -t kingfisher:arm64 .
+
 list-archives:
 	@echo -e "\n=== Built archives ==="
 	@found=0; \
