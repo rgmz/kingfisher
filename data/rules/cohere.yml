@@ -35,5 +35,4 @@ rules:
               match_all_words: true
               words:
                 - '"connectors"'
-                - '"id"'
-                - '"organization_id"'
+                - '"total_count"'
