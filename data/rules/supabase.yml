@@ -4,9 +4,8 @@ rules:
     pattern: |
       (?xi)
       \b
-      sbp_
       (
-        [a-z0-9_-]{40}
+        sbp_[a-z0-9_-]{40}
       )
       \b
     min_entropy: 3.5

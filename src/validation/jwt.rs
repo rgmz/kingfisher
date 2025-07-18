@@ -75,6 +75,7 @@ pub async fn validate_jwt(token: &str) -> Result<(bool, String)> {
     if let Some(iss) = claims.iss.clone() {
         // parse header now (kid, alg)
         let header = decode_header(token).map_err(|e| anyhow!("decode header: {e}"))?;
+        let alg = header.alg;
 
         // build discovery URL and fetch it (redirects disabled)
         let config_url = format!("{}/.well-known/openid-configuration", iss.trim_end_matches('/'));
@@ -161,7 +162,7 @@ pub async fn validate_jwt(token: &str) -> Result<(bool, String)> {
 
         return Ok((
             true,
-            format!("JWT valid (iss: {issuer}, aud: {:?})", extract_aud_strings(&claims)),
+            format!("JWT valid (alg: {:?}, iss: {issuer}, aud: {:?})", alg, extract_aud_strings(&claims)),
         ));
     }
 

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.23.0]
+- Updating GitHub Action to generate Docker image
+- Added rules for Diffbot, ai21, baseten
+- Fixed supabase rule
+
 ## [1.22.0]
 - Added rules for Google Gemini AI, Cohere, Stability.ai, Replicate, Runway, Clarifai
 - Upgraded dependencies
