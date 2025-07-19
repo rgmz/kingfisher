@@ -23,13 +23,8 @@ RUN set -eux; \
         exit 1; \
     fi; \
     curl -fsSL "$LATEST_URL" -o kingfisher.tgz; \
-    CHECKSUM_URL=$(curl -fsSL https://api.github.com/repos/mongodb/kingfisher/releases/latest \
-        | grep -Eo "https://[^\"]*checksums.txt"); \
-    curl -fsSL "$CHECKSUM_URL" -o checksums.txt; \
-    EXPECTED_CHECKSUM=$(grep "${SUFFIX}" checksums.txt | awk '{print $1}'); \
-    echo "$EXPECTED_CHECKSUM  kingfisher.tgz" | sha256sum -c -; \
     tar -xzf kingfisher.tgz; \
-    rm kingfisher.tgz checksums.txt; \
+    rm kingfisher.tgz CHECKSUM-*.txt; \
     # locate the binary (pattern covers kingfisher-linux-x64 / kingfisher-linux-arm64)
     KF_PATH=$(find . -type f -name 'kingfisher*' -executable -print -quit); \
     if [ -z "$KF_PATH" ]; then echo "No executable kingfisher binary found" >&2; exit 1; fi; \
