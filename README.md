@@ -58,6 +58,58 @@ make darwin-all # builds both x64 and arm64
 make all # builds for every OS and architecture supported
 ```
 
+
+### Run Kingfisher in Docker
+
+
+Run the dockerized Kingfisher container:
+```bash
+# GitHub Container Registry 
+docker run --rm ghcr.io/mongodb/kingfisher:latest --version
+
+# Scan the current working directory
+# (mounts your code at /src and scans it)
+docker run --rm \
+  -v "$PWD":/src \
+  ghcr.io/mongodb/kingfisher:latest scan /src
+
+
+# Scan while providing a GitHub token
+# Mounts your working dir at /proj and passes in the token:
+docker run --rm \
+  -e KF_GITHUB_TOKEN=ghp_… \
+  -v "$PWD":/proj \
+  ghcr.io/mongodb/kingfisher:latest \
+    scan --git-url https://github.com/org/private_repo.git
+
+# Scan and write a JSON report locally
+# Here we:
+#    1. Mount $PWD → /proj
+#    2. Tell Kingfisher to write findings.json inside /proj/reports
+#   3. Ensure ./reports exists on your host so Docker can mount it
+mkdir -p reports
+
+# run and output into host’s ./reports directory
+docker run --rm \
+  -v "$PWD":/proj \
+  ghcr.io/mongodb/kingfisher:latest \
+    scan /proj \
+    --format json \
+    --output /proj/reports/findings.json
+
+
+# Tip: you can combine multiple mounts if you prefer separating source vs. output:
+# Here /src is read‑only, and /out holds your generated reports
+docker run --rm \
+  -v "$PWD":/src:ro \
+  -v "$PWD/reports":/out \
+  ghcr.io/mongodb/kingfisher:latest \
+    scan /src \
+    --format json \
+    --output /out/findings.json
+
+```
+
 # 🔐 Detection Rules at a Glance
 
 Kingfisher ships with hundreds of rules that cover everything from classic cloud keys to the latest LLM-API secrets. Below is an overview:

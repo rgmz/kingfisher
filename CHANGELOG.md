@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.24.0]
+- Now generating DEB and RPM packages
+- Now releasing Docker images, and updated README
+- Added rule for Scale, Deepgram, AssemblyAI
+
+
 ## [1.23.0]
 - Updating GitHub Action to generate Docker image
 - Added rules for Diffbot, ai21, baseten
