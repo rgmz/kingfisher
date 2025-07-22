@@ -43,7 +43,7 @@ jobs:
           mkdir -p dist
           cp target/release/kingfisher-linux-x64.tgz dist/
           cp target/release/kingfisher-linux-x64.deb dist/
-          cp target/release/kingfisher--linuxx64.rpm dist/
+          cp target/release/kingfisher-linux-x64.rpm dist/
 
       - uses: actions/upload-artifact@v4
         with:
