@@ -1,6 +1,6 @@
 [workspace.package]
 edition = "2021"
-rust-version = "1.83"
+rust-version = "1.88"
 license = "Apache-2.0"
 authors = ["Mick Grove <mick.grove@mongodb.com>"]
 homepage = "https://github.com/mongodb/kingfisher"
@@ -10,7 +10,7 @@ publish = false
 
 [package]
 name = "kingfisher"
-version = "1.23.0"
+version = "1.24.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -18,6 +18,25 @@ authors.workspace = true
 homepage.workspace = true
 repository.workspace = true
 publish.workspace = true
+
+[package.metadata.deb]
+name = "kingfisher"
+maintainer = "Mick Grove <mick.grove@mongodb.com>"
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/kingfisher", "/usr/bin/kingfisher", "755"]
+]
+
+[package.metadata.generate-rpm]
+package = "kingfisher"
+summary = "MongoDB's blazingly fast secret scanning and validation tool"
+license = "Apache-2.0"
+url = "https://github.com/mongodb/kingfisher"
+assets = [
+    { source = "target/release/kingfisher", dest = "/usr/bin/kingfisher", mode = "755" }
+]
 
 [dependencies]
 clap = { version = "4.5", features = [
@@ -27,6 +46,7 @@ clap = { version = "4.5", features = [
     "unicode",
     "wrap_help",
 ] }
+
 anyhow = "1.0"
 bstr = { version = "1.12", features = ["serde"] }
 fixedbitset = "0.5"

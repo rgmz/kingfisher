@@ -1,8 +1,7 @@
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
 
-# Detect project name from Cargo.toml
-PROJECT_NAME := $(shell grep '^name' Cargo.toml | cut -d '"' -f 2)
+PROJECT_NAME := kingfisher
 
 # Determine OS and whether to use gtar on darwin
 OS := $(shell uname)

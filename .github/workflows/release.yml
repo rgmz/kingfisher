@@ -21,19 +21,37 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
 
+      - name: Install packaging tools
+        run: cargo install cargo-deb cargo-generate-rpm
+
       - name: Build (Makefile linux-x64)
         run: make linux-x64
+
+      - name: Build Debian package
+        run: |
+          cargo deb --no-build --target x86_64-unknown-linux-musl \
+            --output target/release/kingfisher-amd64.deb
+
+      - name: Build RPM package
+        run: |
+          cargo generate-rpm --target x86_64-unknown-linux-musl \
+            --output target/release/kingfisher-amd64.rpm
 
       - name: Move artifact to dist
         shell: bash
         run: |
           mkdir -p dist
           cp target/release/kingfisher-linux-x64.tgz dist/
+          cp target/release/kingfisher-amd64.deb dist/
+          cp target/release/kingfisher-amd64.rpm dist/
 
       - uses: actions/upload-artifact@v4
         with:
           name: kingfisher-linux-x64
-          path: dist/kingfisher-*linux-x64*.*
+          path: |
+            dist/kingfisher-linux-x64.tgz
+            dist/kingfisher-amd64.deb
+            dist/kingfisher-amd64.rpm
 
   linux-arm64:
     name: Linux arm64
@@ -49,19 +67,37 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
 
+      - name: Install packaging tools
+        run: cargo install cargo-deb cargo-generate-rpm
+
       - name: Build (Makefile linux-arm64)
         run: make linux-arm64
+
+      - name: Build Debian package
+        run: |
+          cargo deb --no-build --target aarch64-unknown-linux-musl \
+            --output target/release/kingfisher-arm64.deb
+
+      - name: Build RPM package
+        run: |
+          cargo generate-rpm --target aarch64-unknown-linux-musl \
+            --output target/release/kingfisher-arm64.rpm
 
       - name: Move artifact to dist
         shell: bash
         run: |
           mkdir -p dist
           cp target/release/kingfisher-linux-arm64.tgz dist/
+          cp target/release/kingfisher-arm64.deb dist/
+          cp target/release/kingfisher-arm64.rpm dist/
 
       - uses: actions/upload-artifact@v4
         with:
           name: kingfisher-linux-arm64
-          path: dist/kingfisher-*linux-arm64*.*
+          path: |
+            dist/kingfisher-linux-arm64.tgz
+            dist/kingfisher-arm64.deb
+            dist/kingfisher-arm64.rpm
 
 
   macos-x64:
