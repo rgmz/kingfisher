@@ -23,6 +23,7 @@ Kingfisher extends Nosey Parker with live secret validation via cloud-provider A
 - **Git History Scanning**: Scan local repos, remote GitHub/GitLab orgs/users, or arbitrary GitHub/GitLab repos
 - **Baseline Support:** Generate and manage baseline files to ignore known secrets and report only newly introduced ones. See  ([docs/BASELINE.md](docs/BASELINE.md)) for details.
 
+# Getting Started
 ## Installation
 
 On macOS, you can simply
