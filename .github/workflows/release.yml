@@ -30,28 +30,33 @@ jobs:
       - name: Build Debian package
         run: |
           cargo deb --no-build --target x86_64-unknown-linux-musl \
-            --output target/release/kingfisher-amd64.deb
+            --output target/release/kingfisher-linux-x64.deb
 
       - name: Build RPM package
         run: |
           cargo generate-rpm --target x86_64-unknown-linux-musl \
-            --output target/release/kingfisher-amd64.rpm
+            --output target/release/kingfisher-linux-x64.rpm
 
       - name: Move artifact to dist
         shell: bash
         run: |
           mkdir -p dist
           cp target/release/kingfisher-linux-x64.tgz dist/
-          cp target/release/kingfisher-amd64.deb dist/
-          cp target/release/kingfisher-amd64.rpm dist/
+          cp target/release/kingfisher-linux-x64.deb dist/
+          cp target/release/kingfisher--linuxx64.rpm dist/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kingfisher-linux-x64
-          path: |
-            dist/kingfisher-linux-x64.tgz
-            dist/kingfisher-amd64.deb
-            dist/kingfisher-amd64.rpm
+          name: kingfisher-linux-x64.tgz
+          path: dist/kingfisher-linux-x64.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kingfisher-linux-x64.deb
+          path: dist/kingfisher-linux-x64.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kingfisher-linux-x64.rpm
+          path: dist/kingfisher-linux-x64.rpm
 
   linux-arm64:
     name: Linux arm64
@@ -76,29 +81,33 @@ jobs:
       - name: Build Debian package
         run: |
           cargo deb --no-build --target aarch64-unknown-linux-musl \
-            --output target/release/kingfisher-arm64.deb
+            --output target/release/kingfisher-linux-arm64.deb
 
       - name: Build RPM package
         run: |
           cargo generate-rpm --target aarch64-unknown-linux-musl \
-            --output target/release/kingfisher-arm64.rpm
+            --output target/release/kingfisher-linux-arm64.rpm
 
       - name: Move artifact to dist
         shell: bash
         run: |
           mkdir -p dist
           cp target/release/kingfisher-linux-arm64.tgz dist/
-          cp target/release/kingfisher-arm64.deb dist/
-          cp target/release/kingfisher-arm64.rpm dist/
+          cp target/release/kingfisher-linux-arm64.deb dist/
+          cp target/release/kingfisher-linux-arm64.rpm dist/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kingfisher-linux-arm64
-          path: |
-            dist/kingfisher-linux-arm64.tgz
-            dist/kingfisher-arm64.deb
-            dist/kingfisher-arm64.rpm
-
+          name: kingfisher-linux-arm64.tgz
+          path: dist/kingfisher-linux-arm64.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kingfisher-linux-arm64.deb
+          path: dist/kingfisher-linux-arm64.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kingfisher-linux-arm64.rpm
+          path: dist/kingfisher-linux-arm64.rpm
 
   macos-x64:
     name: macOS x64
