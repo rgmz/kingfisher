@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM alpine:latest
 
-RUN apk add --no-cache curl tar git sh
+RUN apk add --no-cache curl tar git
 
-ARG TARGETARCH               # set automatically by BuildKit
+ARG TARGETARCH
 ENV TARGETARCH=${TARGETARCH}
 
 WORKDIR /app
