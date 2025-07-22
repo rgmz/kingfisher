@@ -42,8 +42,6 @@ endif
 
 ARCHIVE_CMD = $(TAR_CMD) $(TAR_OPTS)
 SUDO_CMD := $(shell command -v sudo 2>/dev/null)
-HOST_UID := $(shell id -u)
-HOST_GID := $(shell id -g)
 
 .PHONY: default help create-dockerignore ubuntu-x64 ubuntu-arm64 linux-x64 linux-arm64 darwin-arm64 darwin-x64 windows-x64 windows \
         linux darwin all list-archives check-docker check-rust clean tests
@@ -243,8 +241,7 @@ endif
 linux-x64: check-docker create-dockerignore
 	@mkdir -p target/release
 	docker run --platform linux/amd64 --rm \
-		-e HOST_UID=$(HOST_UID) -e HOST_GID=$(HOST_GID) \
-		-v "$$(pwd):/src" -w /src rust:1.88-alpine sh -eu -c '\
+	  -v "$$(pwd):/src" -w /src rust:1.88-alpine sh -eu -c '\
 		apk add --no-cache \
 		    musl-dev \
 		    gcc g++ make cmake pkgconfig \
@@ -264,26 +261,16 @@ linux-x64: check-docker create-dockerignore
 		\
 		cargo build --release --target x86_64-unknown-linux-musl && \
 		cd target/x86_64-unknown-linux-musl/release && \
-		find "./$(PROJECT_NAME)" -type f -executable \
-				-not -name "*.d" -not -name "*.rlib" \
-				-exec sha256sum {} \; > CHECKSUM.txt && \
-		chown -R $$HOST_UID:$$HOST_GID /src/target \
+	    sha256sum kingfisher > CHECKSUM.txt && \
+	    tar -czf /src/target/release/kingfisher-linux-x64.tgz \
+	        kingfisher CHECKSUM.txt \
 	'
-	@cd target/release && \
-	  rm -rf $(PROJECT_NAME)-linux-x64.tgz && \
-	  cp ../x86_64-unknown-linux-musl/release/$(PROJECT_NAME) . && \
-	  cp ../x86_64-unknown-linux-musl/release/CHECKSUM.txt CHECKSUM-linux-x64.txt && \
-	  tar --no-xattrs -czf $(PROJECT_NAME)-linux-x64.tgz \
-	      $(PROJECT_NAME) CHECKSUM-linux-x64.txt && \
-	  rm $(PROJECT_NAME) && \
-	  sha256sum $(PROJECT_NAME)-linux-x64.tgz >> CHECKSUM-linux-x64.txt
 	$(MAKE) list-archives
 
 linux-arm64: check-docker create-dockerignore
 	@mkdir -p target/release
 	docker run --platform linux/arm64 --rm \
-		-e HOST_UID=$(HOST_UID) -e HOST_GID=$(HOST_GID) \
-	  	-v "$$(pwd):/src" -w /src rust:1.88-alpine sh -eu -c '\
+	  -v "$$(pwd):/src" -w /src rust:1.88-alpine sh -eu -c '\
 		apk add --no-cache \
 		    musl-dev \
 		    gcc g++ make cmake pkgconfig \
@@ -304,19 +291,10 @@ linux-arm64: check-docker create-dockerignore
 		cargo build --release --target aarch64-unknown-linux-musl && \
 		\
 		cd target/aarch64-unknown-linux-musl/release && \
-		find "./$(PROJECT_NAME)" -type f -executable \
-				-not -name "*.d" -not -name "*.rlib" \
-				-exec sha256sum {} \; > CHECKSUM.txt && \
-		chown -R $$HOST_UID:$$HOST_GID /src/target \
+	    sha256sum kingfisher > CHECKSUM.txt && \
+	    tar -czf /src/target/release/kingfisher-linux-arm64.tgz \
+	        kingfisher CHECKSUM.txt \
 	'
-	@cd target/release && \
-	  rm -rf $(PROJECT_NAME)-linux-arm64.tgz && \
-	  cp ../aarch64-unknown-linux-musl/release/$(PROJECT_NAME) . && \
-	  cp ../aarch64-unknown-linux-musl/release/CHECKSUM.txt CHECKSUM-linux-arm64.txt && \
-	  tar --no-xattrs -czf $(PROJECT_NAME)-linux-arm64.tgz \
-	      $(PROJECT_NAME) CHECKSUM-linux-arm64.txt && \
-	  rm $(PROJECT_NAME) && \
-	  sha256sum $(PROJECT_NAME)-linux-arm64.tgz >> CHECKSUM-linux-arm64.txt
 	$(MAKE) list-archives
 
 
