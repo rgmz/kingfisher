@@ -36,17 +36,33 @@ impl Git {
     /// Create a new `Git` instance.
     ///
     /// * `ignore_certs`: If `true`, disables SSL certificate verification for `git` operations.
-    pub fn new(ignore_certs: bool) -> Self {
-        let credentials = if std::env::var("KF_GITHUB_TOKEN").is_ok() {
-            vec![
-                "-c".into(),
-                r#"credential.helper="#.into(),
-                "-c".into(),
+pub fn new(ignore_certs: bool) -> Self {
+        let mut credentials = Vec::new();
+
+        // If either GitHub or GitLab token is set, first clear existing credential.helpers
+        if std::env::var("KF_GITHUB_TOKEN").is_ok() 
+            || std::env::var("KF_GITLAB_TOKEN").is_ok() 
+        {
+            credentials.push("-c".into());
+            credentials.push(r#"credential.helper="#.into());
+        }
+
+        // Inject GitHub token helper
+        if std::env::var("KF_GITHUB_TOKEN").is_ok() {
+            credentials.push("-c".into());
+            credentials.push(
                 r#"credential.helper=!_ghcreds() { echo username="kingfisher"; echo password="$KF_GITHUB_TOKEN"; }; _ghcreds"#.into(),
-            ]
-        } else {
-            Vec::new()
-        };
+            );
+        }
+
+        // Inject GitLab token helper
+        if std::env::var("KF_GITLAB_TOKEN").is_ok() {
+            credentials.push("-c".into());
+            credentials.push(
+                r#"credential.helper=!_glcreds() { echo username="oauth2"; echo password="$KF_GITLAB_TOKEN"; }; _glcreds"#.into(),
+            );
+        }
+
         Self { credentials, ignore_certs }
     }
 

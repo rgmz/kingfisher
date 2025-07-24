@@ -318,7 +318,27 @@ _If no token is provided Kingfisher still works for public repositories._
 | 200  | Findings discovered           |
 | 205  | Validated findings discovered |
 
----
+
+## Install a Pre-Commit Hook
+
+Run the provided helper script to add a hook that scans staged files before each commit:
+
+```bash
+./install-precommit-hook.sh
+```
+
+This creates `.git/hooks/pre-commit` that scans the files staged for commit with `kingfisher scan --no-update-check` and blocks the commit if any secrets are found.
+
+### Install a Pre-Receive Hook
+
+To check incoming pushes on a server-side repository, install the pre-receive hook:
+
+```bash
+./install-prereceive-hook.sh
+```
+
+The resulting `.git/hooks/pre-receive` script scans the files in each pushed commit and rejects the push if any secrets are detected.
+
 
 ## Update Checks
 
