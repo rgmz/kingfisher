@@ -19,14 +19,23 @@ const FAST_SELECT_MS: u64 = 300;
 const SRV_CONNECT_MS: u64 = 15_000; // gives Atlas a fighting chance
 const SRV_SELECT_MS: u64 = 15_000;
 
-/// Validates a MongoDB URI in ≤ 2 s. Returns `Ok(true)` on successful ping.
-pub async fn validate_mongodb(uri: &str) -> Result<bool> {
+/// Validates a MongoDB URI in ≤ 2 s. Returns `(bool, String)` where the
+/// boolean indicates success and the string provides a status message.
+pub async fn validate_mongodb(uri: &str) -> Result<(bool, String)> {
     // ---- quick reject without touching the network
     if !looks_like_mongodb_uri(uri) {
-        return Ok(false);
+        return Ok((false, "Invalid MongoDB URI".to_string()));
     }
 
     let is_srv = uri.starts_with("mongodb+srv://");
+
+    if is_srv {
+        // Skip SRV URIs to avoid slow DNS lookups and topology discovery.
+        return Ok((
+            false,
+            "Validation skipped for mongodb+srv:// URI (performance reasons)".to_string(),
+        ));
+    }
 
     // ---- build client opts
     let mut opts = ClientOptions::parse(uri).await?;
@@ -46,7 +55,13 @@ pub async fn validate_mongodb(uri: &str) -> Result<bool> {
 
     // ---- dial and ping
     let client = Client::with_options(opts)?;
-    Ok(client.database("admin").run_command(doc! { "ping": 1 }).await.is_ok())
+    let ok = client.database("admin").run_command(doc! { "ping": 1 }).await.is_ok();
+    let msg = if ok {
+        "MongoDB connection is valid.".to_string()
+    } else {
+        "MongoDB connection failed.".to_string()
+    };
+    Ok((ok, msg))
 }
 
 // pub fn generate_mongodb_cache_key(mongodb_uri: &str) -> String {

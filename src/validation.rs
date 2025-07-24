@@ -538,16 +538,16 @@ async fn timed_validate_single_match<'a>(
             }
 
             match mongodb::validate_mongodb(&uri).await {
-                Ok(ok) => {
+                Ok((ok, msg)) => {
                     m.validation_success = ok;
-                    m.validation_response_body = if ok {
-                        "MongoDB connection is valid."
+                    m.validation_response_body = msg;
+                    m.validation_response_status = if uri.starts_with("mongodb+srv://") {
+                        StatusCode::CONTINUE
+                    } else if ok {
+                        StatusCode::OK
                     } else {
-                        "MongoDB connection failed."
-                    }
-                    .to_string();
-                    m.validation_response_status =
-                        if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
+                        StatusCode::UNAUTHORIZED
+                    };
                 }
                 Err(e) => {
                     m.validation_success = false;

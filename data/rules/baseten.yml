@@ -4,6 +4,9 @@ rules:
     pattern: |
       (?x)       
       \b
+      baseten
+      (?:.|[\n\r]){0,32}?
+      \b
       (               
         [A-Za-z0-9]{8} 
         \.             
@@ -13,10 +16,10 @@ rules:
     min_entropy: 3.4
     confidence: medium
     examples:
-      - WSsDXzCD.uOcxAp7k82IvCKyY36TnpVbP4ZszP1qw
-      - crXCQC3W.CgCGGY1b9IfJan5TppW0Z07C9oMN2DmR
-      - h2wFkhFC.3WFVwVcxGFr4Qup0gyhvIuONwQxEpL0A
-      - XqbIpj04.x73j1zLUOEgGIKROqVbxsmggPdL8JvAY
+      - baseten_key = WSsDXzCD.uOcxAp7k82IvCKyY36TnpVbP4ZszP1qw
+      - baseten_key = crXCQC3W.CgCGGY1b9IfJan5TppW0Z07C9oMN2DmR
+      - baseten_key = h2wFkhFC.3WFVwVcxGFr4Qup0gyhvIuONwQxEpL0A
+      - baseten_key = XqbIpj04.x73j1zLUOEgGIKROqVbxsmggPdL8JvAY
     references:
       - https://docs.baseten.co/examples/vllm 
       - https://docs.baseten.co/reference/management-api/api-keys/lists-the-users-api-keys

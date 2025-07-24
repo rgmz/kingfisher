@@ -92,3 +92,5 @@ rules:
     min_entropy: 3.5
     examples:
       - mdb_sa_sk_BdIX_jLzut2WTgglKzKvSgWMDDj5hEoTqdwOyLOL
+    validation:
+      type: MongoDB
