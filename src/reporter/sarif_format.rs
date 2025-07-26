@@ -206,7 +206,7 @@ impl DetailsReporter {
             let p = first_match.origin.first();
             match p {
                 Origin::File(e) => {
-                    // msg.push_str(&format!("Location: {}\n", e.path.display()));
+                    
                     let uri = if let Some(url) = self.jira_issue_url(&e.path, args) {
                         url
                     } else {
