@@ -20,7 +20,7 @@ use crate::{
     findings_store,
     git_binary::{CloneMode, Git},
     git_url::GitUrl,
-    github, gitlab,
+    github, gitlab, jira,
     matcher::Match,
     origin::OriginSet,
     PathBuf,
@@ -223,4 +223,33 @@ pub async fn enumerate_gitlab_repos(
     repo_urls.sort();
     repo_urls.dedup();
     Ok(repo_urls)
+}
+
+
+pub async fn fetch_jira_issues(
+    args: &scan::ScanArgs,
+    global_args: &global::GlobalArgs,
+    datastore: &Arc<Mutex<findings_store::FindingsStore>>,
+) -> Result<Vec<PathBuf>> {
+    let Some(jira_url) = args.input_specifier_args.jira_url.clone() else {
+        return Ok(Vec::new());
+    };
+    let Some(jql) = args.input_specifier_args.jql.as_deref() else {
+        return Ok(Vec::new());
+    };
+    let max_results = args.input_specifier_args.max_results;
+    let output_dir = {
+        let ds = datastore.lock().unwrap();
+        ds.clone_root()
+    };
+    let output_dir = output_dir.join("jira_issues");
+    let _paths = jira::download_issues_to_dir(
+        jira_url,
+        jql,
+        max_results,
+        global_args.ignore_certs,
+        &output_dir,
+    )
+    .await?;
+    Ok(vec![output_dir])
 }

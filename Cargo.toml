@@ -10,7 +10,7 @@ publish = false
 
 [package]
 name = "kingfisher"
-version = "1.25.0"
+version = "1.26.0"
 description = "MongoDB's blazingly fast secret scanning and validation tool"
 edition.workspace = true
 rust-version.workspace = true
@@ -185,6 +185,7 @@ semver = "1.0.26"
 globset = "0.4.16"
 jsonwebtoken = "9.3.1"
 ipnet = "2.11.0"
+jira_query = "1.6.0"
 
 [dependencies.tikv-jemallocator]
 version = "0.6"
@@ -223,6 +224,7 @@ codegen-units = 256
 [patch.crates-io]
 vectorscan-rs = { path = "vendor/vectorscan-rs/vectorscan-rs" }
 vectorscan-rs-sys = { path = "vendor/vectorscan-rs/vectorscan-rs-sys" }
+jira_query = { path = "vendor/jira_query" }
 
 [profile.profiling]
 inherits = "release"

@@ -280,6 +280,13 @@ impl FindingsStore {
         self.clone_dir.join(repo_identifier)
     }
 
+    /// Return the directory used to store cloned repositories and other
+    /// temporary artifacts.
+    pub fn clone_root(&self) -> PathBuf {
+        self.clone_dir.clone()
+    }
+
+
     pub fn get_finding_data_iter(
         &self,
     ) -> impl Iterator<Item = finding_data::FindingMetadata> + '_ {

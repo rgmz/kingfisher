@@ -279,6 +279,10 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
             gitlab_repo_type: GitLabRepoType::Owner,
 
+            jira_url: None,
+            jql: None,
+            max_results: 50,
+
             // git clone / history options
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,

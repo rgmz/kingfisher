@@ -12,7 +12,7 @@ rules:
     confidence: medium
     examples:
       - example-jira.atlassian.net
-      - jira.sprintUri= https://leakyday.atlassian.net/rest
+      - jira.sprintUri= https://example.atlassian.net/rest
 
   - name: Jira Token
     id: kingfisher.jira.2

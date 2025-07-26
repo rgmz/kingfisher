@@ -112,6 +112,34 @@ impl DetailsReporter {
             None
         }
     }
+
+
+    /// If the given file path corresponds to a Jira issue downloaded to disk,
+    /// return the online Jira URL for that issue.
+    fn jira_issue_url(
+        &self,
+        path: &std::path::Path,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Option<String> {
+        // drop any trailing slash so we don’t end up with “//browse/…”
+        let jira_url = args
+            .input_specifier_args
+            .jira_url
+            .as_ref()?
+            .as_str()
+            .trim_end_matches('/');
+
+        let ds = self.datastore.lock().ok()?;
+        let root = ds.clone_root();
+        let jira_dir = root.join("jira_issues");
+        if path.starts_with(&jira_dir) {
+            let key = path.file_stem()?.to_string_lossy();
+            Some(format!("{}/browse/{}", jira_url, key))
+        } else {
+            None
+        }
+    }
+
     fn gather_findings(&self) -> Result<Vec<Finding>> {
         let metadata_list = self.get_finding_data()?;
         let all_matches = self.get_filtered_matches()?;
@@ -288,7 +316,7 @@ impl Reportable for DetailsReporter {
             ReportOutputFormat::Json => self.json_format(writer, args),
             ReportOutputFormat::Jsonl => self.jsonl_format(writer, args),
             ReportOutputFormat::Bson => self.bson_format(writer, args),
-            ReportOutputFormat::Sarif => self.sarif_format(writer, args.no_dedup),
+            ReportOutputFormat::Sarif => self.sarif_format(writer, args.no_dedup, args),
         }
     }
 }

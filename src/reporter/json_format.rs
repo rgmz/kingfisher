@@ -101,7 +101,11 @@ impl DetailsReporter {
                 .iter()
                 .find_map(|origin| {
                     if let Origin::File(e) = origin {
-                        Some(e.path.display().to_string())
+                        if let Some(url) = self.jira_issue_url(&e.path, args) {
+                            Some(url)
+                        } else {
+                            Some(e.path.display().to_string())
+                        }
                     } else {
                         None
                     }
@@ -173,12 +177,12 @@ impl DetailsReporter {
                     };
 
                     // Process this single-origin match into a JSON finding
-                    let json_finding = self.process_match_to_json(&single_origin_rm)?;
+                    let json_finding = self.process_match_to_json(&single_origin_rm, args)?;
                     findings.push(json_finding);
                 }
             } else {
                 // Process normally for deduped matches or matches with only one origin
-                let json_finding = self.process_match_to_json(&rm)?;
+                let json_finding = self.process_match_to_json(&rm, args)?;
                 findings.push(json_finding);
             }
         }
@@ -192,7 +196,11 @@ impl DetailsReporter {
     }
 
     // Add a helper method to convert a ReportMatch to a JSON finding
-    pub fn process_match_to_json(&self, rm: &ReportMatch) -> Result<serde_json::Value> {
+    pub fn process_match_to_json(
+        &self,
+        rm: &ReportMatch,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Result<serde_json::Value> {
         // Extract the relevant data from the match as you already do in your current implementation
         let source_span = &rm.m.location.source_span;
         let line_num = source_span.start.line;
@@ -242,7 +250,11 @@ impl DetailsReporter {
             .iter()
             .find_map(|origin| {
                 if let Origin::File(e) = origin {
-                    Some(e.path.display().to_string())
+                    if let Some(url) = self.jira_issue_url(&e.path, args) {
+                        Some(url)
+                    } else {
+                        Some(e.path.display().to_string())
+                    }
                 } else {
                     None
                 }
@@ -325,13 +337,13 @@ impl DetailsReporter {
                     };
 
                     // Process this single-origin match into a JSON finding and write it
-                    let json_finding = self.process_match_to_json(&single_origin_rm)?;
+                    let json_finding = self.process_match_to_json(&single_origin_rm, args)?;
                     serde_json::to_writer(&mut writer, &json_finding)?;
                     writeln!(writer)?;
                 }
             } else {
                 // Process normally for deduped matches or matches with only one origin
-                let json_finding = self.process_match_to_json(&rm)?;
+                let json_finding = self.process_match_to_json(&rm, args)?;
                 serde_json::to_writer(&mut writer, &json_finding)?;
                 writeln!(writer)?;
             }
@@ -413,7 +425,10 @@ mod tests {
                 all_gitlab_groups: false,
                 gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
                 gitlab_repo_type: GitLabRepoType::Owner,
-
+                // Jira options
+                jira_url: None,
+                jql: None,
+                max_results: 50,
                 // clone / history options
                 git_clone: GitCloneMode::Bare,
                 git_history: GitHistoryMode::Full,

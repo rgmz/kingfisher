@@ -18,6 +18,7 @@ pub mod git_url;
 pub mod github;
 pub mod gitlab;
 pub mod guesser;
+pub mod jira;
 pub mod liquid_filters;
 pub mod location;
 pub mod matcher;
