@@ -19,7 +19,7 @@ pub async fn fetch_issues(
         .build()
         .context("Failed to build HTTP client")?;
 
-    let mut jira = JiraInstance::at(base.to_string())?   // no trailing slash here
+    let mut jira = JiraInstance::at(base.to_string())? // no trailing slash here
         .with_client(client)
         .paginate(Pagination::MaxResults(max_results as u32));
 

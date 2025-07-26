@@ -223,10 +223,8 @@ impl<'a> Display for PrettyFinding<'a> {
                         f,
                         " |Path..........: {}",
                         if rm.validation_success {
-                            // reporter.style_active_creds(e.path.display()).to_string().to_string()
                             reporter.style_active_creds(&display_path).to_string()
                         } else {
-                            // e.path.display().to_string()
                             display_path
                         }
                     )?;
