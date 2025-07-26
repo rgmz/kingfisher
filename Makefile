@@ -241,6 +241,7 @@ endif
 linux-x64: check-docker create-dockerignore
 	@mkdir -p target/release
 	docker run --platform linux/amd64 --rm \
+          --user "$(shell id -u):$(shell id -g)" \
 	  -v "$$(pwd):/src" -w /src rust:1.88-alpine sh -eu -c '\
 		apk add --no-cache \
 		    musl-dev \
@@ -270,6 +271,7 @@ linux-x64: check-docker create-dockerignore
 linux-arm64: check-docker create-dockerignore
 	@mkdir -p target/release
 	docker run --platform linux/arm64 --rm \
+          --user "$(shell id -u):$(shell id -g)" \
 	  -v "$$(pwd):/src" -w /src rust:1.88-alpine sh -eu -c '\
 		apk add --no-cache \
 		    musl-dev \
