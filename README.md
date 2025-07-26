@@ -21,6 +21,7 @@ Kingfisher extends Nosey Parker with live secret validation via cloud-provider A
 - **Language‑Aware Accuracy**: AST parsing in 20+ languages via Tree‑Sitter reduces contextless regex matches. see [docs/PARSING.md](/docs/PARSING.md)
 - **Built-In Validation**: Hundreds of built-in detection rules, many with live-credential validators that call the relevant service APIs (AWS, Azure, GCP, Stripe, etc.) to confirm a secret is active. You can extend or override the library by adding YAML-defined rules on the command line—see [docs/RULES.md](/docs/RULES.md) for details
 - **Git History Scanning**: Scan local repos, remote GitHub/GitLab orgs/users, or arbitrary GitHub/GitLab repos
+- **Jira Scanning**: Scan issues returned from a JQL search using `--jira-url` and `--jql`
 - **Baseline Support:** Generate and manage baseline files to ignore known secrets and report only newly introduced ones. See ([docs/BASELINE.md](docs/BASELINE.md)) for details.
 
 # Getting Started
@@ -285,7 +286,26 @@ kingfisher scan --git-url https://gitlab.com/group/project.git
 kingfisher gitlab repos list --group my-group
 ```
 
+## Scanning Jira
+
+### Scan Jira issues matching a JQL query
+
+```bash
+KF_JIRA_TOKEN="token" kingfisher scan \
+    --jira-url https://jira.company.com \
+    --jql "project = TEST AND status = Open" \
+    --max-results 500
+```
+
+### Scan the last 1,000 Jira issues:
+```bash
+KF_JIRA_TOKEN="token" kingfisher scan \
+  --jira-url https://jira.mongodb.org \
+  --jql 'ORDER BY created DESC' \
+  --max-results 1000
+```
 ---
+
 
 ## Environment Variables for Tokens
 
@@ -293,6 +313,7 @@ kingfisher gitlab repos list --group my-group
 | ----------------- | ---------------------------- |
 | `KF_GITHUB_TOKEN` | GitHub Personal Access Token |
 | `KF_GITLAB_TOKEN` | GitLab Personal Access Token |
+| `KF_JIRA_TOKEN`   | Jira API token               |
 
 Set them temporarily per command:
 
@@ -304,6 +325,11 @@ Or export for the session:
 
 ```bash
 export KF_GITLAB_TOKEN="glpat-…"
+```
+
+To authenticate Jira requests:
+```bash
+export KF_JIRA_TOKEN="token"
 ```
 
 _If no token is provided Kingfisher still works for public repositories._

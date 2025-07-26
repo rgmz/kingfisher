@@ -39,14 +39,14 @@ impl DetailsReporter {
                     };
 
                     // Process to JSON first, then convert to BSON
-                    let json_finding = self.process_match_to_json(&single_origin_rm)?;
+                    let json_finding = self.process_match_to_json(&single_origin_rm, args)?;
                     if let Ok(bson_doc) = json_to_bson_document(&json_finding) {
                         bson_findings.push(bson_doc);
                     }
                 }
             } else {
                 // Process normally for deduped matches or matches with only one origin
-                let json_finding = self.process_match_to_json(&rm)?;
+                let json_finding = self.process_match_to_json(&rm, args)?;
                 if let Ok(bson_doc) = json_to_bson_document(&json_finding) {
                     bson_findings.push(bson_doc);
                 }

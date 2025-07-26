@@ -64,6 +64,10 @@ fn test_gitlab_remote_scan() -> Result<()> {
             all_gitlab_groups: false,
             gitlab_api_url: Url::parse("https://gitlab.com/")?,
             gitlab_repo_type: GitLabRepoType::Owner,
+        
+            jira_url: None,
+            jql: None,
+            max_results: 50,
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,
             scan_nested_repos: true,

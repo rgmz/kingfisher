@@ -1,6 +1,15 @@
 NOTICE file corresponding to Section 4 (d) of the Apache License, Version 2.0
 
 --------------------------------------------------------------------
+Notices for Kingfisher
+--------------------------------------------------------------------
+Copyright 2025 MongoDB, Inc.
+https://www.mongodb.com
+
+Source repository: https://github.com/mongodb/kingfisher
+
+
+--------------------------------------------------------------------
 Upstream notices
 --------------------------------------------------------------------
 Copyright 2022 Praetorian Security, Inc <https://praetorian.com>.
@@ -21,11 +30,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
---------------------------------------------------------------------
-Additional notices for Kingfisher
---------------------------------------------------------------------
-Copyright 2025 MongoDB, Inc.
-https://www.mongodb.com
-
-Source repository: https://github.com/mongodb/kingfisher

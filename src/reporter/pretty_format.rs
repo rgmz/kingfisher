@@ -214,14 +214,20 @@ impl<'a> Display for PrettyFinding<'a> {
         for p in rm.origin.iter() {
             match p {
                 Origin::File(e) => {
+                    let display_path = if let Some(url) = reporter.jira_issue_url(&e.path, args) {
+                        url
+                    } else {
+                        e.path.display().to_string()
+                    };
                     writeln!(
                         f,
                         " |Path..........: {}",
                         if rm.validation_success {
-                            reporter.style_active_creds(e.path.display()).to_string().to_string()
-                        // Convert StyledObject to String
+                            // reporter.style_active_creds(e.path.display()).to_string().to_string()
+                            reporter.style_active_creds(&display_path).to_string()
                         } else {
-                            e.path.display().to_string()
+                            // e.path.display().to_string()
+                            display_path
                         }
                     )?;
                 }
@@ -337,7 +343,10 @@ fn test_pretty_format_with_nan_entropy_panics() {
             all_gitlab_groups: false,
             gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
             gitlab_repo_type: GitLabRepoType::Owner,
-
+            // Jira options
+            jira_url: None,
+            jql: None,
+            max_results: 50,
             // git clone / history options
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,

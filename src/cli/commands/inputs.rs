@@ -25,7 +25,8 @@ pub struct InputSpecifierArgs {
             "gitlab_group",
             "git_url",
             "all_github_organizations",
-            "all_gitlab_groups"
+            "all_gitlab_groups",
+            "jira_url"
         ]),
         value_hint = ValueHint::AnyPath
     )]
@@ -83,6 +84,18 @@ pub struct InputSpecifierArgs {
 
     #[arg(long, default_value_t = GitLabRepoType::Owner)]
     pub gitlab_repo_type: GitLabRepoType,
+
+    /// Jira base URL (e.g. https://jira.example.com)
+    #[arg(long, value_hint = ValueHint::Url, requires = "jql")]
+    pub jira_url: Option<Url>,
+
+    /// JQL query to select Jira issues
+    #[arg(long, requires = "jira_url")]
+    pub jql: Option<String>,
+
+    /// Maximum number of Jira results to fetch
+    #[arg(long, default_value_t = 100)]
+    pub max_results: usize,
 
     /// Select how to clone Git repositories
     #[arg(long, default_value_t=GitCloneMode::Bare, alias="git-clone-mode")]

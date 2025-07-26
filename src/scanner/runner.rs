@@ -18,7 +18,9 @@ use crate::{
     rules_database::RulesDatabase,
     scanner::{
         clone_or_update_git_repos, enumerate_filesystem_inputs, enumerate_github_repos,
-        repos::enumerate_gitlab_repos, run_secret_validation, summary::print_scan_summary,
+        repos::{enumerate_gitlab_repos, fetch_jira_issues},
+        run_secret_validation,
+        summary::print_scan_summary,
     },
 };
 
@@ -61,7 +63,11 @@ pub async fn run_async_scan(
     repo_urls.sort();
     repo_urls.dedup();
 
-    let input_roots = clone_or_update_git_repos(args, global_args, &repo_urls, &datastore)?;
+    let mut input_roots = clone_or_update_git_repos(args, global_args, &repo_urls, &datastore)?;
+    // Fetch Jira issues if requested
+    let jira_dirs = fetch_jira_issues(args, global_args, &datastore).await?;
+    input_roots.extend(jira_dirs);
+    
     if input_roots.is_empty() {
         bail!("No inputs to scan");
     }

@@ -14,7 +14,12 @@ struct LocationKey {
     text: String,
 }
 impl DetailsReporter {
-    fn make_sarif_result(&self, finding: &Finding, no_dedup: bool) -> Result<sarif::Result> {
+    fn make_sarif_result(
+        &self,
+        finding: &Finding,
+        no_dedup: bool,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Result<sarif::Result> {
         // Deduplicate exactly as in the JSON reporter
         // let matches = self.deduplicate_matches(finding.matches.clone(), no_dedup);
         // Deduplicate exactly as in the JSON reporter - but only if no_dedup is false
@@ -66,11 +71,13 @@ impl DetailsReporter {
                 for p in prov.iter() {
                     match p {
                         Origin::File(e) => {
+                            let uri = if let Some(url) = self.jira_issue_url(&e.path, args) {
+                                url
+                            } else {
+                                e.path.display().to_string()
+                            };
                             artifact_locations.push(
-                                sarif::ArtifactLocationBuilder::default()
-                                    .uri(e.path.display().to_string())
-                                    .build()
-                                    .ok()?,
+                                sarif::ArtifactLocationBuilder::default().uri(uri).build().ok()?,
                             );
                         }
                         Origin::GitRepo(e) => {
@@ -199,7 +206,13 @@ impl DetailsReporter {
             let p = first_match.origin.first();
             match p {
                 Origin::File(e) => {
-                    msg.push_str(&format!("Location: {}\n", e.path.display()));
+                    // msg.push_str(&format!("Location: {}\n", e.path.display()));
+                    let uri = if let Some(url) = self.jira_issue_url(&e.path, args) {
+                        url
+                    } else {
+                        e.path.display().to_string()
+                    };
+                    msg.push_str(&format!("Location: {}\n", uri));
                 }
                 Origin::GitRepo(e) => {
                     if let Some(cs) = &e.first_commit {
@@ -242,7 +255,12 @@ impl DetailsReporter {
         Ok(result)
     }
 
-    pub fn sarif_format<W: std::io::Write>(&self, mut writer: W, no_dedup: bool) -> Result<()> {
+    pub fn sarif_format<W: std::io::Write>(
+        &self,
+        mut writer: W,
+        no_dedup: bool,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Result<()> {
         // Gather findings first
         let mut findings = self.gather_findings()?;
 
@@ -329,8 +347,11 @@ impl DetailsReporter {
                     .build()?,
             )
             .build()?;
-        let sarif_results: Vec<sarif::Result> =
-            findings.par_iter().filter_map(|f| self.make_sarif_result(f, no_dedup).ok()).collect();
+        
+        let sarif_results: Vec<sarif::Result> = findings
+            .par_iter()
+            .filter_map(|f| self.make_sarif_result(f, no_dedup, args).ok())
+            .collect();
         let run = sarif::RunBuilder::default().tool(tool).results(sarif_results).build()?;
         let sarif = sarif::SarifBuilder::default()
             .version(sarif::Version::V2_1_0.to_string())
