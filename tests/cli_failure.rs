@@ -56,6 +56,11 @@ rules:
         request:
           method: BREW
           url: "https://example.com/"
+          response_matcher:
+            - report_response: true
+            - status:
+                - 200
+              type: StatusMatch
 "#,
     )
     .unwrap();
