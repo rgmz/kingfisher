@@ -74,8 +74,12 @@ pub async fn run_async_scan(
             let ds = datastore.lock().unwrap();
             ds.clone_root()
         };
-        let docker_dirs =
-            save_docker_images(&args.input_specifier_args.docker_image, &clone_root).await?;
+        let docker_dirs = save_docker_images(
+            &args.input_specifier_args.docker_image,
+            &clone_root,
+            progress_enabled,
+        )
+        .await?;
         input_roots.extend(docker_dirs);
     }
 
