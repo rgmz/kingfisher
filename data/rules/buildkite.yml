@@ -28,3 +28,4 @@ rules:
               status: [200]
             - type: WordMatch
               words: ['"uuid"', '"user"']
+  

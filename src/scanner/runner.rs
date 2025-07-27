@@ -19,7 +19,7 @@ use crate::{
     scanner::{
         clone_or_update_git_repos, enumerate_filesystem_inputs, enumerate_github_repos,
         repos::{enumerate_gitlab_repos, fetch_jira_issues},
-        run_secret_validation,
+        run_secret_validation, save_docker_images,
         summary::print_scan_summary,
     },
 };
@@ -68,6 +68,17 @@ pub async fn run_async_scan(
     let jira_dirs = fetch_jira_issues(args, global_args, &datastore).await?;
     input_roots.extend(jira_dirs);
     
+    // Save Docker images if specified
+    if !args.input_specifier_args.docker_image.is_empty() {
+        let clone_root = {
+            let ds = datastore.lock().unwrap();
+            ds.clone_root()
+        };
+        let docker_dirs =
+            save_docker_images(&args.input_specifier_args.docker_image, &clone_root).await?;
+        input_roots.extend(docker_dirs);
+    }
+
     if input_roots.is_empty() {
         bail!("No inputs to scan");
     }

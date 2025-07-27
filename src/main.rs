@@ -281,7 +281,9 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
 
             jira_url: None,
             jql: None,
-            max_results: 50,
+            max_results: 100,
+            // Docker image scanning
+            docker_image: Vec::new(),
 
             // git clone / history options
             git_clone: GitCloneMode::Bare,

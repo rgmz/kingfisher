@@ -67,7 +67,9 @@ fn test_gitlab_remote_scan() -> Result<()> {
         
             jira_url: None,
             jql: None,
-            max_results: 50,
+            max_results: 100,
+            // Docker image scanning
+            docker_image: Vec::new(),
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,
             scan_nested_repos: true,

@@ -26,7 +26,8 @@ pub struct InputSpecifierArgs {
             "git_url",
             "all_github_organizations",
             "all_gitlab_groups",
-            "jira_url"
+            "jira_url",
+            "docker_image"
         ]),
         value_hint = ValueHint::AnyPath
     )]
@@ -96,6 +97,11 @@ pub struct InputSpecifierArgs {
     /// Maximum number of Jira results to fetch
     #[arg(long, default_value_t = 100)]
     pub max_results: usize,
+
+    /// Docker/OCI images to scan (no local Docker required)
+    #[arg(long = "docker-image")]
+    pub docker_image: Vec<String>,
+
 
     /// Select how to clone Git repositories
     #[arg(long, default_value_t=GitCloneMode::Bare, alias="git-clone-mode")]

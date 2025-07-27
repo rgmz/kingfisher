@@ -81,7 +81,9 @@ rules:
 
             jira_url: None,
             jql: None,
-            max_results: 50,
+            max_results: 100,
+            // Docker image scanning
+            docker_image: Vec::new(),
             // git clone / history options
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,

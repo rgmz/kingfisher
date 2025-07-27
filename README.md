@@ -197,6 +197,14 @@ kingfisher scan /path/to/repo --format sarif --output findings.sarif
 cat /path/to/file.py | kingfisher scan -
 ```
 
+### Scan a Docker image (without Docker installed)
+
+```bash
+kingfisher scan --docker-image ubuntu:latest
+```
+
+### Sc
+
 ### Scan using a rule _family_ with one flag
 
 _(prefix matching: `--rule kingfisher.aws` loads `kingfisher.aws._`)\*
