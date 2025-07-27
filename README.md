@@ -11,7 +11,13 @@ Kingfisher is a blazingly fast secret‑scanning and validation tool built in Ru
 
 Kingfisher originated as a fork of [Nosey Parker](https://github.com/praetorian-inc/noseyparker) by Praetorian Security, Inc, and is built atop their incredible work and the work contributed by the Nosey Parker community.
 
-Kingfisher extends Nosey Parker with live secret validation via cloud-provider APIs, augments regex detection with tree-sitter for code parsing, adds GitLab support, and builds a Windows x64 binary. 
+Kingfisher extends Nosey Parker by:
+1. Validating secrets in real time via cloud-provider APIs
+2. Enhancing regex-based detection with source-code parsing for improved accuracy
+3. Adding GitLab repository scanning support
+4. Providing Jira scanning capabilities
+5. Introducing a baseline feature that suppresses known secrets and reports only newly introduced ones
+5. Offering native Windows environment support
 
 **MongoDB Blog**: [Introducing Kingfisher: Real-Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
 
