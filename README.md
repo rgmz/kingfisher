@@ -335,7 +335,7 @@ KF_JIRA_TOKEN="token" kingfisher scan \
 | `KF_GITHUB_TOKEN` | GitHub Personal Access Token |
 | `KF_GITLAB_TOKEN` | GitLab Personal Access Token |
 | `KF_JIRA_TOKEN`   | Jira API token               |
-| `KF_DOCKER_TOKEN` | Docker token                 |
+| `KF_DOCKER_TOKEN` | Docker registry token (`user:pass` or bearer token). If unset, credentials from the Docker keychain are used |
 
 Set them temporarily per command:
 

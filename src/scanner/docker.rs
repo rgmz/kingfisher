@@ -1,30 +1,110 @@
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::env;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
+use base64::Engine;
 use indicatif::{ProgressBar, ProgressStyle};
-use oci_distribution::client::{linux_amd64_resolver, Client, ClientConfig};
-use oci_distribution::{secrets::RegistryAuth, Reference};
+use oci_client::client::{linux_amd64_resolver, Client, ClientConfig};
+use oci_client::secrets::RegistryAuth;
+use oci_client::Reference;
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tracing::debug;
 use walkdir::WalkDir;
 
 use crate::decompress::decompress_file;
 
-fn registry_auth_from_env() -> RegistryAuth {
-    match env::var("KF_DOCKER_TOKEN") {
-        Ok(token) => {
-            if let Some((user, pass)) = token.split_once(':') {
-                RegistryAuth::Basic(user.to_string(), pass.to_string())
-            } else {
-                RegistryAuth::Basic(String::new(), token)
+fn helper_get_creds(helper: &str, registry: &str) -> Option<(String, String)> {
+    fn run(bin: &str, registry: &str) -> Option<(String, String)> {
+        let mut child = Command::new(bin)
+            .arg("get")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .ok()?;
+        {
+            let stdin = child.stdin.as_mut()?;
+            let _ = stdin.write_all(format!("{registry}\n").as_bytes());
+        }
+        let output = child.wait_with_output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let v: Value = serde_json::from_slice(&output.stdout).ok()?;
+        let user = v.get("Username")?.as_str()?.to_string();
+        let secret = v.get("Secret")?.as_str()?.to_string();
+        Some((user, secret))
+    }
+
+    let bin = format!("docker-credential-{helper}");
+    if let Some(creds) = run(&bin, registry) {
+        return Some(creds);
+    }
+    if helper == "keychain" && bin != "docker-credential-osxkeychain" {
+        if let Some(creds) = run("docker-credential-osxkeychain", registry) {
+            return Some(creds);
+        }
+    }
+    None
+}
+
+fn creds_from_docker_config(registry: &str) -> Option<(String, String)> {
+    let config_dir = env::var("DOCKER_CONFIG")
+        .map(PathBuf::from)
+        .or_else(|_| env::var("HOME").map(|h| PathBuf::from(h).join(".docker")))
+        .ok()?;
+    let path = config_dir.join("config.json");
+    let mut content = String::new();
+    File::open(path).ok()?.read_to_string(&mut content).ok()?;
+    let json: Value = serde_json::from_str(&content).ok()?;
+
+    if let Some(ch) = json.get("credHelpers").and_then(|v| v.get(registry)).and_then(|v| v.as_str())
+    {
+        if let Some(creds) = helper_get_creds(ch, registry) {
+            return Some(creds);
+        }
+    }
+    if let Some(store) = json.get("credsStore").and_then(|v| v.as_str()) {
+        if let Some(creds) = helper_get_creds(store, registry) {
+            return Some(creds);
+        }
+    }
+
+    if let Some(auths) = json.get("auths").and_then(|v| v.as_object()) {
+        if let Some(entry) = auths
+            .get(registry)
+            .or_else(|| auths.get(&format!("https://{registry}")))
+            .or_else(|| auths.get(&format!("http://{registry}")))
+        {
+            if let Some(auth) = entry.get("auth").and_then(|v| v.as_str()) {
+                let decoded = base64::engine::general_purpose::STANDARD.decode(auth).ok()?;
+                let cred = String::from_utf8(decoded).ok()?;
+                if let Some((u, p)) = cred.split_once(':') {
+                    return Some((u.to_string(), p.to_string()));
+                }
             }
         }
-        Err(_) => RegistryAuth::Anonymous,
+    }
+    None
+}
+
+fn registry_auth(reference: &Reference) -> RegistryAuth {
+    if let Ok(token) = env::var("KF_DOCKER_TOKEN") {
+        if let Some((user, pass)) = token.split_once(':') {
+            return RegistryAuth::Basic(user.to_string(), pass.to_string());
+        } else {
+            return RegistryAuth::Bearer(token);
+        }
+    }
+    if let Some((user, pass)) = creds_from_docker_config(reference.registry()) {
+        RegistryAuth::Basic(user, pass)
+    } else {
+        RegistryAuth::Anonymous
     }
 }
 
@@ -123,12 +203,12 @@ impl Docker {
             ..Default::default()
         });
         let mut client = client;
-        let auth = registry_auth_from_env();
+        let auth = registry_auth(&reference);
         let accepted = vec![
-            oci_distribution::manifest::IMAGE_LAYER_MEDIA_TYPE,
-            oci_distribution::manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE,
-            oci_distribution::manifest::IMAGE_DOCKER_LAYER_TAR_MEDIA_TYPE,
-            oci_distribution::manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE,
+            oci_client::manifest::IMAGE_LAYER_MEDIA_TYPE,
+            oci_client::manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE,
+            oci_client::manifest::IMAGE_DOCKER_LAYER_TAR_MEDIA_TYPE,
+            oci_client::manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE,
         ];
         let pulled = client.pull(&reference, &auth, accepted).await?;
         pb.set_length(pulled.layers.len() as u64);
@@ -137,10 +217,10 @@ impl Docker {
         std::fs::create_dir_all(out_dir)?;
         for layer in pulled.layers.into_iter() {
             let ext = match layer.media_type.as_str() {
-                oci_distribution::manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE
-                | oci_distribution::manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE => "tar.gz",
-                oci_distribution::manifest::IMAGE_LAYER_MEDIA_TYPE
-                | oci_distribution::manifest::IMAGE_DOCKER_LAYER_TAR_MEDIA_TYPE => "tar",
+                oci_client::manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE
+                | oci_client::manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE => "tar.gz",
+                oci_client::manifest::IMAGE_LAYER_MEDIA_TYPE
+                | oci_client::manifest::IMAGE_DOCKER_LAYER_TAR_MEDIA_TYPE => "tar",
                 _ => "bin",
             };
             let digest = layer.sha256_digest();
