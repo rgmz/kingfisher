@@ -388,14 +388,14 @@ Run the provided helper script to add a hook that scans staged files before each
 
 ```bash
 # local (current repo only ─ default)
-./install-kingfisher-hook.sh
+./install-precommit-hook.sh
 ```
 
 This creates `.git/hooks/pre-commit` that scans the files staged for commit with `kingfisher scan --no-update-check` and blocks the commit if any secrets are found.
 
 ```bash
 # global (every repo on this machine)
-./install-kingfisher-hook.sh --global
+./install-precommit-hook.sh --global
 ### Install a Pre-Receive Hook
 ```
 
