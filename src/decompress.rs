@@ -135,24 +135,24 @@ fn handle_zip_archive_streaming(
             let out_path = base_dir.join(&name_in_zip);
             if let Some(parent) = out_path.parent() {
                 if let Err(e) = fs::create_dir_all(parent) {
-                    println!("****************failed to create directory {}: {}", parent.display(), e);
+                    tracing::debug!("failed to create directory {}: {}", parent.display(), e);
                     continue;
                 }
             }
             if !is_safe_extract_path(&out_path) {
-                println!("****************unsafe zip path: {}", out_path.display());
+                tracing::warn!("unsafe zip path: {}", out_path.display());
                 continue;
             }
             match fs::File::create(&out_path) {
                 Ok(mut out_file) => {
                     if let Err(e) = std::io::copy(&mut zipped_file, &mut out_file) {
-                        println!("****************failed to extract {}: {}", out_path.display(), e);
+                        tracing::debug!("failed to extract {}: {}", out_path.display(), e);
                         continue;
                     }
                     entries_on_disk.push((logical_path, out_path));
                 }
                 Err(e) => {
-                    println!("****************failed to create file {}: {}", out_path.display(), e);
+                    tracing::debug!("failed to create file {}: {}", out_path.display(), e);
                     continue;
                 }
             }
