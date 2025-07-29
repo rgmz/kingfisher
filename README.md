@@ -43,19 +43,33 @@ brew install kingfisher
 
 Pre-built binaries are also available on the [Releases](https://github.com/mongodb/kingfisher/releases) section of this page.
 
+You can also install using [ubi](https://github.com/houseabsolute/ubi), which downloads the correct binary for your platform:
+
+```bash
+# Linux, macOS
+curl --silent --location \
+    https://raw.githubusercontent.com/houseabsolute/ubi/master/bootstrap/bootstrap-ubi.sh | \
+    sh && \
+  ubi --project mongodb/kingfisher --in "$HOME/bin"
+```
+
+```powershell
+# Windows
+powershell -exec bypass -c "Invoke-WebRequest -URI 'https://raw.githubusercontent.com/houseabsolute/ubi/master/bootstrap/bootstrap-ubi.ps1' -UseBasicParsing | Invoke-Expression" && ubi --project mongodb/kingfisher --in .
+```
+
+This installs `ubi` and then places the `kingfisher` executable in `~/bin` on Unix-like
+systems (or the current directory on Windows).
+
 Or you may compile for your platform via `make`:
 
 ```bash
 # NOTE: Requires Docker
 make linux
-```
 
-```bash
-# macOS
+# macOS --- must build from a macOS host
 make darwin
-```
 
-```bash
 # Windows x64 --- requires building from a Windows host with Visual Studio installed
 ./buildwin.bat -force
 ```
@@ -67,9 +81,7 @@ make darwin-all # builds both x64 and arm64
 make all # builds for every OS and architecture supported
 ```
 
-
 ### Run Kingfisher in Docker
-
 
 Run the dockerized Kingfisher container:
 ```bash

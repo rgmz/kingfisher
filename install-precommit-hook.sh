@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Install a Git pre-commit hook that runs `kingfisher scan`.
-# --global   → install once for all repos using core.hooksPath
-# --force    → overwrite an existing pre-commit hook
+# Install a Git pre‑commit hook that runs `kingfisher scan`.
+#
+#   --global   → install once for all repos via core.hooksPath
+#   --force    → overwrite an existing pre‑commit hook
 #
 set -euo pipefail
 
@@ -48,7 +49,7 @@ fi
 
 cat >"$HOOK_PATH" <<'HOOK'
 #!/usr/bin/env bash
-# Git pre-commit hook to run Kingfisher on staged changes
+# Git pre‑commit hook to run Kingfisher on staged changes
 set -euo pipefail
 
 if ! command -v kingfisher >/dev/null 2>&1; then
@@ -59,6 +60,14 @@ fi
 git diff --cached --name-only -z | \
   xargs -0 --no-run-if-empty kingfisher scan --only-valid --no-update-check
 status=$?
+
+# ────────────────────────────────────────────────────────────────
+# Treat Kingfisher exit‑code 200 as success (map → 0)
+# ────────────────────────────────────────────────────────────────
+if [[ $status -eq 200 ]]; then
+  status=0
+fi
+
 if [[ $status -ne 0 ]]; then
   echo "Kingfisher detected secrets in staged files. Commit aborted." >&2
   exit $status
@@ -66,4 +75,4 @@ fi
 HOOK
 
 chmod +x "$HOOK_PATH"
-echo "Pre-commit hook installed to $HOOK_PATH ($MODE mode)"
+echo "Pre‑commit hook installed to $HOOK_PATH ($MODE mode)"

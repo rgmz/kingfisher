@@ -238,7 +238,7 @@ impl Docker {
                 _ => "bin",
             };
             let digest = layer.sha256_digest();
-            let file_name = format!("layer_{digest}.{ext}");
+            let file_name = format!("layer_{}.{}", digest.replace(':', "_"), ext);
             let tmp_path = out_dir.join(file_name);
             let mut tmp = std::fs::File::create(&tmp_path)?;
             tmp.write_all(&layer.data)?;
