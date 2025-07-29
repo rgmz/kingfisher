@@ -68,7 +68,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo Found vcpkg at: !VCPKG_EXE!
 
-REM  Derive vcpkg root (%~dp will end with a backslash)
+REM  Derive vcpkg root
 for %%i in ("!VCPKG_EXE!") do set "VCPKG_ROOT=%%~dpi"
 if "!VCPKG_ROOT:~-1!"=="\" set "VCPKG_ROOT=!VCPKG_ROOT:~0,-1!"
 
