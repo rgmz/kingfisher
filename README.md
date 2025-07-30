@@ -6,33 +6,29 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Kingfisher is a blazingly fast secret‑scanning and validation tool built in Rust. It combines Intel’s hardware‑accelerated Hyperscan regex engine with language‑aware parsing via Tree‑Sitter, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
-
 </p>
 
-Kingfisher originated as a fork of [Nosey Parker](https://github.com/praetorian-inc/noseyparker) by Praetorian Security, Inc, and is built atop their incredible work and the work contributed by the Nosey Parker community.
+Kingfisher originated as a fork of Praetorian's [Nosey Parker](https://github.com/praetorian-inc/noseyparker), and is built atop their incredible work and the work contributed by the Nosey Parker community.
 
-Kingfisher extends Nosey Parker by:
-1. **Validating secrets** in real time via cloud-provider APIs
-2. Enhancing regex-based detection with **source-code parsing** for improved accuracy
-3. Adding **GitLab** repository scanning support
-4. Adding support for scanning **Docker** images
-5. Providing **Jira** scanning capabilities
-6. Adding **Slack** scanning capabilities
-7. Introducing a baseline feature that suppresses known secrets and reports only newly introduced ones
-8. Offering native **Windows** support
+## What Kingfisher Adds
+- **Live validation** via cloud-provider APIs
+- **Language-aware detection** (AST parsing) for ~20 languages
+- **Extra targets**: GitLab repos, Docker images, Jira issues, and Slack messages
+- **Baseline mode**: ignore known secrets, flag only new ones
+- **Native Windows** binaries
 
-**MongoDB Blog**: [Introducing Kingfisher: Real-Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
 
 ## Key Features
+- **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
+- **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
+- **Multiple targets**:
+  - **Git history**: local repos or GitHub/GitLab orgs/users  
+  - **Docker images**: public or private via `--docker-image`  
+  - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`  
+  - **Slack messages**: query‑based scans with `--slack-query`  
+- **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))  
 
-- **Performance**: Multi‑threaded, Hyperscan‑powered scanning for massive codebases
-- **Language‑Aware Accuracy**: AST parsing in 20+ languages via Tree‑Sitter reduces contextless regex matches. see [docs/PARSING.md](/docs/PARSING.md)
-- **Built-In Validation**: Hundreds of built-in detection rules, many with live-credential validators that call the relevant service APIs (AWS, Azure, GCP, Stripe, etc.) to confirm a secret is active. You can extend or override the library by adding YAML-defined rules on the command line—see [docs/RULES.md](/docs/RULES.md) for details
-- **Git History Scanning**: Scan local repos, remote GitHub/GitLab orgs/users, or arbitrary GitHub/GitLab repos
-- **Jira Scanning**: Scan issues returned from a JQL search using `--jira-url` and `--jql`
-- **Slack Scanning**: Scan messages returned from a Slack search query using `--slack-query`
-- **Docker Image Scanning**: Scan public or private docker images via `--docker-image`
-- **Baseline Support:** Generate and manage baseline files to ignore known secrets and report only newly introduced ones. See ([docs/BASELINE.md](docs/BASELINE.md)) for details.
+**Learn more:** [Introducing Kingfisher: Real‑Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
 
 # Getting Started
 ## Installation
@@ -360,8 +356,12 @@ KF_JIRA_TOKEN="token" kingfisher scan \
 ### Scan Slack messages matching a search query
 
 ```bash
-KF_SLACK_TOKEN="token" kingfisher scan \
+KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
     --slack-query "from:username has:link" \
+    --max-results 1000
+
+KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
+    --slack-query "akia" \
     --max-results 1000
 ```
 *The Slack token must be a user token with the `search:read` scope. Bot tokens (those beginning with `xoxb-`) cannot call the Slack search API.*
