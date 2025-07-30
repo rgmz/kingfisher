@@ -15,10 +15,11 @@ Kingfisher extends Nosey Parker by:
 1. **Validating secrets** in real time via cloud-provider APIs
 2. Enhancing regex-based detection with **source-code parsing** for improved accuracy
 3. Adding **GitLab** repository scanning support
-4. Adding support for scanning **Docker** images via `--docker-image`
+4. Adding support for scanning **Docker** images
 5. Providing **Jira** scanning capabilities
-6. Introducing a baseline feature that suppresses known secrets and reports only newly introduced ones
-7. Offering native **Windows** support
+6. Adding **Slack** scanning capabilities
+7. Introducing a baseline feature that suppresses known secrets and reports only newly introduced ones
+8. Offering native **Windows** support
 
 **MongoDB Blog**: [Introducing Kingfisher: Real-Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
 
@@ -29,6 +30,7 @@ Kingfisher extends Nosey Parker by:
 - **Built-In Validation**: Hundreds of built-in detection rules, many with live-credential validators that call the relevant service APIs (AWS, Azure, GCP, Stripe, etc.) to confirm a secret is active. You can extend or override the library by adding YAML-defined rules on the command line—see [docs/RULES.md](/docs/RULES.md) for details
 - **Git History Scanning**: Scan local repos, remote GitHub/GitLab orgs/users, or arbitrary GitHub/GitLab repos
 - **Jira Scanning**: Scan issues returned from a JQL search using `--jira-url` and `--jql`
+- **Slack Scanning**: Scan messages returned from a Slack search query using `--slack-query`
 - **Docker Image Scanning**: Scan public or private docker images via `--docker-image`
 - **Baseline Support:** Generate and manage baseline files to ignore known secrets and report only newly introduced ones. See ([docs/BASELINE.md](docs/BASELINE.md)) for details.
 
@@ -353,7 +355,16 @@ KF_JIRA_TOKEN="token" kingfisher scan \
   --max-results 1000
 ```
 ---
+## Scanning Slack
 
+### Scan Slack messages matching a search query
+
+```bash
+KF_SLACK_TOKEN="token" kingfisher scan \
+    --slack-query "from:username has:link" \
+    --max-results 1000
+```
+*The Slack token must be a user token with the `search:read` scope. Bot tokens (those beginning with `xoxb-`) cannot call the Slack search API.*
 
 ## Environment Variables for Tokens
 
@@ -362,8 +373,8 @@ KF_JIRA_TOKEN="token" kingfisher scan \
 | `KF_GITHUB_TOKEN` | GitHub Personal Access Token |
 | `KF_GITLAB_TOKEN` | GitLab Personal Access Token |
 | `KF_JIRA_TOKEN`   | Jira API token               |
+| `KF_SLACK_TOKEN`  | Slack API token              |
 | `KF_DOCKER_TOKEN` | Docker registry token (`user:pass` or bearer token). If unset, credentials from the Docker keychain are used |
-
 Set them temporarily per command:
 
 ```bash

@@ -18,7 +18,7 @@ use crate::{
     rules_database::RulesDatabase,
     scanner::{
         clone_or_update_git_repos, enumerate_filesystem_inputs, enumerate_github_repos,
-        repos::{enumerate_gitlab_repos, fetch_jira_issues},
+        repos::{enumerate_gitlab_repos, fetch_jira_issues, fetch_slack_messages},
         run_secret_validation, save_docker_images,
         summary::print_scan_summary,
     },
@@ -68,6 +68,10 @@ pub async fn run_async_scan(
     let jira_dirs = fetch_jira_issues(args, global_args, &datastore).await?;
     input_roots.extend(jira_dirs);
     
+    // Fetch Slack messages if requested
+    let slack_dirs = fetch_slack_messages(args, global_args, &datastore).await?;
+    input_roots.extend(slack_dirs);
+
     // Save Docker images if specified
     if !args.input_specifier_args.docker_image.is_empty() {
         let clone_root = {

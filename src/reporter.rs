@@ -122,13 +122,8 @@ impl DetailsReporter {
         args: &cli::commands::scan::ScanArgs,
     ) -> Option<String> {
         // drop any trailing slash so we don’t end up with “//browse/…”
-        let jira_url = args
-            .input_specifier_args
-            .jira_url
-            .as_ref()?
-            .as_str()
-            .trim_end_matches('/');
-
+        let jira_url = args.input_specifier_args.jira_url.as_ref()?.as_str().trim_end_matches('/');
+        
         let ds = self.datastore.lock().ok()?;
         let root = ds.clone_root();
         let jira_dir = root.join("jira_issues");
@@ -138,6 +133,13 @@ impl DetailsReporter {
         } else {
             None
         }
+    }
+
+    /// If the given file path corresponds to a Slack message downloaded to disk,
+    /// return the permalink for that message.
+    fn slack_message_url(&self, path: &std::path::Path) -> Option<String> {
+        let ds = self.datastore.lock().ok()?;
+        ds.slack_links().get(path).cloned()
     }
 
     fn docker_display_path(&self, path: &std::path::Path) -> Option<String> {

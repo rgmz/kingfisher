@@ -53,6 +53,7 @@ pub struct FindingsStore {
     blob_meta: FxHashMap<BlobId, Arc<BlobMetadata>>,
     origin_meta: FxHashMap<u64, Arc<OriginSet>>,
     docker_images: FxHashMap<PathBuf, String>,
+    slack_links: FxHashMap<PathBuf, String>,
 }
 impl FindingsStore {
     pub fn new(clone_dir: PathBuf) -> Self {
@@ -71,6 +72,7 @@ impl FindingsStore {
             seen_bloom,
             bloom_items: 0,
             docker_images: FxHashMap::default(),
+            slack_links: FxHashMap::default(),
         }
     }
 
@@ -294,6 +296,14 @@ impl FindingsStore {
 
     pub fn docker_images(&self) -> &FxHashMap<PathBuf, String> {
         &self.docker_images
+    }
+
+    pub fn register_slack_message(&mut self, path: PathBuf, permalink: String) {
+        self.slack_links.insert(path, permalink);
+    }
+
+    pub fn slack_links(&self) -> &FxHashMap<PathBuf, String> {
+        &self.slack_links
     }
 
     pub fn get_finding_data_iter(
