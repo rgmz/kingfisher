@@ -6,31 +6,37 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Kingfisher is a blazingly fast secret‑scanning and validation tool built in Rust. It combines Intel’s hardware‑accelerated Hyperscan regex engine with language‑aware parsing via Tree‑Sitter, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
-
 </p>
 
-Kingfisher originated as a fork of [Nosey Parker](https://github.com/praetorian-inc/noseyparker) by Praetorian Security, Inc, and is built atop their incredible work and the work contributed by the Nosey Parker community.
+Kingfisher originated as a fork of Praetorian's [Nosey Parker](https://github.com/praetorian-inc/noseyparker), and is built atop their incredible work and the work contributed by the Nosey Parker community.
 
-Kingfisher extends Nosey Parker by:
-1. **Validating secrets** in real time via cloud-provider APIs
-2. Enhancing regex-based detection with **source-code parsing** for improved accuracy
-3. Adding **GitLab** repository scanning support
-4. Adding support for scanning **Docker** images via `--docker-image`
-5. Providing **Jira** scanning capabilities
-6. Introducing a baseline feature that suppresses known secrets and reports only newly introduced ones
-7. Offering native **Windows** support
+## What Kingfisher Adds
+- **Live validation** via cloud-provider APIs
+- **Language-aware detection** (source-code parsing) for ~20 languages
+- **Extra targets**: GitLab repos, Docker images, Jira issues, and Slack messages
+- **Baseline mode**: ignore known secrets, flag only new ones
+- **Native Windows** binary
 
-**MongoDB Blog**: [Introducing Kingfisher: Real-Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
 
 ## Key Features
+- **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
+- **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
+- **Multiple targets**:
+  - **Git history**: local repos or GitHub/GitLab orgs/users  
+  - **Docker images**: public or private via `--docker-image`  
+  - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`  
+  - **Slack messages**: query‑based scans with `--slack-query`  
+- **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))  
 
-- **Performance**: Multi‑threaded, Hyperscan‑powered scanning for massive codebases
-- **Language‑Aware Accuracy**: AST parsing in 20+ languages via Tree‑Sitter reduces contextless regex matches. see [docs/PARSING.md](/docs/PARSING.md)
-- **Built-In Validation**: Hundreds of built-in detection rules, many with live-credential validators that call the relevant service APIs (AWS, Azure, GCP, Stripe, etc.) to confirm a secret is active. You can extend or override the library by adding YAML-defined rules on the command line—see [docs/RULES.md](/docs/RULES.md) for details
-- **Git History Scanning**: Scan local repos, remote GitHub/GitLab orgs/users, or arbitrary GitHub/GitLab repos
-- **Jira Scanning**: Scan issues returned from a JQL search using `--jira-url` and `--jql`
-- **Docker Image Scanning**: Scan public or private docker images via `--docker-image`
-- **Baseline Support:** Generate and manage baseline files to ignore known secrets and report only newly introduced ones. See ([docs/BASELINE.md](docs/BASELINE.md)) for details.
+**Learn more:** [Introducing Kingfisher: Real‑Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
+
+# Benchmark Results
+
+See ([docs/COMPARISON.md](docs/COMPARISON.md))
+
+<p align="center">
+  <img src="docs/runtime-comparison.png" alt="Kingfisher Runtime Comparison" style="vertical-align: center;" />
+</p>
 
 # Getting Started
 ## Installation
@@ -353,7 +359,20 @@ KF_JIRA_TOKEN="token" kingfisher scan \
   --max-results 1000
 ```
 ---
+## Scanning Slack
 
+### Scan Slack messages matching a search query
+
+```bash
+KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
+    --slack-query "from:username has:link" \
+    --max-results 1000
+
+KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
+    --slack-query "akia" \
+    --max-results 1000
+```
+*The Slack token must be a user token with the `search:read` scope. Bot tokens (those beginning with `xoxb-`) cannot call the Slack search API.*
 
 ## Environment Variables for Tokens
 
@@ -362,8 +381,8 @@ KF_JIRA_TOKEN="token" kingfisher scan \
 | `KF_GITHUB_TOKEN` | GitHub Personal Access Token |
 | `KF_GITLAB_TOKEN` | GitLab Personal Access Token |
 | `KF_JIRA_TOKEN`   | Jira API token               |
+| `KF_SLACK_TOKEN`  | Slack API token              |
 | `KF_DOCKER_TOKEN` | Docker registry token (`user:pass` or bearer token). If unset, credentials from the Docker keychain are used |
-
 Set them temporarily per command:
 
 ```bash
@@ -412,15 +431,6 @@ This creates `.git/hooks/pre-commit` that scans the files staged for commit with
 ```
 
 Installs a global pre-commit hook at `$HOME/.git/hooks/pre-commit`; for every Git repository you use, it runs `kingfisher scan --no-update-check` on the staged files and cancels the commit if any secrets are detected.
-
-To check incoming pushes on a server-side repository, install the pre-receive hook:
-
-```bash
-./install-prereceive-hook.sh
-```
-
-The resulting `.git/hooks/pre-receive` script scans the files in each pushed commit and rejects the push if any secrets are detected.
-
 
 ## Update Checks
 
@@ -547,20 +557,10 @@ Real breaches show how one exposed key can snowball into a full-scale incident:
 
 Leaked secrets fuel unauthorized access, lateral movement, regulatory fines, and brand-damaging incident-response costs.
 
-# Benchmark Results
-
-See ([docs/COMPARISON.md](docs/COMPARISON.md))
-
-
-<p align="center">
-  <img src="docs/runtime-comparison.png" alt="Kingfisher Runtime Comparison" style="vertical-align: center;" />
-</p>
-
-
 # Roadmap
 
 - More rules
-- Packages for Linux (deb, rpm)
+- More targets
 - Please file a [feature request](https://github.com/mongodb/kingfisher/issues) if you have specific features you'd like added
 
 # License

@@ -282,6 +282,10 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             jira_url: None,
             jql: None,
             max_results: 100,
+            // Slack query
+            slack_query: None,
+            slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
+            
             // Docker image scanning
             docker_image: Vec::new(),
 

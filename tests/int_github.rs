@@ -69,6 +69,8 @@ fn test_github_remote_scan() -> Result<()> {
             jira_url: None,
             jql: None,
             max_results: 100,
+            slack_query: None,
+            slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
             // Docker image scanning
             docker_image: Vec::new(),
             // git clone / history options

@@ -73,6 +73,8 @@ impl DetailsReporter {
                         Origin::File(e) => {
                             let uri = if let Some(url) = self.jira_issue_url(&e.path, args) {
                                 url
+                            } else if let Some(url) = self.slack_message_url(&e.path) {
+                                url
                             } else {
                                 e.path.display().to_string()
                             };
@@ -208,6 +210,8 @@ impl DetailsReporter {
                 Origin::File(e) => {
                     
                     let uri = if let Some(url) = self.jira_issue_url(&e.path, args) {
+                        url
+                    } else if let Some(url) = self.slack_message_url(&e.path) {
                         url
                     } else {
                         e.path.display().to_string()

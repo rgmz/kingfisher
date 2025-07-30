@@ -103,6 +103,8 @@ impl DetailsReporter {
                     if let Origin::File(e) = origin {
                         if let Some(url) = self.jira_issue_url(&e.path, args) {
                             Some(url)
+                        } else if let Some(url) = self.slack_message_url(&e.path) {
+                            Some(url)
                         } else if let Some(mapped) = self.docker_display_path(&e.path) {
                             Some(mapped)
                         } else {
@@ -253,6 +255,8 @@ impl DetailsReporter {
             .find_map(|origin| {
                 if let Origin::File(e) = origin {
                     if let Some(url) = self.jira_issue_url(&e.path, args) {
+                        Some(url)
+                    } else if let Some(url) = self.slack_message_url(&e.path) {
                         Some(url)
                     } else if let Some(mapped) = self.docker_display_path(&e.path) {
                         Some(mapped)
@@ -434,6 +438,10 @@ mod tests {
                 jql: None,
                 max_results: 100,
                 // Docker image scanning
+                // Slack options
+                slack_query: None,
+                slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
+                
                 docker_image: Vec::new(),
                 // clone / history options
                 git_clone: GitCloneMode::Bare,

@@ -23,7 +23,7 @@ use crate::{
     github, gitlab, jira,
     matcher::Match,
     origin::OriginSet,
-    PathBuf,
+    slack, PathBuf,
 };
 pub type DatastoreMessage = (OriginSet, BlobMetadata, Vec<(Option<f64>, Match)>);
 
@@ -251,5 +251,37 @@ pub async fn fetch_jira_issues(
         &output_dir,
     )
     .await?;
+    Ok(vec![output_dir])
+}
+
+pub async fn fetch_slack_messages(
+    args: &scan::ScanArgs,
+    global_args: &global::GlobalArgs,
+    datastore: &Arc<Mutex<findings_store::FindingsStore>>,
+) -> Result<Vec<PathBuf>> {
+    let Some(query) = args.input_specifier_args.slack_query.as_deref() else {
+        return Ok(Vec::new());
+    };
+    let api_url = args.input_specifier_args.slack_api_url.clone();
+    let max_results = args.input_specifier_args.max_results;
+    let output_root = {
+        let ds = datastore.lock().unwrap();
+        ds.clone_root()
+    };
+    let output_dir = output_root.join("slack_messages");
+    let paths = slack::download_messages_to_dir(
+        api_url,
+        query,
+        max_results,
+        global_args.ignore_certs,
+        &output_dir,
+    )
+    .await?;
+    {
+        let mut ds = datastore.lock().unwrap();
+        for (path, link) in &paths {
+            ds.register_slack_message(path.clone(), link.clone());
+        }
+    }
     Ok(vec![output_dir])
 }

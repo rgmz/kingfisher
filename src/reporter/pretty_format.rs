@@ -216,6 +216,8 @@ impl<'a> Display for PrettyFinding<'a> {
                 Origin::File(e) => {
                     let display_path = if let Some(url) = reporter.jira_issue_url(&e.path, args) {
                         url
+                    } else if let Some(url) = reporter.slack_message_url(&e.path) {
+                        url
                     } else if let Some(mapped) = reporter.docker_display_path(&e.path) {
                         mapped
                     } else {
@@ -347,6 +349,10 @@ fn test_pretty_format_with_nan_entropy_panics() {
             jira_url: None,
             jql: None,
             max_results: 100,
+
+            // Slack options
+            slack_query: None,
+            slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
             // Docker image scanning
             docker_image: Vec::new(),
             // git clone / history options

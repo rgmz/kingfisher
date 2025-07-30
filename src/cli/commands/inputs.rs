@@ -27,7 +27,8 @@ pub struct InputSpecifierArgs {
             "all_github_organizations",
             "all_gitlab_groups",
             "jira_url",
-            "docker_image"
+            "docker_image",
+            "slack_query"
         ]),
         value_hint = ValueHint::AnyPath
     )]
@@ -94,14 +95,21 @@ pub struct InputSpecifierArgs {
     #[arg(long, requires = "jira_url")]
     pub jql: Option<String>,
 
-    /// Maximum number of Jira results to fetch
+    /// Slack search query
+    #[arg(long)]
+    pub slack_query: Option<String>,
+
+    /// Use the specified URL for Slack API access
+    #[arg(long, default_value = "https://slack.com/api/", value_hint = ValueHint::Url)]
+    pub slack_api_url: Url,
+
+    /// Maximum number of Slack or Jira results to fetch
     #[arg(long, default_value_t = 100)]
     pub max_results: usize,
 
     /// Docker/OCI images to scan (no local Docker required)
     #[arg(long = "docker-image")]
     pub docker_image: Vec<String>,
-
 
     /// Select how to clone Git repositories
     #[arg(long, default_value_t=GitCloneMode::Bare, alias="git-clone-mode")]
