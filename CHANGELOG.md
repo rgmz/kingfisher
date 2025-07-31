@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.0]
+- Fixed issue when more than 1 named capture group is used in a rule variable
+- Added 2 new liquid template filters: `b64dec` and `es256_sign`
+- Added custom validator for Coinbase, and a Coinbase rule that uses it
+
 ## [1.28.0]
 - Added support for scanning Slack
 
