@@ -2,19 +2,33 @@ use reqwest::Url;
 use tokio::net::lookup_host;
 
 use crate::validation::SerializableCaptures;
-pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String, usize, usize)> {
-    let has_multiple_captures = captures.captures.len() > 1;
+
+/// Return (NAME, value, start, end) for every capture we care about.
+///
+/// * If a capture has a name, use that (upper-cased)  
+/// * If it’s unnamed, fall back to `"TOKEN"`  
+/// * Skip the unnamed “whole-match” capture **only when** there are
+///   additional captures to return.
+pub fn process_captures(
+    captures: &SerializableCaptures,
+) -> Vec<(String, String, usize, usize)> {
+    let multiple = captures.captures.len() > 1;
+
     captures
         .captures
         .iter()
-        .enumerate()
-        .filter(|(idx, _)| !has_multiple_captures || *idx > 0)
-        .map(|(_, capture)| {
-            let name = capture.name.as_ref().map_or("TOKEN".to_string(), |n| n.to_uppercase());
-            (name, capture.value.clone().into_owned(), capture.start, capture.end)
+        .filter(|cap| !multiple || cap.name.is_some())
+        .map(|cap| {
+            let name = cap
+                .name
+                .as_ref()
+                .map(|n| n.to_uppercase())
+                .unwrap_or_else(|| "TOKEN".to_string());
+            (name, cap.value.clone().into_owned(), cap.start, cap.end)
         })
         .collect()
 }
+
 pub fn find_closest_variable(
     captures: &[(String, String, usize, usize)],
     target_value: &String,
@@ -47,6 +61,7 @@ pub fn find_closest_variable(
     }
     closest_value
 }
+
 pub async fn check_url_resolvable(url: &Url) -> Result<(), Box<dyn std::error::Error>> {
     let host = url.host_str().ok_or("No host in URL")?;
     let port = url.port().unwrap_or(if url.scheme() == "https" { 443 } else { 80 });

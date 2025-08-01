@@ -6,6 +6,10 @@ use liquid_core::{
     Display_filter, Error as LiquidError, Expression, Filter, FilterParameters, FilterReflection,
     FromFilterParameters, ParseFilter, Result, Runtime, Value, ValueView,
 };
+
+use p256::ecdsa::{signature::Signer, SigningKey};
+use p256::pkcs8::DecodePrivateKey;
+use sec1::DecodeEcPrivateKey;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use rand::{distr::Alphanumeric, Rng};
 use sha1::Sha1;
@@ -267,6 +271,31 @@ impl Filter for B64EncFilter {
     }
 }
 
+#[derive(Debug, Clone, Default, FilterReflection, ParseFilter)]
+#[filter(name = "b64dec", description = "Decodes a Base64 string", parsed(B64DecFilter))]
+pub struct B64DecFilter;
+
+impl std::fmt::Display for B64DecFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "b64dec")
+    }
+}
+
+impl Filter for B64DecFilter {
+    fn evaluate(
+        &self,
+        input: &dyn ValueView,
+        _runtime: &dyn Runtime,
+    ) -> Result<Value, LiquidError> {
+        let input_str = input.to_kstr();
+        match general_purpose::STANDARD.decode(input_str.as_bytes()) {
+            Ok(bytes) => Ok(Value::scalar(String::from_utf8_lossy(&bytes).to_string())),
+            Err(e) => Err(LiquidError::with_msg(e.to_string())),
+        }
+    }
+}
+
+
 // -----------------------------------------------------------------------------
 // Authentication & Security
 // -----------------------------------------------------------------------------
@@ -388,6 +417,7 @@ pub fn register_all(builder: liquid::ParserBuilder) -> liquid::ParserBuilder {
         .filter(UuidFilter::default())
         .filter(JwtHeaderFilter::default())
         .filter(B64EncFilter::default())
+        .filter(B64DecFilter::default())
         .filter(RandomStringFilter::default())
         .filter(HmacSha256::default())
         .filter(HmacSha1::default())
@@ -422,6 +452,11 @@ mod tests {
     #[test]
     fn b64enc_filter() {
         assert_eq!(render(r#"{{ "hello" | b64enc }}"#), "aGVsbG8=");
+    }
+
+    #[test]
+    fn b64dec_filter() {
+        assert_eq!(render(r#"{{ "aGVsbG8=" | b64dec }}"#), "hello");
     }
 
     #[test]

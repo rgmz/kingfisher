@@ -22,6 +22,10 @@ use std::alloc::System;
 #[global_allocator]
 static GLOBAL: System = System;
 
+// use std::alloc::System;
+// #[global_allocator]
+// static GLOBAL: System = System;
+
 use std::{
     io::Read,
     sync::{Arc, Mutex},

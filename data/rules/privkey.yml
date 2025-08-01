@@ -45,8 +45,7 @@ rules:
   - name: Contains Private Key
     id: kingfisher.privkey.2
     pattern: |
-      (?xi)                    
-      (?ims)
+      (?xims)
       (                       
         -----BEGIN\s
         (?:
@@ -68,7 +67,8 @@ rules:
           PGP |
           DSA |
           OPENSSH |
-          ENCRYPTED
+          ENCRYPTED |
+          EC
         )?
         \s{0,1}
         PRIVATE\sKEY

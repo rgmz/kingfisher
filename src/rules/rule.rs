@@ -35,6 +35,7 @@ fn default_true() -> bool {
 pub enum Validation {
     AWS,
     AzureStorage,
+    Coinbase,
     GCP,
     MongoDB,
     Postgres,

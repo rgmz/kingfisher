@@ -25,6 +25,7 @@ use crate::{
 
 mod aws;
 mod azure;
+mod coinbase;
 mod gcp;
 mod httpvalidation;
 mod jwt;
@@ -254,7 +255,7 @@ async fn timed_validate_single_match<'a>(
         if !missing.is_empty() {
             m.validation_success = false;
             m.validation_response_body =
-                format!("Validation skipped – missing dependent rules: {}", missing.join(", "));
+                format!("Validation skipped - missing dependent rules: {}", missing.join(", "));
             m.validation_response_status = StatusCode::PRECONDITION_REQUIRED;
             commit_and_return(m);
             return;
@@ -828,7 +829,43 @@ async fn timed_validate_single_match<'a>(
                 },
             );
         }
+        // ----------------------------------------------------- Coinbase validator
+        Some(Validation::Coinbase) => {
+            let cred_name = globals
+                .get("CRED_NAME")
+                .and_then(|v| v.as_scalar())
+                .map(|s| s.into_owned().to_kstr().to_string())
+                .unwrap_or_default();
+            let private_key = globals
+                .get("PRIVATE_KEY")
+                .and_then(|v| v.as_scalar())
+                .map(|s| s.into_owned().to_kstr().to_string())
+                .unwrap_or_default();
 
+            if cred_name.is_empty() || private_key.is_empty() {
+                m.validation_success = false;
+                m.validation_response_body = "Missing key name or private key.".to_string();
+                m.validation_response_status = StatusCode::BAD_REQUEST;
+                commit_and_return(m);
+                return;
+            }
+
+            match coinbase::validate_cdp_api_key(&cred_name, &private_key, client, parser, cache)
+                .await
+            {
+                Ok((ok, msg)) => {
+                    m.validation_success = ok;
+                    m.validation_response_body = msg;
+                    m.validation_response_status =
+                        if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
+                }
+                Err(e) => {
+                    m.validation_success = false;
+                    m.validation_response_body = format!("Coinbase validation error: {}", e);
+                    m.validation_response_status = StatusCode::BAD_GATEWAY;
+                }
+            }
+        }
         // --------------------------------------------------------- Raw / none
         Some(Validation::Raw(raw)) => {
             debug!("Raw validation not implemented: {}", raw);

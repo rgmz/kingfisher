@@ -10,7 +10,7 @@ publish = false
 
 [package]
 name = "kingfisher"
-version = "1.28.0"
+version = "1.29.0"
 description = "MongoDB's blazingly fast secret scanning and validation tool"
 edition.workspace = true
 rust-version.workspace = true
@@ -188,6 +188,10 @@ ipnet = "2.11.0"
 jira_query = "1.6.0"
 oci-client = { version = "0.15", default-features = false, features = ["rustls-tls"] }
 walkdir = "2.5.0"
+p256 = "0.13.2"
+sec1 = "0.7.3"
+rand_core = "0.9.3"
+ed25519-dalek = { version = "2.2", features = ["pkcs8"] }
 
 [dependencies.tikv-jemallocator]
 version = "0.6"
