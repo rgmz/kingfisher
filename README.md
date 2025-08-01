@@ -412,26 +412,6 @@ _If no token is provided Kingfisher still works for public repositories._
 | 200  | Findings discovered           |
 | 205  | Validated findings discovered |
 
-
-## Install a Pre-Commit Hook
-
-Run the provided helper script to add a hook that scans staged files before each commit:
-
-```bash
-# local (current repo only ─ default)
-./install-precommit-hook.sh
-```
-
-This creates `.git/hooks/pre-commit` that scans the files staged for commit with `kingfisher scan --no-update-check` and blocks the commit if any secrets are found.
-
-```bash
-# global (every repo on this machine)
-./install-precommit-hook.sh --global
-### Install a Pre-Receive Hook
-```
-
-Installs a global pre-commit hook at `$HOME/.git/hooks/pre-commit`; for every Git repository you use, it runs `kingfisher scan --no-update-check` on the staged files and cancels the commit if any secrets are detected.
-
 ## Update Checks
 
 Kingfisher automatically queries GitHub for a newer release when it starts and tells you whether an update is available.
