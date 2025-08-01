@@ -491,7 +491,7 @@ mod tests {
     }
     #[test]
     fn test_validate_response_slack_webhook() {
-        // 1️⃣  Build matchers equivalent to rule kingfisher.slack.4
+        // 1Build matchers equivalent to rule kingfisher.slack.4
         let matchers = vec![
             ResponseMatcher::WordMatch {
                 r#type: "word-match".to_string(),
@@ -507,16 +507,16 @@ mod tests {
             },
         ];
 
-        // 2️⃣  Simulate the real Slack response you posted
+        // 2️Simulate the real Slack response you posted
         let body = "invalid_payload";
         let status = StatusCode::BAD_REQUEST; // 400
         let mut headers = HeaderMap::new();
         headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
 
-        // 3️⃣  Call validate_response with html_allowed = false
+        // 3️Call validate_response with html_allowed = false
         let ok = validate_response(&matchers, body, &status, &headers, false);
 
-        // 4️⃣  It *should* be valid (true) because all matcher conditions hold
+        // 4️It *should* be valid (true) because all matcher conditions hold
         assert!(ok, "Slack webhook response should be considered ACTIVE");
     }
 }

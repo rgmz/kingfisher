@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.0]
+- Fixed validation caching for HTTP validators to include rendered headers so inactive secrets no longer appear active.
+
 ## [1.29.0]
 - Fixed issue when more than 1 named capture group is used in a rule variable
 - Added a new liquid template filters: `b64dec`

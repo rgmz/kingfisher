@@ -1,6 +1,7 @@
 use std::{
     fs,
     hash::{Hash, Hasher},
+    collections::BTreeMap,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -345,10 +346,24 @@ async fn timed_validate_single_match<'a>(
 
             // old per-request cache (optional)
             if !is_multipart {
+                let rendered_headers = httpvalidation::process_headers(
+                    &http_validation.request.headers,
+                    parser,
+                    &globals,
+                    &url,
+                )
+                .unwrap_or_default();
+
+                let mut header_map = BTreeMap::new();
+                for (name, value) in rendered_headers.iter() {
+                    if let Ok(v) = value.to_str() {
+                        header_map.insert(name.as_str().to_string(), v.to_string());
+                    }
+                }
                 cache_key = httpvalidation::generate_http_cache_key_parts(
                     http_validation.request.method.as_str(),
                     &url,
-                    &http_validation.request.headers,
+                    &header_map,
                 );
                 if let Some(cached) = cache.get(&cache_key) {
                     let c = cached.value();
@@ -1029,116 +1044,4 @@ rules:
         Ok(())
     }
 
-    //     // ────────────────────────────────────────────────────────────────
-    //     // Slack Webhook – end-to-end validation test
-    //     // ────────────────────────────────────────────────────────────────
-    //     #[tokio::test]
-    //     async fn test_actual_slack_webhook_validation() -> anyhow::Result<()> {
-    //         use std::sync::Arc;
-
-    //         use crossbeam_skiplist::SkipMap;
-    //         use http::StatusCode;
-    //         use rustc_hash::FxHashMap;
-
-    //         use crate::{
-    //             blob::BlobId,
-    //             liquid_filters::register_all,
-    //             location::OffsetSpan,
-    //             matcher::{OwnedBlobMatch, SerializableCapture, SerializableCaptures},
-    //             rules::{
-    //                 rule::{Confidence, Rule},
-    //                 Rules,
-    //             },
-    //             validation::{validate_single_match, Cache},
-    //         };
-
-    //         // 1️⃣ YAML snippet with the **exact** Slack rule
-    //         let slack_yaml = r#"
-    // rules:
-    //   - name: Slack Webhook id: kingfisher.slack.4 pattern: | (?xi) \b ( https://hooks\.slack\.com/services/
-    //     T[a-z0-9_-]{8,12}/ B[a-z0-9_-]{8,12}/ [a-z0-9_-]{20,30} ) \b min_entropy: 3.3 confidence:
-    //     medium examples:
-    //       - https://hooks.slack.com/services/TY40v9sZ9/BxIqhIXIi/NGUyXK6nK7HMAqd0ASzXluoV
-    //       - https://hooks.slack.com/services/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
-    //     validation:
-    //       type: Http
-    //       content:
-    //         request:
-    //           headers:
-    //             Content-Type: application/json
-    //           method: POST
-    //           response_matcher:
-    //             - report_response: true
-    //             - type: WordMatch words:
-    //                 - invalid_payload
-    //             - type: WordMatch words:
-    //                 - "invalid_token"
-    //               negative: true
-    //           url: "{{ TOKEN }}"
-    // "#;
-
-    //         // 2️⃣ Load that YAML into a Rules object
-    //         let data = vec![(std::path::Path::new("slack_test.yaml"), slack_yaml.as_bytes())];
-    //         let rules = Rules::from_paths_and_contents(data, Confidence::Low)?;
-
-    //         // 3️⃣ Pull the rule syntax & wrap into a Rule
-    //         let slack_rule_syntax = rules
-    //             .rules
-    //             .iter()
-    //             .find(|r| r.id == "kingfisher.slack.4")
-    //             .expect("Slack rule not found")
-    //             .clone();
-    //         let slack_rule = Rule::new(slack_rule_syntax);
-
-    //         // 4️⃣ Provide a real-looking webhook URL (use one of the examples)
-    //         let token = "ENTER YOUR SLACK WEBHOOK URL HERE";
-
-    //         // 5️⃣ Build OwnedBlobMatch stub
-    //         let blob_id = BlobId::new(&token.as_bytes());
-    //         let mut owned_blob_match = OwnedBlobMatch {
-    //             rule: slack_rule.into(),
-    //             blob_id,
-    //             finding_fingerprint: 0,
-    //             matching_input_offset_span: OffsetSpan { start: 0, end: token.len() },
-    //             captures: SerializableCaptures {
-    //                 captures: vec![SerializableCapture {
-    //                     name: Some("TOKEN".to_string()),
-    //                     match_number: -1,
-    //                     start: 0,
-    //                     end: token.len(),
-    //                     value: token.into(),
-    //                 }],
-    //             },
-    //             validation_response_body: String::new(),
-    //             validation_response_status: StatusCode::OK,
-    //             validation_success: false,
-    //             calculated_entropy: 5.0,
-    //         };
-
-    //         // 6️⃣ Prepare helpers and run validation
-    //         let parser = register_all(liquid::ParserBuilder::with_stdlib()).build()?;
-    //         let client = reqwest::Client::new();
-    //         let cache: Cache = Arc::new(SkipMap::new());
-    //         let dependent_vars = FxHashMap::default();
-    //         let missing_deps = FxHashMap::default();
-
-    //         validate_single_match(
-    //             &mut owned_blob_match,
-    //             &parser,
-    //             &client,
-    //             &dependent_vars,
-    //             &missing_deps,
-    //             &cache,
-    //         )
-    //         .await;
-
-    //         // 7️⃣ Inspect outcome (true ⇒ credential considered ACTIVE)
-    //         assert!(
-    //             owned_blob_match.validation_success,
-    //             "Slack webhook should be reported ACTIVE; body was {:?}",
-    //             owned_blob_match.validation_response_body
-    //         );
-
-    //         Ok(())
-    //     }
 }
