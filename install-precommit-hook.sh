@@ -68,10 +68,6 @@ if [[ $status -eq 200 ]]; then
   status=0
 fi
 
-if [[ $status -eq 205 ]]; then
-  status=0
-fi
-
 if [[ $status -ne 0 ]]; then
   echo "Kingfisher detected secrets in staged files. Commit aborted." >&2
   exit $status
