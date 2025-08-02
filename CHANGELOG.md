@@ -2,11 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.32.0]
-- New rules: Groq
-
 ## [1.31.0]
-- New rules: Telegram bot token, OpenWeatherMap, Apify
+- New rules: Telegram bot token, OpenWeatherMap, Apify, Groq
 - New OpenAI detectors added (@joshlarsen)
 - Fixed bug that broke validation when using unnamed group captures
 
