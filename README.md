@@ -13,7 +13,7 @@ Kingfisher originated as a fork of Praetorian's [Nosey Parker](https://github.co
 ## What Kingfisher Adds
 - **Live validation** via cloud-provider APIs
 - **Language-aware detection** (source-code parsing) for ~20 languages
-- **Extra targets**: GitLab repos, Docker images, Jira issues, and Slack messages
+- **Extra targets**: GitLab repos, S3 buckets, Docker images, Jira issues, and Slack messages
 - **Baseline mode**: ignore known secrets, flag only new ones
 - **Native Windows** binary
 
@@ -26,6 +26,7 @@ Kingfisher originated as a fork of Praetorian's [Nosey Parker](https://github.co
   - **Docker images**: public or private via `--docker-image`  
   - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`  
   - **Slack messages**: query‑based scans with `--slack-query`  
+  - **AWS S3**: bucket scans via `--s3-bucket`/`--s3-prefix` with credentials from `KF_AWS_KEY`/`KF_AWS_SECRET`, `--role-arn`, `--aws-local-profile`, or anonymous
 - **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))  
 
 **Learn more:** [Introducing Kingfisher: Real‑Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
@@ -108,6 +109,15 @@ docker run --rm \
   -v "$PWD":/proj \
   ghcr.io/mongodb/kingfisher:latest \
     scan --git-url https://github.com/org/private_repo.git
+
+# Scan an S3 bucket
+# Credentials can come from KF_AWS_KEY/KF_AWS_SECRET, --role-arn, or --aws-local-profile
+docker run --rm \
+  -e KF_AWS_KEY=AKIA... \
+  -e KF_AWS_SECRET=g5nYW... \
+  ghcr.io/mongodb/kingfisher:latest \
+    scan --s3-bucket bucket-name
+
 
 # Scan and write a JSON report locally
 # Here we:
@@ -263,6 +273,57 @@ kingfisher scan ./my-project \
   --exclude '*.py' \
   --exclude tests \
   -v
+```
+## Scan an S3 bucket
+You can scan S3 objects directly:
+
+```bash
+kingfisher scan --s3-bucket bucket-name [--s3-prefix path/]
+```
+
+Credential resolution happens in this order:
+
+1. `KF_AWS_KEY` and `KF_AWS_SECRET` environment variables
+2. `--aws-local-profile` pointing to a profile in `~/.aws/config` (works with AWS SSO)
+3. anonymous access for public buckets
+
+If `--role-arn` is supplied, the credentials from steps 1–2 are used to assume that role.
+
+Examples:
+
+```bash
+# using explicit keys
+export KF_AWS_KEY=AKIA...
+export KF_AWS_SECRET=g5nYW...
+kingfisher scan --s3-bucket some-example-bucket
+
+# Above can also be run as:
+KF_AWS_KEY=AKIA... KF_AWS_SECRET=g5nYW... kingfisher scan --s3-bucket some-example-bucket
+
+# using a local profile (e.g., SSO) that exists in your AWS profile (~/.aws/config)
+kingfisher scan --s3-bucket some-example-bucket --aws-local-profile myprofile
+
+# anonymous scan of a bucket, while providing an object prefix to only scan subset of the s3 bucket
+kingfisher scan \
+  --s3-bucket awsglue-datasets \
+  --s3-prefix examples/us-legislators/all
+
+# assuming a role when scanning
+kingfisher scan --s3-bucket some-example-bucket \
+  --role-arn arn:aws:iam::123456789012:role/MyRole
+
+# anonymous scan of a public bucket
+kingfisher scan --s3-bucket some-example-bucket
+```
+
+Docker example:
+
+```bash
+docker run --rm \
+  -e KF_AWS_KEY=AKIA... \
+  -e KF_AWS_SECRET=g5nYW... \
+  ghcr.io/mongodb/kingfisher:latest \
+    scan --s3-bucket bucket-name
 ```
 ## Scanning Docker Images
 

@@ -218,6 +218,8 @@ impl<'a> Display for PrettyFinding<'a> {
                         url
                     } else if let Some(url) = reporter.slack_message_url(&e.path) {
                         url
+                    } else if let Some(mapped) = reporter.s3_display_path(&e.path) {
+                        mapped
                     } else if let Some(mapped) = reporter.docker_display_path(&e.path) {
                         mapped
                     } else {
@@ -233,12 +235,22 @@ impl<'a> Display for PrettyFinding<'a> {
                         }
                     )?;
                 }
+                Origin::Extended(e) => {
+                    if let Some(p) = e.path() {
+                        let display_path = p.display().to_string();
+                        writeln!(
+                            f,
+                            " |Path..........: {}",
+                            if rm.validation_success {
+                                reporter.style_active_creds(&display_path).to_string()
+                            } else {
+                                display_path
+                            }
+                        )?;
+                    }
+                }
                 Origin::GitRepo(e) => {
                     reporter.write_git_metadata(f, e, args, source_span.start.line)?;
-                }
-                Origin::Extended(e) => {
-                    writeln!(f, " |Extended......: {}", reporter.style_metadata(e).to_string())?;
-                    // Convert StyledObject to String
                 }
             }
         }
@@ -353,6 +365,11 @@ fn test_pretty_format_with_nan_entropy_panics() {
             // Slack options
             slack_query: None,
             slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
+            // s3
+            s3_bucket: None,
+            s3_prefix: None,
+            role_arn: None,
+            aws_local_profile: None,
             // Docker image scanning
             docker_image: Vec::new(),
             // git clone / history options

@@ -75,12 +75,24 @@ impl DetailsReporter {
                                 url
                             } else if let Some(url) = self.slack_message_url(&e.path) {
                                 url
+                            } else if let Some(mapped) = self.s3_display_path(&e.path) {
+                                mapped
                             } else {
                                 e.path.display().to_string()
                             };
                             artifact_locations.push(
                                 sarif::ArtifactLocationBuilder::default().uri(uri).build().ok()?,
                             );
+                        }
+                        Origin::Extended(e) => {
+                            if let Some(p) = e.path() {
+                                artifact_locations.push(
+                                    sarif::ArtifactLocationBuilder::default()
+                                        .uri(p.display().to_string())
+                                        .build()
+                                        .ok()?,
+                                );
+                            }
                         }
                         Origin::GitRepo(e) => {
                             // Extract and store Git metadata
@@ -111,7 +123,6 @@ impl DetailsReporter {
                                 );
                             }
                         }
-                        Origin::Extended(_) => (),
                     }
                 }
 
@@ -212,10 +223,17 @@ impl DetailsReporter {
                         url
                     } else if let Some(url) = self.slack_message_url(&e.path) {
                         url
+                    } else if let Some(mapped) = self.s3_display_path(&e.path) {
+                        mapped
                     } else {
                         e.path.display().to_string()
                     };
                     msg.push_str(&format!("Location: {}\n", uri));
+                }
+                Origin::Extended(e) => {
+                    if let Some(p) = e.path() {
+                        msg.push_str(&format!("Location: {}\n", p.display()));
+                    }
                 }
                 Origin::GitRepo(e) => {
                     if let Some(cs) = &e.first_commit {
@@ -234,9 +252,6 @@ impl DetailsReporter {
                         ));
                         msg.push_str(&format!("File: {}", cs.blob_path));
                     }
-                }
-                Origin::Extended(e) => {
-                    msg.push_str(&format!("Extended: {}\n", e));
                 }
             }
             msg

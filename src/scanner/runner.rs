@@ -18,7 +18,9 @@ use crate::{
     rules_database::RulesDatabase,
     scanner::{
         clone_or_update_git_repos, enumerate_filesystem_inputs, enumerate_github_repos,
-        repos::{enumerate_gitlab_repos, fetch_jira_issues, fetch_slack_messages},
+        repos::{
+            enumerate_gitlab_repos, fetch_jira_issues, fetch_s3_objects, fetch_slack_messages,
+        },
         run_secret_validation, save_docker_images,
         summary::print_scan_summary,
     },
@@ -72,6 +74,7 @@ pub async fn run_async_scan(
     let slack_dirs = fetch_slack_messages(args, global_args, &datastore).await?;
     input_roots.extend(slack_dirs);
 
+
     // Save Docker images if specified
     if !args.input_specifier_args.docker_image.is_empty() {
         let clone_root = {
@@ -93,22 +96,39 @@ pub async fn run_async_scan(
         }
     }
 
-    if input_roots.is_empty() {
-        bail!("No inputs to scan");
-    }
     let shared_profiler = Arc::new(ConcurrentRuleProfiler::new());
     let enable_profiling = args.rule_stats;
     let matcher_stats = Mutex::new(MatcherStats::default());
-    let _inputs = enumerate_filesystem_inputs(
+
+    // Fetch S3 objects if requested (scanned immediately)
+    fetch_s3_objects(
         args,
-        datastore.clone(),
-        &input_roots,
-        progress_enabled,
+        &datastore,
         rules_db,
+        &matcher_stats,
         enable_profiling,
         Arc::clone(&shared_profiler),
-        &matcher_stats,
-    )?;
+    )
+    .await?;
+
+    let has_s3 = args.input_specifier_args.s3_bucket.is_some();
+    if input_roots.is_empty() && !has_s3 {
+        bail!("No inputs to scan");
+    }
+
+    if !input_roots.is_empty() {
+        let _inputs = enumerate_filesystem_inputs(
+            args,
+            datastore.clone(),
+            &input_roots,
+            progress_enabled,
+            rules_db,
+            enable_profiling,
+            Arc::clone(&shared_profiler),
+            &matcher_stats,
+        )?;
+    }
+
 
     if !args.no_dedup {
         // Final deduplication step before validation (or before reporting)

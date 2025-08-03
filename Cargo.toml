@@ -10,7 +10,7 @@ publish = false
 
 [package]
 name = "kingfisher"
-version = "1.31.0"
+version = "1.32.0"
 description = "MongoDB's blazingly fast secret scanning and validation tool"
 edition.workspace = true
 rust-version.workspace = true
@@ -186,6 +186,7 @@ oci-client = { version = "0.15", default-features = false, features = ["rustls-t
 walkdir = "2.5.0"
 p256 = "0.13.2"
 ed25519-dalek = { version = "2.2", features = ["pkcs8"] }
+aws-sdk-s3 = "1.100.0"
 
 [dependencies.tikv-jemallocator]
 version = "0.6"
@@ -207,7 +208,7 @@ rand_chacha = "0.9.0"
 
 [profile.release]
 debug = false
-strip = "debuginfo"
+strip = true #"debuginfo"
 opt-level = 3           # Maximum optimization for performance
 lto = true              # Enable Link Time Optimization
 codegen-units = 1       # Optimize for size but slower compilation
