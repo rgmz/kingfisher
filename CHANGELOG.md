@@ -5,7 +5,6 @@ All notable changes to this project will be documented in this file.
 ## [1.32.0]
 - Added support for scanning AWS S3 buckets via `--s3-bucket` and optional `--s3-prefix`
 - Added `--role-arn` and `--aws-local-profile` flags for S3 authentication alongside `KF_AWS_KEY`/`KF_AWS_SECRET`
-- 
 ## [1.31.0]
 - New rules: Telegram bot token, OpenWeatherMap, Apify, Groq
 - New OpenAI detectors added (@joshlarsen)

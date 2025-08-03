@@ -187,7 +187,6 @@ walkdir = "2.5.0"
 p256 = "0.13.2"
 ed25519-dalek = { version = "2.2", features = ["pkcs8"] }
 aws-sdk-s3 = "1.100.0"
-aws-smithy-http = "0.62.2"
 
 [dependencies.tikv-jemallocator]
 version = "0.6"
