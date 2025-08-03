@@ -127,6 +127,11 @@ async fn test_validation_cache_and_depvars() -> Result<()> {
             max_results: 100,
             slack_query: None,
             slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
+            // s3
+            s3_bucket: None,
+            s3_prefix: None,
+            role_arn: None,
+            aws_local_profile: None,
             // Docker image scanning
             docker_image: Vec::new(),
             // git clone / history options

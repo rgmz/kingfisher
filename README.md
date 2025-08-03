@@ -26,6 +26,7 @@ Kingfisher originated as a fork of Praetorian's [Nosey Parker](https://github.co
   - **Docker images**: public or private via `--docker-image`  
   - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`  
   - **Slack messages**: query‑based scans with `--slack-query`  
+  - **AWS S3**: bucket scans via `--s3-bucket`/`--s3-prefix` with credentials from `KF_AWS_KEY`/`KF_AWS_SECRET`, `--role-arn`, or `--aws-local-profile`
 - **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))  
 
 **Learn more:** [Introducing Kingfisher: Real‑Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
@@ -108,6 +109,15 @@ docker run --rm \
   -v "$PWD":/proj \
   ghcr.io/mongodb/kingfisher:latest \
     scan --git-url https://github.com/org/private_repo.git
+
+# Scan an S3 bucket
+# Credentials can come from KF_AWS_KEY/KF_AWS_SECRET, --role-arn, or --aws-local-profile
+docker run --rm \
+  -e KF_AWS_KEY=AKIA... \
+  -e KF_AWS_SECRET=g5nYW... \
+  ghcr.io/mongodb/kingfisher:latest \
+    scan --s3-bucket bucket-name
+
 
 # Scan and write a JSON report locally
 # Here we:

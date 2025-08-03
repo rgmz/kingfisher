@@ -286,6 +286,11 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             jira_url: None,
             jql: None,
             max_results: 100,
+
+            s3_bucket: None,
+            s3_prefix: None,
+            role_arn: None,
+            aws_local_profile: None,
             // Slack query
             slack_query: None,
             slack_api_url: Url::parse("https://slack.com/api/").unwrap(),

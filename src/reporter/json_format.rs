@@ -99,20 +99,22 @@ impl DetailsReporter {
             let file_path = rm
                 .origin
                 .iter()
-                .find_map(|origin| {
-                    if let Origin::File(e) = origin {
+                .find_map(|origin| match origin {
+                    Origin::File(e) => {
                         if let Some(url) = self.jira_issue_url(&e.path, args) {
                             Some(url)
                         } else if let Some(url) = self.slack_message_url(&e.path) {
                             Some(url)
+                        } else if let Some(mapped) = self.s3_display_path(&e.path) {
+                            Some(mapped)
                         } else if let Some(mapped) = self.docker_display_path(&e.path) {
                             Some(mapped)
                         } else {
                             Some(e.path.display().to_string())
                         }
-                    } else {
-                        None
-                    }
+                    } 
+                    Origin::Extended(e) => e.path().map(|p| p.display().to_string()),
+                    _ => None,
                 })
                 .unwrap_or_default();
 
@@ -258,11 +260,15 @@ impl DetailsReporter {
                         Some(url)
                     } else if let Some(url) = self.slack_message_url(&e.path) {
                         Some(url)
+                    } else if let Some(mapped) = self.s3_display_path(&e.path) {
+                        Some(mapped)
                     } else if let Some(mapped) = self.docker_display_path(&e.path) {
                         Some(mapped)
                     } else {
                         Some(e.path.display().to_string())
                     }
+                } else if let Origin::Extended(e) = origin {
+                    e.path().map(|p| p.display().to_string())
                 } else {
                     None
                 }
@@ -437,10 +443,14 @@ mod tests {
                 jira_url: None,
                 jql: None,
                 max_results: 100,
-                // Docker image scanning
                 // Slack options
                 slack_query: None,
                 slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
+                // s3
+                s3_bucket: None,
+                s3_prefix: None,
+                role_arn: None,
+                aws_local_profile: None,
 
                 docker_image: Vec::new(),
                 // clone / history options

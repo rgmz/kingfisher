@@ -141,6 +141,17 @@ impl DetailsReporter {
         ds.slack_links().get(path).cloned()
     }
 
+    fn s3_display_path(&self, path: &std::path::Path) -> Option<String> {
+        let ds = self.datastore.lock().ok()?;
+        for (dir, bucket) in ds.s3_buckets().iter() {
+            if path.starts_with(dir) {
+                let rel = path.strip_prefix(dir).ok()?;
+                return Some(format!("s3://{}/{}", bucket, rel.display()));
+            }
+        }
+        None
+    }
+
     fn docker_display_path(&self, path: &std::path::Path) -> Option<String> {
         let ds = self.datastore.lock().ok()?;
         for (dir, image) in ds.docker_images().iter() {
