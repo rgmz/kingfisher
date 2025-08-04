@@ -300,6 +300,7 @@ pub async fn fetch_s3_objects(
     matcher_stats: &Mutex<MatcherStats>,
     enable_profiling: bool,
     shared_profiler: Arc<crate::rule_profiling::ConcurrentRuleProfiler>,
+    progress_enabled: bool,
 ) -> Result<()> {
     let Some(bucket) = args.input_specifier_args.s3_bucket.as_deref() else {
         return Ok(());
@@ -320,9 +321,25 @@ pub async fn fetch_s3_objects(
     )?;
     let guesser = Guesser::new().expect("should be able to create filetype guesser");
     let mut processor = BlobProcessor { matcher, guesser };
+
+    let progress = if progress_enabled {
+        let style =
+            ProgressStyle::with_template("{spinner} {msg} ({pos} objects) [{elapsed_precise}]")
+                .expect("progress bar style template should compile");
+        let pb = ProgressBar::new_spinner().with_style(style).with_message("Fetching S3 objects");
+        pb.enable_steady_tick(Duration::from_millis(500));
+        pb
+    } else {
+        ProgressBar::hidden()
+    };
+
+    let bucket_name = bucket.to_string();
+    let pb = progress.clone();
+
+
     let bucket_name = bucket.to_string();
 
-    s3::visit_bucket_objects(bucket, prefix, role_arn, profile, |key, bytes| {
+    s3::visit_bucket_objects(bucket, prefix, role_arn, profile, move |key, bytes| {
         let origin = OriginSet::new(
             Origin::from_extended(serde_json::json!({
                 "path": format!("s3://{}/{}", bucket_name, key)
@@ -348,9 +365,13 @@ pub async fn fetch_s3_objects(
             let added = datastore.lock().unwrap().record(batch, !args.no_dedup);
             debug!("Added {} new S3 blobs", added);
         }
+        pb.inc(1);
         Ok(())
     })
     .await?;
+
+    let total = progress.position();
+    progress.finish_with_message(format!("Fetched {} S3 objects", total));
 
     Ok(())
 }

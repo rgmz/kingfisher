@@ -107,6 +107,7 @@ pub async fn run_async_scan(
         &matcher_stats,
         enable_profiling,
         Arc::clone(&shared_profiler),
+        progress_enabled,
     )
     .await?;
 

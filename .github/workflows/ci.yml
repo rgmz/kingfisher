@@ -24,6 +24,8 @@ jobs:
          run: make ubuntu-arm64
        - name: Run tests
          run: make tests
+         env:
+           CARGO_BUILD_JOBS: 1
 
    macos-arm64:
      name: macOS arm64
