@@ -5,12 +5,12 @@ use std::{
 
 use anyhow::Result;
 use http::StatusCode;
-use indenter::indented;
 use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::{
     blob::BlobMetadata,
+    bstring_escape::Escaped,
     cli,
     cli::global::GlobalArgs,
     finding_data, findings_store,
@@ -23,7 +23,7 @@ mod json_format;
 mod pretty_format;
 mod sarif_format;
 pub mod styles;
-use std::{hash::Hash, io::IsTerminal};
+use std::io::IsTerminal;
 
 use styles::{StyledObject, Styles};
 
@@ -141,6 +141,17 @@ impl DetailsReporter {
         ds.slack_links().get(path).cloned()
     }
 
+    fn s3_display_path(&self, path: &std::path::Path) -> Option<String> {
+        let ds = self.datastore.lock().ok()?;
+        for (dir, bucket) in ds.s3_buckets().iter() {
+            if path.starts_with(dir) {
+                let rel = path.strip_prefix(dir).ok()?;
+                return Some(format!("s3://{}/{}", bucket, rel.display()));
+            }
+        }
+        None
+    }
+
     fn docker_display_path(&self, path: &std::path::Path) -> Option<String> {
         let ds = self.datastore.lock().ok()?;
         for (dir, image) in ds.docker_images().iter() {
@@ -154,19 +165,6 @@ impl DetailsReporter {
             }
         }
         None
-    }
-
-    fn gather_findings(&self) -> Result<Vec<Finding>> {
-        let metadata_list = self.get_finding_data()?;
-        let all_matches = self.get_filtered_matches()?;
-        let mut findings = Vec::new();
-        for md in metadata_list {
-            // Filter matches that belong to this metadata if needed
-            let matches_for_md =
-                all_matches.iter().filter(|m| m.m.rule_name == md.rule_name).cloned().collect();
-            findings.push(Finding::new(md.clone(), matches_for_md));
-        }
-        Ok(findings)
     }
 
     fn process_matches(&self, only_valid: bool, filter_visible: bool) -> Result<Vec<ReportMatch>> {
@@ -215,38 +213,6 @@ impl DetailsReporter {
             .collect())
     }
 
-    // fn process_matches(&self, only_valid: bool) -> Result<Vec<ReportMatch>> {
-    //     let datastore = self.datastore.lock().unwrap();
-    //     Ok(datastore
-    //         .get_matches()
-    //         .iter()
-    //         .filter(|msg| {
-    //             let (_origin, _blob_metadata, match_item) = &***msg;
-    //             if only_valid {
-    //                 match_item.validation_success
-    //                     && match_item.validation_response_status != StatusCode::CONTINUE.as_u16()
-    //                     && match_item.visible
-    //             } else {
-    //                 match_item.visible
-    //             }
-    //         })
-    //         .map(|msg| {
-    //             let (origin, blob_metadata, match_item) = &**msg;
-    //             ReportMatch {
-    //                 origin: origin.clone(),
-    //                 blob_metadata: blob_metadata.clone(),
-    //                 m: match_item.clone(),
-    //                 comment: None,
-    //                 visible: match_item.visible,
-    //                 match_confidence: match_item.rule_confidence,
-    //                 validation_response_body: match_item.validation_response_body.clone(),
-    //                 validation_response_status: match_item.validation_response_status,
-    //                 validation_success: match_item.validation_success,
-    //             }
-    //         })
-    //         .collect())
-    // }
-
     pub fn get_filtered_matches(&self) -> Result<Vec<ReportMatch>> {
         self.process_matches(self.only_valid, true)
     }
@@ -255,24 +221,164 @@ impl DetailsReporter {
         self.process_matches(only_valid.unwrap_or(self.only_valid), false)
     }
 
-    fn get_finding_data(&self) -> Result<Vec<finding_data::FindingMetadata>> {
-        let datastore = self.datastore.lock().unwrap();
-        Ok(datastore
-            .get_finding_data_iter()
-            .filter(|metadata| {
-                if self.only_valid {
-                    datastore.get_matches().iter().any(|msg| {
-                        let (_, _, match_item) = &**msg;
-                        match_item.rule_name == metadata.rule_name
-                            && match_item.validation_success
-                            && match_item.validation_response_status
-                                != StatusCode::CONTINUE.as_u16()
-                    })
+    pub fn deduplicate_matches(
+        &self,
+        matches: Vec<ReportMatch>,
+        no_dedup: bool,
+    ) -> Vec<ReportMatch> {
+        if no_dedup {
+            return matches;
+        }
+
+        use std::collections::HashMap;
+        let mut by_fp: HashMap<u64, ReportMatch> = HashMap::new();
+
+        for rm in matches {
+            let fp = rm.m.finding_fingerprint;
+            if let Some(existing) = by_fp.get_mut(&fp) {
+                // merge origin sets (keep first origin, append the rest)
+                for o in rm.origin.iter() {
+                    if !existing.origin.iter().any(|e| e == o) {
+                        existing.origin = OriginSet::new(
+                            existing.origin.first().clone(),
+                            existing
+                                .origin
+                                .iter()
+                                .skip(1)
+                                .cloned()
+                                .chain(std::iter::once(o.clone()))
+                                .collect(),
+                        );
+                    }
+                }
+                continue;
+            }
+            by_fp.insert(fp, rm);
+        }
+        by_fp.into_values().collect()
+    }
+
+    fn matches_for_output(&self, args: &cli::commands::scan::ScanArgs) -> Result<Vec<ReportMatch>> {
+        let mut matches = self.get_filtered_matches()?;
+        if !args.no_dedup {
+            matches = self.deduplicate_matches(matches, args.no_dedup);
+        }
+        if args.no_dedup {
+            let mut expanded = Vec::new();
+            for rm in matches {
+                if rm.origin.len() > 1 {
+                    for origin in rm.origin.iter() {
+                        let mut single = rm.clone();
+                        single.origin = OriginSet::new(origin.clone(), Vec::new());
+                        expanded.push(single);
+                    }
                 } else {
-                    true
+                    expanded.push(rm);
+                }
+            }
+            matches = expanded;
+        }
+        Ok(matches)
+    }
+
+    pub fn build_finding_record(
+        &self,
+        rm: &ReportMatch,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> FindingReporterRecord {
+        let source_span = &rm.m.location.source_span;
+        let line_num = source_span.start.line;
+
+        let snippet = Escaped(
+            rm.m.groups
+                .captures
+                .get(1)
+                .or_else(|| rm.m.groups.captures.get(0))
+                .map(|capture| capture.value.as_bytes())
+                .unwrap_or_default(),
+        )
+        .to_string();
+
+        let validation_status = if rm.validation_success {
+            "Active Credential".to_string()
+        } else if rm.validation_response_status == StatusCode::CONTINUE.as_u16() {
+            "Not Attempted".to_string()
+        } else {
+            "Inactive Credential".to_string()
+        };
+
+        const MAX_RESPONSE_LENGTH: usize = 512;
+        let truncated_body: String =
+            rm.validation_response_body.chars().take(MAX_RESPONSE_LENGTH).collect();
+        let ellipsis =
+            if rm.validation_response_body.len() > MAX_RESPONSE_LENGTH { "..." } else { "" };
+        let response_body = format!("{}{}", truncated_body, ellipsis);
+
+        let git_metadata_val = rm
+            .origin
+            .iter()
+            .filter_map(|origin| {
+                if let Origin::GitRepo(e) = origin {
+                    self.extract_git_metadata(e, source_span)
+                } else {
+                    None
                 }
             })
-            .collect())
+            .next();
+
+        let file_path = rm
+            .origin
+            .iter()
+            .find_map(|origin| match origin {
+                Origin::File(e) => {
+                    if let Some(url) = self.jira_issue_url(&e.path, args) {
+                        Some(url)
+                    } else if let Some(url) = self.slack_message_url(&e.path) {
+                        Some(url)
+                    } else if let Some(mapped) = self.s3_display_path(&e.path) {
+                        Some(mapped)
+                    } else if let Some(mapped) = self.docker_display_path(&e.path) {
+                        Some(mapped)
+                    } else {
+                        Some(e.path.display().to_string())
+                    }
+                }
+                Origin::Extended(e) => e.path().map(|p| p.display().to_string()),
+                _ => None,
+            })
+            .unwrap_or_default();
+
+        FindingReporterRecord {
+            rule: RuleMetadata {
+                name: rm.m.rule_name.to_string(),
+                id: rm.m.rule_text_id.to_string(),
+            },
+            finding: FindingRecordData {
+                snippet,
+                fingerprint: rm.m.finding_fingerprint.to_string(),
+                confidence: rm.match_confidence.to_string(),
+                entropy: format!("{:.2}", rm.m.calculated_entropy),
+                validation: ValidationInfo { status: validation_status, response: response_body },
+                language: rm
+                    .blob_metadata
+                    .language
+                    .clone()
+                    .unwrap_or_else(|| "Unknown".to_string()),
+                line: line_num as u32,
+                column_start: source_span.start.column as u32,
+                column_end: source_span.end.column as u32,
+                path: file_path,
+                git_metadata: git_metadata_val,
+            },
+        }
+    }
+
+    pub fn build_finding_records(
+        &self,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Result<Vec<FindingReporterRecord>> {
+        let matches = self.matches_for_output(args)?;
+        Ok(matches.iter().map(|rm| self.build_finding_record(rm, args)).collect())
     }
 
     fn style_finding_heading<D>(&self, val: D) -> StyledObject<D> {
@@ -336,13 +442,7 @@ impl Reportable for DetailsReporter {
         }
     }
 }
-/// A group of matches that all have the same rule and capture group content
-#[derive(Serialize, JsonSchema)]
-pub(crate) struct Finding {
-    #[serde(flatten)]
-    metadata: finding_data::FindingMetadata,
-    matches: Vec<ReportMatch>,
-}
+
 /// A match produced by one of kingfisher's rules.
 /// This corresponds to a single location.
 #[derive(Serialize, JsonSchema, Clone)]
@@ -355,18 +455,14 @@ pub struct ReportMatch {
     #[serde(flatten)]
     pub m: Match,
 
-    /// An optional score assigned to the match
-    // #[validate(range(min = 0.0, max = 1.0))]
-    // score: Option<f64>,
-
     /// An optional comment assigned to the match
     pub comment: Option<String>,
 
+    /// The confidence level of the match
     pub match_confidence: Confidence,
 
+    /// Whether the match is visible in the output
     pub visible: bool,
-    /// An optional status assigned to the match
-    // status: Option<finding_data::Status>,
 
     /// Validation Body
     pub validation_response_body: String,
@@ -377,6 +473,41 @@ pub struct ReportMatch {
     /// Validation Success
     pub validation_success: bool,
 }
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct FindingReporterRecord {
+    pub rule: RuleMetadata,
+    pub finding: FindingRecordData,
+}
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct RuleMetadata {
+    pub name: String,
+    pub id: String,
+}
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct ValidationInfo {
+    pub status: String,
+    pub response: String,
+}
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct FindingRecordData {
+    pub snippet: String,
+    pub fingerprint: String,
+    pub confidence: String,
+    pub entropy: String,
+    pub validation: ValidationInfo,
+    pub language: String,
+    pub line: u32,
+    pub column_start: u32,
+    pub column_end: u32,
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_metadata: Option<serde_json::Value>,
+}
+
 impl From<finding_data::FindingDataEntry> for ReportMatch {
     fn from(e: finding_data::FindingDataEntry) -> Self {
         ReportMatch {
@@ -392,8 +523,4 @@ impl From<finding_data::FindingDataEntry> for ReportMatch {
         }
     }
 }
-impl Finding {
-    fn new(metadata: finding_data::FindingMetadata, matches: Vec<ReportMatch>) -> Self {
-        Self { metadata, matches }
-    }
-}
+

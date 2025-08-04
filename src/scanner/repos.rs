@@ -8,6 +8,7 @@ use indicatif::{HumanCount, ProgressBar, ProgressStyle};
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
+use crate::blob::BlobIdMap;
 use crate::{
     blob::BlobMetadata,
     cli::{
@@ -20,11 +21,18 @@ use crate::{
     findings_store,
     git_binary::{CloneMode, Git},
     git_url::GitUrl,
-    github, gitlab, jira,
-    matcher::Match,
-    origin::OriginSet,
+    github, gitlab,
+    guesser::Guesser,
+    jira,
+    matcher::{Match, Matcher, MatcherStats},
+    origin::{Origin, OriginSet},
+    rules_database::RulesDatabase,
+    s3,
+    scanner::processing::BlobProcessor,
+    scanner_pool::ScannerPool,
     slack, PathBuf,
 };
+
 pub type DatastoreMessage = (OriginSet, BlobMetadata, Vec<(Option<f64>, Match)>);
 
 pub fn clone_or_update_git_repos(
@@ -283,4 +291,87 @@ pub async fn fetch_slack_messages(
         }
     }
     Ok(vec![output_dir])
+}
+
+pub async fn fetch_s3_objects(
+    args: &scan::ScanArgs,
+    datastore: &Arc<Mutex<findings_store::FindingsStore>>,
+    rules_db: &RulesDatabase,
+    matcher_stats: &Mutex<MatcherStats>,
+    enable_profiling: bool,
+    shared_profiler: Arc<crate::rule_profiling::ConcurrentRuleProfiler>,
+    progress_enabled: bool,
+) -> Result<()> {
+    let Some(bucket) = args.input_specifier_args.s3_bucket.as_deref() else {
+        return Ok(());
+    };
+    let prefix = args.input_specifier_args.s3_prefix.as_deref();
+    let role_arn = args.input_specifier_args.role_arn.as_deref();
+    let profile = args.input_specifier_args.aws_local_profile.as_deref();
+
+    let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
+    let seen_blobs = BlobIdMap::new();
+    let matcher = Matcher::new(
+        rules_db,
+        scanner_pool,
+        &seen_blobs,
+        Some(matcher_stats),
+        enable_profiling,
+        Some(shared_profiler.clone()),
+    )?;
+    let guesser = Guesser::new().expect("should be able to create filetype guesser");
+    let mut processor = BlobProcessor { matcher, guesser };
+
+    let progress = if progress_enabled {
+        let style =
+            ProgressStyle::with_template("{spinner} {msg} ({pos} objects) [{elapsed_precise}]")
+                .expect("progress bar style template should compile");
+        let pb = ProgressBar::new_spinner().with_style(style).with_message("Fetching S3 objects");
+        pb.enable_steady_tick(Duration::from_millis(500));
+        pb
+    } else {
+        ProgressBar::hidden()
+    };
+
+    let bucket_name = bucket.to_string();
+    let pb = progress.clone();
+
+
+    let bucket_name = bucket.to_string();
+
+    s3::visit_bucket_objects(bucket, prefix, role_arn, profile, move |key, bytes| {
+        let origin = OriginSet::new(
+            Origin::from_extended(serde_json::json!({
+                "path": format!("s3://{}/{}", bucket_name, key)
+            })),
+            Vec::new(),
+        );
+        let blob = crate::blob::Blob::from_bytes(bytes);
+
+        if let Some((origin, blob_md, scored_matches)) =
+            processor.run(origin, blob, args.no_dedup)?
+        {
+            // Wrap origin & metadata once:
+            let origin_arc = Arc::new(origin);
+            let blob_arc = Arc::new(blob_md);
+
+            // Now build a batch of exactly one FindingsStoreMessage per Match
+            let mut batch = Vec::with_capacity(scored_matches.len());
+            for (_score, m) in scored_matches {
+                batch.push((origin_arc.clone(), blob_arc.clone(), m));
+            }
+
+            // Call record with the right type
+            let added = datastore.lock().unwrap().record(batch, !args.no_dedup);
+            debug!("Added {} new S3 blobs", added);
+        }
+        pb.inc(1);
+        Ok(())
+    })
+    .await?;
+
+    let total = progress.position();
+    progress.finish_with_message(format!("Fetched {} S3 objects", total));
+
+    Ok(())
 }

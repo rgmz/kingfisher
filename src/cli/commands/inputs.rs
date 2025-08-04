@@ -28,7 +28,8 @@ pub struct InputSpecifierArgs {
             "all_gitlab_groups",
             "jira_url",
             "docker_image",
-            "slack_query"
+            "slack_query",
+            "s3_bucket"
         ]),
         value_hint = ValueHint::AnyPath
     )]
@@ -106,6 +107,22 @@ pub struct InputSpecifierArgs {
     /// Maximum number of Slack or Jira results to fetch
     #[arg(long, default_value_t = 100)]
     pub max_results: usize,
+
+    /// Scan the specified S3 bucket
+    #[arg(long)]
+    pub s3_bucket: Option<String>,
+
+    /// Optional prefix within the S3 bucket
+    #[arg(long, requires = "s3_bucket")]
+    pub s3_prefix: Option<String>,
+
+    /// AWS IAM role ARN to assume for S3 access
+    #[arg(long, requires = "s3_bucket")]
+    pub role_arn: Option<String>,
+
+    /// Use credentials from a local AWS profile in ~/.aws/config
+    #[arg(long, requires = "s3_bucket")]
+    pub aws_local_profile: Option<String>,
 
     /// Docker/OCI images to scan (no local Docker required)
     #[arg(long = "docker-image")]

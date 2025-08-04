@@ -29,6 +29,7 @@ pub mod rule_loader;
 pub mod rule_profiling;
 pub mod rules;
 pub mod rules_database;
+pub mod s3;
 pub mod safe_list;
 pub mod scanner;
 pub mod scanner_pool;
