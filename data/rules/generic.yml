@@ -96,7 +96,6 @@ rules:
       ["']
     min_entropy: 3.3
     confidence: low
-    categories: [fuzzy, generic, secret]
     examples:
       - |
         password = "super$ecret"

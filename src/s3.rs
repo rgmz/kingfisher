@@ -2,12 +2,12 @@ use anyhow::{Context, Result};
 use aws_config::{defaults, meta::region::RegionProviderChain, BehaviorVersion};
 use aws_credential_types::Credentials;
 use aws_sdk_s3::{
+    error::ProvideErrorMetadata,                    // for .code()
+    operation::list_objects_v2::ListObjectsV2Error, // modeled service error
     Client,
-    operation::list_objects_v2::ListObjectsV2Error,            // modeled service error
-    error::ProvideErrorMetadata,                               // for .code()
 };
 use aws_types::region::Region;
-use reqwest;                                                 // HTTP client for HEAD fallback
+use reqwest; // HTTP client for HEAD fallback
 
 pub async fn visit_bucket_objects<F>(
     bucket: &str,
@@ -43,9 +43,7 @@ where
             .configure(&config)
             .build()
             .await;
-        let conf = aws_sdk_s3::config::Builder::from(&config)
-            .credentials_provider(assume)
-            .build();
+        let conf = aws_sdk_s3::config::Builder::from(&config).credentials_provider(assume).build();
         Client::from_conf(conf)
     } else {
         Client::new(&config)
@@ -66,7 +64,7 @@ where
 
             // On error, extract the modeled service error
             Err(err) => {
-                let svc_err: ListObjectsV2Error = err.into_service_error();  // from SdkError
+                let svc_err: ListObjectsV2Error = err.into_service_error(); // from SdkError
 
                 // If the bucket must be addressed at another region...
                 if svc_err.code() == Some("PermanentRedirect") {

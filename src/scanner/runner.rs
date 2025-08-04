@@ -74,7 +74,6 @@ pub async fn run_async_scan(
     let slack_dirs = fetch_slack_messages(args, global_args, &datastore).await?;
     input_roots.extend(slack_dirs);
 
-
     // Save Docker images if specified
     if !args.input_specifier_args.docker_image.is_empty() {
         let clone_root = {
@@ -128,7 +127,6 @@ pub async fn run_async_scan(
             &matcher_stats,
         )?;
     }
-
 
     if !args.no_dedup {
         // Final deduplication step before validation (or before reporting)

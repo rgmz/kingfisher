@@ -21,14 +21,16 @@ use crate::{
     findings_store,
     git_binary::{CloneMode, Git},
     git_url::GitUrl,
-    github, gitlab, jira,
+    github, gitlab,
+    guesser::Guesser,
+    jira,
     matcher::{Match, Matcher, MatcherStats},
     origin::{Origin, OriginSet},
     rules_database::RulesDatabase,
     s3,
     scanner::processing::BlobProcessor,
     scanner_pool::ScannerPool,
-    slack, guesser::Guesser, PathBuf,
+    slack, PathBuf,
 };
 
 pub type DatastoreMessage = (OriginSet, BlobMetadata, Vec<(Option<f64>, Match)>);
@@ -291,7 +293,6 @@ pub async fn fetch_slack_messages(
     Ok(vec![output_dir])
 }
 
-
 pub async fn fetch_s3_objects(
     args: &scan::ScanArgs,
     datastore: &Arc<Mutex<findings_store::FindingsStore>>,
@@ -330,10 +331,12 @@ pub async fn fetch_s3_objects(
         );
         let blob = crate::blob::Blob::from_bytes(bytes);
 
-        if let Some((origin, blob_md, scored_matches)) = processor.run(origin, blob, args.no_dedup)? {
+        if let Some((origin, blob_md, scored_matches)) =
+            processor.run(origin, blob, args.no_dedup)?
+        {
             // Wrap origin & metadata once:
             let origin_arc = Arc::new(origin);
-            let blob_arc   = Arc::new(blob_md);
+            let blob_arc = Arc::new(blob_md);
 
             // Now build a batch of exactly one FindingsStoreMessage per Match
             let mut batch = Vec::with_capacity(scored_matches.len());

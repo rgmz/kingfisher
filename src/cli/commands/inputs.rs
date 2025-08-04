@@ -124,7 +124,6 @@ pub struct InputSpecifierArgs {
     #[arg(long, requires = "s3_bucket")]
     pub aws_local_profile: Option<String>,
 
-
     /// Docker/OCI images to scan (no local Docker required)
     #[arg(long = "docker-image")]
     pub docker_image: Vec<String>,
