@@ -301,7 +301,7 @@ kingfisher scan --s3-bucket some-example-bucket
 KF_AWS_KEY=AKIA... KF_AWS_SECRET=g5nYW... kingfisher scan --s3-bucket some-example-bucket
 
 # using a local profile (e.g., SSO) that exists in your AWS profile (~/.aws/config)
-kingfisher scan --s3-bucket some-example-bucket --aws-local-profile myprofile
+kingfisher scan --s3-bucket some-example-bucket --aws-local-profile default
 
 # anonymous scan of a bucket, while providing an object prefix to only scan subset of the s3 bucket
 kingfisher scan \
