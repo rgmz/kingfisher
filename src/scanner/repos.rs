@@ -335,7 +335,6 @@ pub async fn fetch_s3_objects(
 
     let pb = progress.clone();
 
-
     let bucket_name = bucket.to_string();
 
     s3::visit_bucket_objects(bucket, prefix, role_arn, profile, move |key, bytes| {

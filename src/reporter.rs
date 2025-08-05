@@ -523,4 +523,3 @@ impl From<finding_data::FindingDataEntry> for ReportMatch {
         }
     }
 }
-
