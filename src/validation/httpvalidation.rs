@@ -92,12 +92,16 @@ pub fn build_request_builder(
         (header::ACCEPT_ENCODING, "gzip, deflate, br"),
         (header::CONNECTION, "keep-alive"),
     ];
-    // Extend custom headers with the standard ones (overwriting any duplicates).
-    let mut combined_headers = custom_headers;
+    // Start with the standard headers and then overlay any custom headers so
+    // caller-specified values take precedence over defaults.
+    let mut combined_headers = HeaderMap::new();
     for (name, value) in &standard_headers {
         if let Ok(hv) = HeaderValue::from_str(value) {
             combined_headers.insert(name.clone(), hv);
         }
+    }
+    for (name, value) in custom_headers.iter() {
+        combined_headers.insert(name.clone(), value.clone());
     }
     request_builder = request_builder.headers(combined_headers);
 
@@ -437,12 +441,19 @@ mod tests {
             .expect("building reqwest client");
         let parser = liquid::ParserBuilder::with_stdlib().build().unwrap();
         let globals = liquid::Object::new();
-        let headers =
-            BTreeMap::from([("Content-Type".to_string(), "application/json".to_string())]);
+        let headers = BTreeMap::from([
+            ("Content-Type".to_string(), "application/json".to_string()),
+            ("Accept".to_string(), "application/custom".to_string()),
+        ]);
         let url = Url::from_str("https://example.com").unwrap();
         let result =
-            build_request_builder(&client, "GET", &url, &headers, &None, &parser, &globals);
-        assert!(result.is_ok());
+            build_request_builder(&client, "GET", &url, &headers, &None, &parser, &globals)
+                .expect("building request");
+        let req = result.build().expect("finalizing request");
+        assert_eq!(
+            req.headers().get(header::ACCEPT).and_then(|v| v.to_str().ok()),
+            Some("application/custom"),
+        );
     }
     #[tokio::test]
     async fn test_retry_request() {

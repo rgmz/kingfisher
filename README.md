@@ -444,6 +444,8 @@ KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
 | `KF_JIRA_TOKEN`   | Jira API token               |
 | `KF_SLACK_TOKEN`  | Slack API token              |
 | `KF_DOCKER_TOKEN` | Docker registry token (`user:pass` or bearer token). If unset, credentials from the Docker keychain are used |
+| `KF_AWS_KEY` and `KF_AWS_SECRET` | AWS Credentials to use with S3 bucket scanning |
+
 Set them temporarily per command:
 
 ```bash

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.33.0]
+- Fixed header precedence so custom HTTP validation headers like `Accept` are preserved
+- Added new Heroku rule
+
 ## [1.32.0]
 - Added support for scanning AWS S3 buckets via `--s3-bucket` and optional `--s3-prefix`
 - Added `--role-arn` and `--aws-local-profile` flags for S3 authentication alongside `KF_AWS_KEY`/`KF_AWS_SECRET`

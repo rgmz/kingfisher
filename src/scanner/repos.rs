@@ -333,7 +333,6 @@ pub async fn fetch_s3_objects(
         ProgressBar::hidden()
     };
 
-    let bucket_name = bucket.to_string();
     let pb = progress.clone();
 
 
