@@ -6,7 +6,7 @@ rules:
       \b                  
       (
         (?:AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
-        [0-9A-Z]{16}
+        [2-7A-Z]{16}
       )
       \b                  
     min_entropy: 3.2

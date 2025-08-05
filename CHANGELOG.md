@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.34.0]
+- Use system TLS root certificates to support self-hosted GitLab instances with internal CAs
+- Added new rule: Coze personal access token
+
 ## [1.33.0]
 - Fixed header precedence so custom HTTP validation headers like `Accept` are preserved
 - Added new Heroku rule
