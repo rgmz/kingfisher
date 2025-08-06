@@ -73,7 +73,6 @@ rules:
     confidence: medium
     min_entropy: 3.0
     visible: false
-    validation:
     references:
       - https://supabase.com/docs/guides/api
     examples:

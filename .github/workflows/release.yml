@@ -81,6 +81,9 @@ jobs:
       - name: Build (Makefile linux-arm64)
         run: make linux-arm64
 
+      - name: Fix permissions
+        run: sudo chown -R $(id -u):$(id -g) target
+        
       - name: Build Debian package
         run: |
           cargo deb --no-build --target aarch64-unknown-linux-musl \
