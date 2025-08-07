@@ -140,7 +140,6 @@ fn test_gitlab_remote_scan() -> Result<()> {
     Ok(())
 }
 
-
 #[test]
 fn test_gitlab_remote_scan_no_history() -> Result<()> {
     let temp_dir = TempDir::new().context("tmp dir")?;

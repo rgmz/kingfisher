@@ -69,7 +69,7 @@ pub fn clone_or_update_git_repos(
     } else {
         ProgressBar::hidden()
     };
-    
+
     for repo_url in repo_urls {
         let output_dir = {
             let datastore = datastore.lock().unwrap();
