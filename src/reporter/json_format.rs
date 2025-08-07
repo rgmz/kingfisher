@@ -76,14 +76,14 @@ mod tests {
                 github_organization: Vec::new(),
                 all_github_organizations: false,
                 github_api_url: Url::parse("https://api.github.com/").unwrap(),
-                github_repo_type: GitHubRepoType::Source,
+                github_repo_type: GitHubRepoType::All,
 
                 // GitLab
                 gitlab_user: Vec::new(),
                 gitlab_group: Vec::new(),
                 all_gitlab_groups: false,
                 gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
-                gitlab_repo_type: GitLabRepoType::Owner,
+                gitlab_repo_type: GitLabRepoType::All,
                 // Jira options
                 jira_url: None,
                 jql: None,

@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.36.0]
+- Fixed GitHub organization and GitLab group scans when using `--git-history=none`
+
 ## [1.35.0]
 - Remote scans with `--git-history=none` now clone repositories with a working tree and scan the current files instead of erroring with "No inputs to scan".
 - Fixed issue where `--redact` did not function properly

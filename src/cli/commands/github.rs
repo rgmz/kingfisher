@@ -60,7 +60,7 @@ pub struct GitHubRepoSpecifiers {
     pub all_organizations: bool,
 
     /// Filter by repository type
-    #[arg(long, default_value_t = GitHubRepoType::Source, alias = "github-repo-type")]
+    #[arg(long, default_value_t = GitHubRepoType::All, alias = "github-repo-type")]
     pub repo_type: GitHubRepoType,
 }
 

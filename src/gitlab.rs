@@ -88,9 +88,25 @@ pub async fn enumerate_repo_urls(
             hits.into_iter().next().context(format!("GitLab user `{}` not found", username))?;
         let user_id = user.id;
 
-        // b) List that user’s projects by ID
-        let projects_ep = UserProjects::builder().user(user_id).build()?;
+        // b) List that user's projects applying the requested filter
+        let mut builder = UserProjects::builder();
+        builder.user(user_id);
+
+        match repo_specifiers.repo_filter {
+            RepoType::Owner => {
+                builder.owned(true);
+            }
+            RepoType::Member => {
+                builder.membership(true);
+            }
+            RepoType::All => {
+                // nothing
+            }
+        }
+
+        let projects_ep = builder.build()?;  // now no borrows of a temporary
         let projects: Vec<SimpleProject> = projects_ep.query(&client)?;
+
         for proj in projects {
             repo_urls.push(proj.http_url_to_repo);
         }
@@ -102,19 +118,29 @@ pub async fn enumerate_repo_urls(
 
     // all groups
     let groups: Vec<SimpleGroup> = if repo_specifiers.all_groups {
-        gitlab::api::groups::Groups::builder().build()?.query(&client.clone())?
+        gitlab::api::groups::Groups::builder()
+            .all_available(true)
+            .build()?
+            .query(&client.clone())?
     } else {
         let mut found: Vec<SimpleGroup> = Vec::new();
         for grp in &repo_specifiers.group {
-            let ep = gitlab::api::groups::Groups::builder().search(grp).build()?;
-            let page: Vec<SimpleGroup> = ep.query(&client.clone())?;
-            found.extend(page);
+            let ep = gitlab::api::groups::Group::builder().group(grp).build()?;
+            let group: SimpleGroup = ep.query(&client.clone())?;
+            found.push(group);
         }
         found
     };
 
     for group in groups {
-        let gp_ep = GroupProjects::builder().group(group.id).build()?;
+        let mut gp_builder = GroupProjects::builder();
+        gp_builder.group(group.id);
+
+        if matches!(repo_specifiers.repo_filter, RepoType::Owner) {
+            gp_builder.owned(true);
+        }
+
+        let gp_ep = gp_builder.build()?;
         let projects: Vec<SimpleProject> = gp_ep.query(&client)?;
         for proj in projects {
             repo_urls.push(proj.http_url_to_repo);
