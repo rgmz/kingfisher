@@ -100,10 +100,10 @@ pub async fn enumerate_repo_urls(
                 builder.membership(true);
             }
             RepoType::All => {
-                // nothing
+                //  this doesn’t set any owned() or membership() flags on the builder, which in GitLab’s API defaults to "all visible repos"
             }
         }
-        
+
         // Extract the builder to a separate variable to avoid borrowing a temporary,
         // allowing us to modify its fields before building the endpoint.
         let projects_ep = builder.build()?;
@@ -137,6 +137,8 @@ pub async fn enumerate_repo_urls(
     for group in groups {
         let mut gp_builder = GroupProjects::builder();
         gp_builder.group(group.id);
+        // Ensure projects from nested subgroups are also enumerated
+        gp_builder.include_subgroups(true);
 
         if matches!(repo_specifiers.repo_filter, RepoType::Owner) {
             gp_builder.owned(true);

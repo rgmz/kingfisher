@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.37.0]
+- GitLab: include nested subgroup projects when enumerating group repositories
+
 ## [1.36.0]
 - Fixed GitHub organization and GitLab group scans when using `--git-history=none`
 - JWT tokens without both `iss` and `aud` are no longer reported as active credentials
