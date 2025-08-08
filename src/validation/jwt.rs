@@ -94,7 +94,7 @@ pub async fn validate_jwt(token: &str) -> Result<(bool, String)> {
     let aud_strings = extract_aud_strings(&claims);
 
     if issuer.trim().is_empty() && aud_strings.iter().all(|s| s.trim().is_empty()) {
-        return Ok((false, "JWT missing issuer and audience".to_string()));
+        return Ok((false, "JWT missing issuer and audience".into()));
     }
     if let Some(iss) = claims.iss.clone() {
         // parse header now (kid, alg)

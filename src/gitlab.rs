@@ -103,8 +103,10 @@ pub async fn enumerate_repo_urls(
                 // nothing
             }
         }
-
-        let projects_ep = builder.build()?; // now no borrows of a temporary
+        
+        // Extract the builder to a separate variable to avoid borrowing a temporary,
+        // allowing us to modify its fields before building the endpoint.
+        let projects_ep = builder.build()?;
         let projects: Vec<SimpleProject> = projects_ep.query(&client)?;
 
         for proj in projects {
