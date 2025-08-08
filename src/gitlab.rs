@@ -103,7 +103,7 @@ pub async fn enumerate_repo_urls(
                 //  this doesn’t set any owned() or membership() flags on the builder, which in GitLab’s API defaults to "all visible repos"
             }
         }
-        
+
         // Extract the builder to a separate variable to avoid borrowing a temporary,
         // allowing us to modify its fields before building the endpoint.
         let projects_ep = builder.build()?;
