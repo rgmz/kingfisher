@@ -76,7 +76,7 @@ mod tests {
                 github_organization: Vec::new(),
                 all_github_organizations: false,
                 github_api_url: Url::parse("https://api.github.com/").unwrap(),
-                github_repo_type: GitHubRepoType::All,
+                github_repo_type: GitHubRepoType::Source,
 
                 // GitLab
                 gitlab_user: Vec::new(),

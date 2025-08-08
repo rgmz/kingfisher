@@ -60,7 +60,7 @@ pub struct InputSpecifierArgs {
     )]
     pub github_api_url: Url,
 
-    #[arg(long, default_value_t = GitHubRepoType::All)]
+    #[arg(long, default_value_t = GitHubRepoType::Source)]
     pub github_repo_type: GitHubRepoType,
 
     // GitLab Options

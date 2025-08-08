@@ -60,7 +60,7 @@ pub struct GitHubRepoSpecifiers {
     pub all_organizations: bool,
 
     /// Filter by repository type
-    #[arg(long, default_value_t = GitHubRepoType::All, alias = "github-repo-type")]
+    #[arg(long, default_value_t = GitHubRepoType::Source, alias = "github-repo-type")]
     pub repo_type: GitHubRepoType,
 }
 
@@ -87,7 +87,7 @@ pub enum GitHubRepoType {
 impl From<GitHubRepoType> for crate::github::RepoType {
     fn from(val: GitHubRepoType) -> Self {
         match val {
-            GitHubRepoType::All => crate::github::RepoType::All,
+            GitHubRepoType::Source => crate::github::RepoType::All,
             GitHubRepoType::Source => crate::github::RepoType::Source,
             GitHubRepoType::Fork => crate::github::RepoType::Fork,
         }
