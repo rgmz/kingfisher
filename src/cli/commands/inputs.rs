@@ -85,7 +85,7 @@ pub struct InputSpecifierArgs {
     )]
     pub gitlab_api_url: Url,
 
-    #[arg(long, default_value_t = GitLabRepoType::Owner)]
+    #[arg(long, default_value_t = GitLabRepoType::All)]
     pub gitlab_repo_type: GitLabRepoType,
 
     /// Jira base URL (e.g. https://jira.example.com)
