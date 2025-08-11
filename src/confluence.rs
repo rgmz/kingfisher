@@ -94,7 +94,8 @@ pub async fn search_pages(
                 .get(header::LOCATION)
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.to_string());
-            let body = resp.text().await.unwrap_or_default();
+            let body = resp.text().await.unwrap_or_else(|e| format!("Failed to read response: {}", e));
+            
             if let Some(loc) = location {
                 bail!(
                     "Confluence API request returned {} redirect to {}. Check KF_CONFLUENCE_TOKEN and KF_CONFLUENCE_USER",
