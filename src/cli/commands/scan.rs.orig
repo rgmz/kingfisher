@@ -99,6 +99,10 @@ pub struct ScanArgs {
     #[command(flatten)]
     pub output_args: OutputArgs<ReportOutputFormat>,
 
+    /// Bytes of context before and after each match
+    #[arg(long, default_value_t = 256, value_name = "BYTES")]
+    pub snippet_length: usize,
+
     /// Baseline file to filter known secrets
     #[arg(long, value_name = "FILE")]
     pub baseline_file: Option<std::path::PathBuf>,

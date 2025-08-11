@@ -86,6 +86,7 @@ impl TestContext {
             git_repo_timeout: 1800,
             output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
             no_dedup: true,
+            snippet_length: 128,
             baseline_file: None,
             manage_baseline: false,
         };
@@ -177,6 +178,7 @@ async fn test_scan_slack_messages() -> Result<()> {
         git_repo_timeout: 1800,
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_dedup: true,
+        snippet_length: 128,
         baseline_file: None,
         manage_baseline: false,
     };
