@@ -282,9 +282,6 @@ pub struct RuleSyntax {
     /// Optional dependencies on other rules.
     #[serde(default)]
     pub depends_on_rule: Vec<Option<DependsOnRule>>,
-    /// Whether matches should always be considered validated.
-    #[serde(default)]
-    pub prevalidated: bool,
 }
 
 lazy_static! {

@@ -368,15 +368,6 @@ async fn validate_single(
     fail_count: &AtomicUsize,
     cache2: &Arc<SkipMap<String, CachedResponse>>,
 ) {
-    // Bypass validation if the rule is prevalidated (eg a Private Key)
-    if om.rule.syntax().prevalidated {
-        om.validation_success = true;
-        om.validation_response_status = http::StatusCode::OK;
-        om.validation_response_body = "Prevalidated".to_string();
-        success_count.fetch_add(1, Ordering::Relaxed);
-        return;
-    }
-
     // Build key
     let dep_vars_str = dep_vars
         .get(om.rule.id())

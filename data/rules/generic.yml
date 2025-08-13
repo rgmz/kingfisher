@@ -127,7 +127,7 @@ rules:
                     'policy_path': os.path.join(TEST_DIR, 'policy.json')
                 })
   - name: Weak Password Pattern
-    id: kingfisher.weak_password.1
+    id: kingfisher.generic.6
     pattern: |
       (?xi)
       \b

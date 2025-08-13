@@ -14,7 +14,7 @@ fn smoke_scan_docker_image() -> anyhow::Result<()> {
             "--no-update-check",
         ])
         .assert()
-        .code(205)
-        .stdout(predicate::str::contains("Active Credential"));
+        .code(200)
+        .stdout(predicate::str::contains("Not Attempted"));
     Ok(())
 }

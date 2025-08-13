@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.40.0]
+- Dropped the “prevalidated” flag from rule definitions and validation logic so every finding now flows through the standard active/inactive/unknown pipeline, simplifying rule configuration and preventing special‑case bypasses
+- Improved Tailscale api key detectors
+
 ## [1.39.0]
 - Added support for scanning Confluence pages via `--confluence-url` and `--cql`
 

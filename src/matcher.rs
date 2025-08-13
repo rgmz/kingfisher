@@ -930,7 +930,6 @@ mod test {
                 visible: true,
                 examples: vec![],
                 negative_examples: vec![],
-                prevalidated: false,
                 references: vec![],
                 validation: None::<Validation>,          // no HTTP validation needed
                 depends_on_rule: vec![],
@@ -972,7 +971,6 @@ mod test {
             visible: true,
             examples: vec![],
             negative_examples: vec![],
-            prevalidated: false,
             references: vec![],
             validation: Some(Validation::Http(HttpValidation {
                 request: HttpRequest {
@@ -1089,7 +1087,6 @@ mod test {
             visible: true,
             examples: vec![],
             negative_examples: vec![],
-            prevalidated: false,
             references: vec![],
             validation: None::<Validation>,
             depends_on_rule: vec![],
