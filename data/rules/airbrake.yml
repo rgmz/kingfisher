@@ -5,9 +5,7 @@ rules:
       (?xi)
       \b
       airbrake
-      (?:.|[\n\r]){0,16}?
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
-      (?:.|[\n\r]){0,16}?
+      (?:.|[\n\r]){0,32}?
       (
         [A-Z0-9-]{40}
       )

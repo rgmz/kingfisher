@@ -6,8 +6,6 @@ rules:
       \b                         
       baremetrics
       (?:.|[\n\r]){0,32}?
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
-      (?:.|[\n\r]){0,32}?
       \b                         
       (
         [a-z0-9_-]{25}

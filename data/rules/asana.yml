@@ -6,8 +6,6 @@ rules:
       \b                         
       asana
       (?:.|[\n\r]){0,32}?
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
-      (?:.|[\n\r]){0,32}?
       \b                         
       (
         [0-9]{16}

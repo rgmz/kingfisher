@@ -2,10 +2,9 @@ rules:
   - name: Heroku API Key
     id: kingfisher.heroku.1
     pattern: |
-      (?xi)                                 
+      (?xi)
+      \b                                
       heroku
-      (?:.|[\n\r]){0,32}?                 
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)  
       (?:.|[\n\r]){0,32}?                  
       \b
       (                                    

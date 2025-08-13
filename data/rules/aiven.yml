@@ -2,10 +2,9 @@ rules:
   - name: Aiven API Key
     id: kingfisher.aiven.1
     pattern: |
-      (?xi)                
+      (?xi)
+      \b              
       aiven
-      (?:.|[\n\r]){0,32}?
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b
       (
