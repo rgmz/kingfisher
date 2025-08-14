@@ -182,6 +182,7 @@ pub async fn enumerate_gitlab_repos(
         user: args.input_specifier_args.gitlab_user.clone(),
         group: args.input_specifier_args.gitlab_group.clone(),
         all_groups: args.input_specifier_args.all_gitlab_groups,
+        include_subgroups: args.input_specifier_args.gitlab_include_subgroups,
         repo_filter: args.input_specifier_args.gitlab_repo_type.into(),
     };
 

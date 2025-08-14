@@ -245,6 +245,7 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         &list_args.repo_specifiers.user,
                         &list_args.repo_specifiers.group,
                         list_args.repo_specifiers.all_groups,
+                        list_args.repo_specifiers.include_subgroups,
                         list_args.repo_specifiers.repo_type.into(),
                     )
                     .await?;
@@ -282,6 +283,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             all_gitlab_groups: false,
             gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
             gitlab_repo_type: GitLabRepoType::All,
+            gitlab_include_subgroups: false,
 
             jira_url: None,
             jql: None,

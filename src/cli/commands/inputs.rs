@@ -89,6 +89,10 @@ pub struct InputSpecifierArgs {
     #[arg(long, default_value_t = GitLabRepoType::All)]
     pub gitlab_repo_type: GitLabRepoType,
 
+    /// Include projects from GitLab subgroups when scanning groups
+    #[arg(long, alias = "include-subgroups")]
+    pub gitlab_include_subgroups: bool,
+
     /// Jira base URL (e.g. https://jira.example.com)
     #[arg(long, value_hint = ValueHint::Url, requires = "jql")]
     pub jira_url: Option<Url>,

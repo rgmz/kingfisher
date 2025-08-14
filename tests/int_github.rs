@@ -65,6 +65,7 @@ fn test_github_remote_scan() -> Result<()> {
             all_gitlab_groups: false,
             gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
             gitlab_repo_type: GitLabRepoType::Owner,
+            gitlab_include_subgroups: false,
 
             jira_url: None,
             jql: None,

@@ -384,6 +384,8 @@ KF_GITHUB_TOKEN="ghp_…" kingfisher scan --git-url https://github.com/org/priva
 
 ```bash
 kingfisher scan --gitlab-group my-group
+# include repositories from all nested subgroups
+kingfisher scan --gitlab-group my-group --gitlab-include-subgroups
 ```
 
 ### Scan GitLab user
@@ -402,6 +404,8 @@ kingfisher scan --git-url https://gitlab.com/group/project.git
 
 ```bash
 kingfisher gitlab repos list --group my-group
+# include repositories from all nested subgroups
+kingfisher gitlab repos list --group my-group --include-subgroups
 ```
 
 ## Scanning Jira

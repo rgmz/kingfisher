@@ -42,6 +42,7 @@ pub struct RepoSpecifiers {
     pub user: Vec<String>,
     pub group: Vec<String>,
     pub all_groups: bool,
+    pub include_subgroups: bool,
     pub repo_filter: RepoType,
 }
 
@@ -137,6 +138,9 @@ pub async fn enumerate_repo_urls(
         if matches!(repo_specifiers.repo_filter, RepoType::Owner) {
             gp_builder.owned(true);
         }
+        if repo_specifiers.include_subgroups {
+            gp_builder.include_subgroups(true);
+        }
 
         let gp_ep = gp_builder.build()?;
         let projects: Vec<SimpleProject> = gp_ep.query(&client)?;
@@ -162,10 +166,16 @@ pub async fn list_repositories(
     users: &[String],
     groups: &[String],
     all_groups: bool,
+    include_subgroups: bool,
     repo_filter: RepoType,
 ) -> Result<()> {
-    let repo_specifiers =
-        RepoSpecifiers { user: users.to_vec(), group: groups.to_vec(), all_groups, repo_filter };
+    let repo_specifiers = RepoSpecifiers {
+        user: users.to_vec(),
+        group: groups.to_vec(),
+        all_groups,
+        include_subgroups,
+        repo_filter,
+    };
 
     // Create a progress bar for displaying status
     let mut progress = if progress_enabled {

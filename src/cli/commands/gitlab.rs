@@ -56,6 +56,10 @@ pub struct GitLabRepoSpecifiers {
     /// Filter by repository type
     #[arg(long, default_value_t = GitLabRepoType::All, alias = "gitlab-repo-type")]
     pub repo_type: GitLabRepoType,
+
+    /// Include repositories from subgroups of the specified groups
+    #[arg(long, alias = "gitlab-include-subgroups")]
+    pub include_subgroups: bool,
 }
 
 impl GitLabRepoSpecifiers {
