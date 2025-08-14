@@ -3,7 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.41.0]
-- Added rules for: Vercel
+- Added support for scanning gitlab subgroups, with `kingfisher scan --gitlab-group my-group --gitlab-include-subgroups`
+- Added rule for Vercel
 
 ## [1.40.0]
 - Dropped the “prevalidated” flag from rule definitions and validation logic so every finding now flows through the standard active/inactive/unknown pipeline, simplifying rule configuration and preventing special‑case bypasses
