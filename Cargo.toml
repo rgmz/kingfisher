@@ -10,7 +10,7 @@ publish = false
 
 [package]
 name = "kingfisher"
-version = "1.41.0"
+version = "1.42.0"
 description = "MongoDB's blazingly fast secret scanning and validation tool"
 edition.workspace = true
 rust-version.workspace = true
@@ -141,6 +141,7 @@ tree-sitter-typescript = "0.23.2"
 tree-sitter-yaml = "0.7.1"
 streaming-iterator = "0.1.9"
 tree-sitter-regex = "0.24.3"
+tree_magic_mini = "3.2"
 content_inspector = "0.2.4"
 rustc-hash = "2.1.1"
 term_size = "0.3.2"
@@ -187,6 +188,7 @@ walkdir = "2.5.0"
 p256 = "0.13.2"
 ed25519-dalek = { version = "2.2", features = ["pkcs8"] }
 aws-sdk-s3 = "1.100.0"
+tokei = "12.1.2"
 
 [dependencies.tikv-jemallocator]
 version = "0.6"

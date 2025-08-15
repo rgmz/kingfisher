@@ -18,9 +18,7 @@ use crate::{
     confluence, findings_store,
     git_binary::{CloneMode, Git},
     git_url::GitUrl,
-    github, gitlab,
-    guesser::Guesser,
-    jira,
+    github, gitlab, jira,
     matcher::{Match, Matcher, MatcherStats},
     origin::{Origin, OriginSet},
     rules_database::RulesDatabase,
@@ -356,8 +354,7 @@ pub async fn fetch_s3_objects(
         enable_profiling,
         Some(shared_profiler.clone()),
     )?;
-    let guesser = Guesser::new().expect("should be able to create filetype guesser");
-    let mut processor = BlobProcessor { matcher, guesser };
+    let mut processor = BlobProcessor { matcher };
 
     let progress = if progress_enabled {
         let style =

@@ -4,7 +4,7 @@ use tracing::{debug_span, trace};
 
 use crate::{
     blob::{Blob, BlobMetadata},
-    guesser::{Guesser, Input},
+    content_type::ContentInspector,
     location::LocationMapping,
     matcher::{Match, Matcher, OwnedBlobMatch, ScanResult},
     origin::{Origin, OriginSet},
@@ -12,11 +12,10 @@ use crate::{
     Path,
 };
 
-/// A combined matcher, content type guesser, and a number of parameters that
-/// don't change within one `scan` run
+/// A matcher along with parameters that remain constant during a single
+/// `scan` run
 pub struct BlobProcessor<'a> {
     pub matcher: Matcher<'a>,
-    pub guesser: Guesser,
 }
 
 impl<'a> BlobProcessor<'a> {
@@ -61,7 +60,7 @@ impl<'a> BlobProcessor<'a> {
                 if matches.is_empty() {
                     return Ok(None);
                 }
-                let md = MetadataResult::from_blob_and_origin(&self.guesser, &blob, &origin);
+                let md = MetadataResult::from_blob_and_origin(&blob, &origin);
                 let metadata = BlobMetadata {
                     id: blob.id,
                     num_bytes: blob.len(),
@@ -109,19 +108,13 @@ struct MetadataResult {
     charset: Option<String>,
 }
 impl MetadataResult {
-    fn from_blob_and_origin(guesser: &Guesser, blob: &Blob, origin: &OriginSet) -> MetadataResult {
+    fn from_blob_and_origin(blob: &Blob, origin: &OriginSet) -> MetadataResult {
         let blob_path: Option<&'_ Path> = origin.iter().find_map(|p| p.blob_path());
-        let input = match blob_path {
-            None => Input::from_bytes(&blob.bytes()), // Use Input directly
-            Some(blob_path) => {
-                Input::from_path_and_bytes(blob_path, &blob.bytes()) // Use Input
-                                                                     // directly
-            }
-        };
-        let guess = guesser.guess(input);
-        let mime_essence = guess.path_guess().map(|s| s.to_string());
-        let language = guess.content_guess().map(ToOwned::to_owned);
-        let charset = guess.path_guess().and_then(|_| guess.get_param("charset")); // Call get_param on Guess directly
+        let bytes = blob.bytes();
+        let mime_essence = Some(tree_magic_mini::from_u8(bytes).to_string());
+        let inspector = ContentInspector::default();
+        let language = blob_path.and_then(|p| inspector.guess_language(p, bytes));
+        let charset = inspector.guess_charset(bytes);
         MetadataResult { mime_essence, language, charset }
     }
 }

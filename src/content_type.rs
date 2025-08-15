@@ -1,9 +1,11 @@
+// Requires: tokei = "12" in Cargo.toml
 use std::path::Path;
+use tokei::LanguageType;
 
 /// The type of content detected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentType {
-    /// Unprintable or control‑heavy data.
+    /// Unprintable or control-heavy data.
     BINARY,
     /// Mostly printable text.
     TEXT,
@@ -30,7 +32,7 @@ impl ContentInspector {
 
     /// Classify `bytes` as TEXT or BINARY:
     ///
-    /// 1. If null‑byte count > `max_null_bytes` -- `BINARY`.
+    /// 1. If null-byte count > `max_null_bytes` -- `BINARY`.
     /// 2. Else if (control chars excluding `\n`, `\r`, `\t`) / total > `max_control_ratio` →
     ///    `BINARY`.
     /// 3. Otherwise,  `TEXT`.
@@ -76,62 +78,89 @@ impl ContentInspector {
         Some(mime.to_string())
     }
 
-    /// Detect UTF‑8 encoding by attempting a lossless conversion.
+    /// Detect UTF-8 encoding by attempting a lossless conversion.
     #[inline]
     #[must_use]
     pub fn guess_charset(&self, bytes: &[u8]) -> Option<String> {
         String::from_utf8(bytes.to_vec()).ok().map(|_| "UTF-8".to_string())
     }
 
-    /// Guess programming language by extension, else simple content markers.
+    /// Guess programming language with broad coverage using `tokei`.
     ///
-    /// Extension mapping covers common languages (Rust, Python, JS, etc.).  
-    /// Fallback checks for `<?php`, `package main`, `public class`, or shebangs.
+    /// Strategy (no disk I/O):
+    /// 1) Try extension via `LanguageType::from_file_extension`.
+    /// 2) Handle common extensionless filenames (e.g., Makefile, Dockerfile, CMakeLists.txt).
+    /// 3) Parse an in-memory shebang (first line) against `LanguageType::shebangs`.
+    /// 4) Minimal content markers as a last resort.
+    ///
+    /// Returns the canonical `tokei` language name (e.g., `Rust`, `Bash`, `Python`).
     #[inline]
     #[must_use]
     pub fn guess_language(&self, path: &Path, content: &[u8]) -> Option<String> {
+        // 1) Extension mapping (fast, no I/O).
         if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-            let name = match ext.to_ascii_lowercase().as_str() {
-                "rs" => "Rust",
-                "py" => "Python",
-                "js" => "JavaScript",
-                "ts" => "TypeScript",
-                "java" => "Java",
-                "c" => "C",
-                "cpp" | "cc" | "cxx" => "C++",
-                "go" => "Go",
-                "rb" => "Ruby",
-                "php" => "PHP",
-                "cs" => "C#",
-                "kt" | "kts" => "Kotlin",
-                "scala" => "Scala",
-                "swift" => "Swift",
-                "sh" => "Shell",
-                "pl" => "Perl",
-                "lua" => "Lua",
-                "hs" => "Haskell",
-                "r" => "R",
-                _ => "",
-            };
-            if !name.is_empty() {
-                return Some(name.to_string());
+            if let Some(lang) = LanguageType::from_file_extension(&ext.to_ascii_lowercase()) {
+                return Some(lang.name().to_string());
             }
         }
 
+        // 2) Well-known filenames with no/odd extensions (avoid from_path to keep this pure).
+        if let Some(file) = path.file_name().and_then(|f| f.to_str()) {
+            match file {
+                "Makefile" | "makefile" => {
+                    return Some(LanguageType::Makefile.name().to_string());
+                }
+                "Dockerfile" | "dockerfile" => {
+                    return Some(LanguageType::Dockerfile.name().to_string());
+                }
+                "CMakeLists.txt" => {
+                    return Some(LanguageType::CMake.name().to_string());
+                }
+                "Rakefile" | "rakefile" => {
+                    return Some(LanguageType::Rakefile.name().to_string());
+                }
+                // Common ecosystem files; map to their primary language where sensible.
+                "Gemfile" | "gemfile" => {
+                    return Some(LanguageType::Ruby.name().to_string());
+                }
+                _ => {}
+            }
+        }
+
+        // 3) Shebang detection (in-memory): compare the first line to known shebangs.
+        if let Some(first_line) = content.split(|&b| b == b'\n').next() {
+            if first_line.starts_with(b"#!") {
+                if let Ok(line) = std::str::from_utf8(first_line) {
+                    for &lang in LanguageType::list() {
+                        for &sb in lang.shebangs() {
+                            if line.starts_with(sb) {
+                                return Some(lang.name().to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4) Lightweight content markers to catch a few ubiquitous cases without I/O.
         let s = String::from_utf8_lossy(content);
         if s.contains("<?php") {
-            Some("PHP".to_string())
-        } else if s.contains("package main") {
-            Some("Go".to_string())
-        } else if s.contains("public class") {
-            Some("Java".to_string())
-        } else if s.contains("#!/usr/bin/env bash") || s.contains("#!/bin/bash") {
-            Some("Shell".to_string())
-        } else if s.contains("#!/usr/bin/env python") {
-            Some("Python".to_string())
-        } else {
-            None
+            return Some(LanguageType::Php.name().to_string());
         }
+        if s.contains("package main") {
+            return Some(LanguageType::Go.name().to_string());
+        }
+        if s.contains("public class") {
+            return Some(LanguageType::Java.name().to_string());
+        }
+        if s.contains("#!/usr/bin/env bash") || s.contains("#!/bin/bash") {
+            return Some(LanguageType::Bash.name().to_string());
+        }
+        if s.contains("#!/usr/bin/env python") {
+            return Some(LanguageType::Python.name().to_string());
+        }
+
+        None
     }
 }
 
@@ -175,11 +204,21 @@ mod tests {
     #[test]
     fn language_guess() {
         let ins = ContentInspector::default();
-        assert_eq!(ins.guess_language(&PathBuf::from("main.rs"), b""), Some("Rust".into()));
-        assert_eq!(ins.guess_language(&PathBuf::from("x"), b"<?php echo; ?>"), Some("PHP".into()));
-        assert_eq!(
-            ins.guess_language(&PathBuf::from("run"), b"#!/bin/bash\necho hi"),
-            Some("Shell".into())
-        );
+
+        // Compare case-insensitively by lowercasing both sides.
+        let rust = ins
+            .guess_language(&PathBuf::from("main.rs"), b"")
+            .map(|s| s.to_ascii_lowercase());
+        assert_eq!(rust, Some("rust".into()));
+
+        let php = ins
+            .guess_language(&PathBuf::from("x"), b"<?php echo; ?>")
+            .map(|s| s.to_ascii_lowercase());
+        assert_eq!(php, Some("php".into()));
+
+        let bash = ins
+            .guess_language(&PathBuf::from("run"), b"#!/bin/bash\necho hi")
+            .map(|s| s.to_ascii_lowercase());
+        assert_eq!(bash, Some("bash".into()));
     }
 }

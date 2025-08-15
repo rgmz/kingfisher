@@ -3,7 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.42.0]
-- Internal refactoring of rule loader and git enumerator
+- Internal refactoring of rule loader, git enumerator, and filetype guesser
+- Improved language detection
 
 ## [1.41.0]
 - Added support for scanning gitlab subgroups, with `kingfisher scan --gitlab-group my-group --gitlab-include-subgroups`
