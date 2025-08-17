@@ -1,7 +1,6 @@
 rules:
   - name: Gitalk OAuth Credentials
     id: kingfisher.gitalk.1
-
     pattern: |
       (?x)
       \b
@@ -13,7 +12,6 @@ rules:
     references:
       - https://gitalk.github.io
       - https://github.com/gitalk/gitalk
-
     examples:
       - |
         new Gitalk({
