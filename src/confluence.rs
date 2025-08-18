@@ -70,7 +70,7 @@ pub async fn search_pages(
     let api_url = Url::parse(&api_base)?;
     let mut pages = Vec::new();
     let mut start = 0usize;
-    
+
     while pages.len() < max_results {
         let limit = std::cmp::min(100, max_results - pages.len());
         let url = api_url.clone();
@@ -94,7 +94,8 @@ pub async fn search_pages(
                 .get(header::LOCATION)
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.to_string());
-            let body = resp.text().await.unwrap_or_else(|e| format!("Failed to read response: {}", e));
+            let body =
+                resp.text().await.unwrap_or_else(|e| format!("Failed to read response: {}", e));
 
             if let Some(loc) = location {
                 bail!(

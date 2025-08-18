@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.42.0]
+- Fixed pagination issue when calling gitlab api
+- Expanded directory exclusion handling to interpret plain patterns as prefixes, ensuring options like --exclude .git also skip all nested paths
+- Updated baseline management to track encountered findings and remove entries that are no longer present, saving the baseline file whenever entries are pruned or new matches are added
 - Added rules for authress, clickhouse, codecov, contentful, curl, dropbox, fly.io, hubspot, firecrawl
 - Internal refactoring of rule loader, git enumerator, and filetype guesser
 - Improved language detection

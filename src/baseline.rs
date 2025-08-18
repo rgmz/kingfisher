@@ -82,6 +82,7 @@ pub fn apply_baseline(
     let mut known: HashSet<String> =
         baseline.exact_findings.matches.iter().map(|m| m.fingerprint.clone()).collect();
 
+    let mut encountered: HashSet<String> = HashSet::new();
     let mut new_entries = Vec::new();
     for arc_msg in store.get_matches_mut() {
         let (origin, _blob, m) = Arc::make_mut(arc_msg);
@@ -93,8 +94,12 @@ pub fn apply_baseline(
             if known.contains(&hash) {
                 debug!("Skipping {} due to baseline (hash {})", normalized, hash);
                 m.visible = false;
+                if manage {
+                    encountered.insert(hash.clone());
+                }
             } else if manage {
                 known.insert(hash.clone());
+                encountered.insert(hash.clone());
                 let entry = BaselineFinding {
                     filepath: normalized,
                     fingerprint: hash,
@@ -105,10 +110,19 @@ pub fn apply_baseline(
             }
         }
     }
+    if manage {
+        let original_len = baseline.exact_findings.matches.len();
+        baseline.exact_findings.matches.retain(|m| encountered.contains(&m.fingerprint));
+        let mut changed = baseline.exact_findings.matches.len() != original_len;
 
-    if manage && !new_entries.is_empty() {
-        baseline.exact_findings.matches.extend(new_entries);
-        save_baseline(baseline_path, &baseline)?;
+        if !new_entries.is_empty() {
+            baseline.exact_findings.matches.extend(new_entries);
+            changed = true;
+        }
+
+        if changed {
+            save_baseline(baseline_path, &baseline)?;
+        }
     }
 
     Ok(())

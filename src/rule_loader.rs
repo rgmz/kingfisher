@@ -87,7 +87,7 @@ impl RuleLoader {
                 id_to_rule.insert(id, Rule::new(rule_syntax));
             }
         }
-        
+
         Ok(LoadedRules { id_to_rule, enabled_rule_ids: self.enabled_rule_ids.clone() })
     }
 

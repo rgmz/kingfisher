@@ -271,18 +271,7 @@ impl FilesystemEnumerator {
         }
         let mut builder = GlobSetBuilder::new();
         for pat in patterns {
-            // Add the pattern itself
             builder.add(Glob::new(pat)?);
-
-            // If the pattern doesn't contain any glob characters, also exclude
-            // directories with this name anywhere in the tree. This lets
-            // `--exclude=.git` skip the entire `.git` directory subtree no
-            // matter where it appears in the path.
-            if !pat.contains('*') && !pat.contains('?') && !pat.contains('[') {
-                let base = pat.trim_end_matches('/');
-                builder.add(Glob::new(&format!("**/{}", base))?);
-                builder.add(Glob::new(&format!("**/{}/**", base))?);
-            }
         }
         let globset = std::sync::Arc::new(builder.build()?);
         self.exclude_globset = Some(globset.clone());

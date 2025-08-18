@@ -33,14 +33,14 @@ ExactFindings:
 
 `fingerprint` reuses Kingfisher's 64-bit *finding fingerprint* algorithm with offsets set to zero. It hashes the secret value together with the normalized filepath, so moving a secret around does not create a new entry.
 
-Use the same YAML file with the `--baseline-file` option on future scans to hide all recorded findings:
+Running another scan with `--manage-baseline` rewrites the file so it only contains findings that still exist in the repository. Use the same YAML file with the `--baseline-file` option on future scans to hide all recorded findings:
 
 ```bash
 kingfisher scan /path/to/code \
   --baseline-file /path/to/baseline-file.yaml
 ```
 
-If you intentionally add a new secret that should be ignored later, rerun the scan with both `--manage-baseline` and `--baseline-file` to append new matches to the file without removing existing entries:
+If you intentionally add a new secret that should be ignored later, rerun the scan with both `--manage-baseline` and `--baseline-file` to refresh the baseline. New matches are appended and entries for secrets that no longer appear (for example, because files were removed or excluded) are pruned:
 
 ```bash
 kingfisher scan /path/to/code \

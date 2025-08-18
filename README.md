@@ -547,7 +547,7 @@ kingfisher scan /path/to/code \
   --baseline-file /path/to/baseline-file.yaml
 ```
 
-See ([docs/BASELINE.md](docs/BASELINE.md)) for full detail.
+Running the scan again with `--manage-baseline` refreshes the baseline by adding new findings and pruning entries for secrets that no longer appear. See [docs/BASELINE.md](docs/BASELINE.md) for full detail.
 
 ## List Builtin Rules
 

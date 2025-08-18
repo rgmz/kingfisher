@@ -46,17 +46,11 @@ fn scan_rules_has_no_validated_findings() -> Result<()> {
     for finding in findings {
         let rule_id = finding["rule"]["id"].as_str().unwrap_or("unknown");
 
-        let status = finding["finding"]["validation"]["status"]
-            .as_str()
-            .unwrap_or("")
-            .to_ascii_lowercase();
+        let status =
+            finding["finding"]["validation"]["status"].as_str().unwrap_or("").to_ascii_lowercase();
 
         // Fail only on genuinely validated secrets
-        assert_ne!(
-            &status,
-            "active credential",
-            "Validated finding detected in rule {rule_id}"
-        );
+        assert_ne!(&status, "active credential", "Validated finding detected in rule {rule_id}");
     }
 
     Ok(())

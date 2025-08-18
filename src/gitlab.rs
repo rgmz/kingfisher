@@ -4,8 +4,9 @@ use anyhow::{Context, Result};
 use gitlab::{
     api::{
         groups::projects::GroupProjects,
+        paged,
         users::{UserProjects, Users},
-        Query,
+        Pagination, Query,
     },
     Gitlab, GitlabBuilder,
 };
@@ -106,7 +107,7 @@ pub async fn enumerate_repo_urls(
         }
 
         let projects_ep = builder.build()?;
-        let projects: Vec<SimpleProject> = projects_ep.query(&client)?;
+        let projects: Vec<SimpleProject> = paged(projects_ep, Pagination::All).query(&client)?;
         for proj in projects {
             repo_urls.push(proj.http_url_to_repo);
         }
@@ -118,10 +119,8 @@ pub async fn enumerate_repo_urls(
 
     // all groups
     let groups: Vec<SimpleGroup> = if repo_specifiers.all_groups {
-        gitlab::api::groups::Groups::builder()
-            .all_available(true)
-            .build()?
-            .query(&client.clone())?
+        let groups_ep = gitlab::api::groups::Groups::builder().all_available(true).build()?;
+        paged(groups_ep, Pagination::All).query(&client.clone())?
     } else {
         let mut found: Vec<SimpleGroup> = Vec::new();
         for grp in &repo_specifiers.group {
@@ -143,7 +142,7 @@ pub async fn enumerate_repo_urls(
         }
 
         let gp_ep = gp_builder.build()?;
-        let projects: Vec<SimpleProject> = gp_ep.query(&client)?;
+        let projects: Vec<SimpleProject> = paged(gp_ep, Pagination::All).query(&client)?;
         for proj in projects {
             repo_urls.push(proj.http_url_to_repo);
         }

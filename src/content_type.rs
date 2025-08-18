@@ -206,9 +206,8 @@ mod tests {
         let ins = ContentInspector::default();
 
         // Compare case-insensitively by lowercasing both sides.
-        let rust = ins
-            .guess_language(&PathBuf::from("main.rs"), b"")
-            .map(|s| s.to_ascii_lowercase());
+        let rust =
+            ins.guess_language(&PathBuf::from("main.rs"), b"").map(|s| s.to_ascii_lowercase());
         assert_eq!(rust, Some("rust".into()));
 
         let php = ins
