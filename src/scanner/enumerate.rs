@@ -455,8 +455,8 @@ impl<'a> rayon::iter::ParallelIterator for GitRepoResultIter<'a> {
                     let origin = OriginSet::try_from_iter(md.first_seen.iter().map(|e| {
                         Origin::from_git_repo_with_first_commit(
                             Arc::clone(&repo_path),
-                            Arc::clone(&e.commit_metadata), // ← clone Arc
-                            String::from_utf8_lossy(&e.path).into_owned(),
+                            Arc::clone(&e.commit_metadata),
+                            String::from_utf8_lossy(&e.path).to_string(),
                         )
                     }))
                     .unwrap_or_else(|| Origin::from_git_repo(Arc::clone(&repo_path)).into());

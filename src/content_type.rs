@@ -1,6 +1,21 @@
-// Requires: tokei = "12" in Cargo.toml
+use once_cell::sync::Lazy;
 use std::path::Path;
 use tokei::LanguageType;
+
+
+// Precompute all (shebang_prefix_bytes, language) pairs once.
+// Sort longest-first so more specific shebangs win.
+static SHEBANG_PREFIXES: Lazy<Vec<(&'static [u8], LanguageType)>> = Lazy::new(|| {
+    let mut v = Vec::new();
+    for &lang in LanguageType::list() {
+        for &sb in lang.shebangs() {
+            v.push((sb.as_bytes(), lang));
+        }
+    }
+    // Longest prefix first to prefer e.g. "#!/usr/bin/env python3" over "#!/usr/bin/env python"
+    v.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    v
+});
 
 /// The type of content detected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,16 +142,12 @@ impl ContentInspector {
             }
         }
 
-        // 3) Shebang detection (in-memory): compare the first line to known shebangs.
+        // 3) Shebang detection (in-memory): match by longest prefix, byte-wise (no UTF-8 needed).
         if let Some(first_line) = content.split(|&b| b == b'\n').next() {
             if first_line.starts_with(b"#!") {
-                if let Ok(line) = std::str::from_utf8(first_line) {
-                    for &lang in LanguageType::list() {
-                        for &sb in lang.shebangs() {
-                            if line.starts_with(sb) {
-                                return Some(lang.name().to_string());
-                            }
-                        }
+                for (prefix, lang) in SHEBANG_PREFIXES.iter() {
+                    if first_line.starts_with(prefix) {
+                        return Some(lang.name().to_string());
                     }
                 }
             }
