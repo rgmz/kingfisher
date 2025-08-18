@@ -55,10 +55,7 @@ fn exclude_git_directory_hides_matches() -> anyhow::Result<()> {
         ])
         .assert()
         .code(200)
-        .stdout(
-            predicate::str::contains("bar.txt")
-                .and(predicate::str::contains("/.git/").not()),
-        );
+        .stdout(predicate::str::contains("bar.txt").and(predicate::str::contains("/.git/").not()));
 
     Ok(())
 }
