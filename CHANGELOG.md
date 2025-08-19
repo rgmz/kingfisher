@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.43.0]
+- Added rules for clearbit, kickbox, azure container registry, improved Azure Storage key
+- Grouped JSON and JSONL outputs by rule, restoring `matches` arrays in reports
+
 ## [1.42.0]
 - Fixed pagination issue when calling gitlab api
 - Expanded directory exclusion handling to interpret plain patterns as prefixes, ensuring options like --exclude .git also skip all nested paths
