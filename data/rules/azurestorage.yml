@@ -31,9 +31,9 @@ rules:
       (?xi)
       \b
       azure
-      (?:.|[\n\r]){0,32}?
-      (?i:(?:Access|Account|Storage)[_.-]?Key)
-      (?:.|[\n\r]){0,25}?
+      (?:.|[\n\r]){0,128}?
+      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
+      (?:.|[\n\r]){0,128}?
       (
         [A-Z0-9+\\/-]{86,88}={0,2}
       )

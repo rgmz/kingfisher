@@ -3,10 +3,10 @@ rules:
     id: kingfisher.intercom.1
     pattern: |
       (?xi)  
-      (?:intercom|ic)       
-      (?:.|[\n\r]){0,16}?                  
+      (?:intercom|ic)
+      (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
-      (?:.|[\n\r]){0,16}?                          
+      (?:.|[\n\r]){0,16}?
       (                               
         [0-9A-Z+/]{59}=                
       )
