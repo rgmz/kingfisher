@@ -41,23 +41,15 @@ fn scan_rules_has_no_validated_findings() -> Result<()> {
         return Ok(());
     }
 
-    let groups: Vec<Value> = serde_json::from_str(json_array_str)?;
+    let findings: Vec<Value> = serde_json::from_str(json_array_str)?;
+    for finding in findings {
+        let rule_id = finding["rule"]["id"].as_str().unwrap_or("unknown");
 
-    for group in groups {
-        let rule_id = group["id"].as_str().unwrap_or("unknown");
-        if let Some(matches) = group["matches"].as_array() {
-            for finding in matches {
-                let status = finding["finding"]["validation"]["status"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_ascii_lowercase();
-                // Fail only on genuinely validated secrets
-                assert_ne!(
-                    &status, "active credential",
-                    "Validated finding detected in rule {rule_id}"
-                );
-            }
-        }
+        let status =
+            finding["finding"]["validation"]["status"].as_str().unwrap_or("").to_ascii_lowercase();
+
+        // Fail only on genuinely validated secrets
+        assert_ne!(&status, "active credential", "Validated finding detected in rule {rule_id}");
     }
 
     Ok(())

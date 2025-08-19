@@ -1,5 +1,4 @@
 use super::*;
-use std::collections::BTreeMap;
 
 impl DetailsReporter {
     pub fn json_format<W: std::io::Write>(
@@ -9,13 +8,7 @@ impl DetailsReporter {
     ) -> Result<()> {
         let records = self.build_finding_records(args)?;
         if !records.is_empty() {
-            let mut grouped: BTreeMap<String, Vec<FindingReporterRecord>> = BTreeMap::new();
-            for record in records {
-                grouped.entry(record.rule.id.clone()).or_default().push(record);
-            }
-            let groups: Vec<RuleMatches> =
-                grouped.into_iter().map(|(id, matches)| RuleMatches { id, matches }).collect();
-            serde_json::to_writer_pretty(&mut writer, &groups)?;
+            serde_json::to_writer_pretty(&mut writer, &records)?;
             writeln!(writer)?;
         }
         Ok(())
@@ -27,16 +20,9 @@ impl DetailsReporter {
         args: &cli::commands::scan::ScanArgs,
     ) -> Result<()> {
         let records = self.build_finding_records(args)?;
-        if !records.is_empty() {
-            let mut grouped: BTreeMap<String, Vec<FindingReporterRecord>> = BTreeMap::new();
-            for record in records {
-                grouped.entry(record.rule.id.clone()).or_default().push(record);
-            }
-            for (id, matches) in grouped {
-                let group = RuleMatches { id, matches };
-                serde_json::to_writer(&mut writer, &group)?;
-                writeln!(writer)?;
-            }
+        for record in records {
+            serde_json::to_writer(&mut writer, &record)?;
+            writeln!(writer)?;
         }
         Ok(())
     }
@@ -237,10 +223,7 @@ mod tests {
         reporter.json_format(&mut output, &create_default_args())?;
         let json_output: Vec<serde_json::Value> = serde_json::from_slice(&output.into_inner())?;
         assert!(!json_output.is_empty(), "JSON output should not be empty");
-        let first_group = &json_output[0];
-        assert_eq!(first_group["id"], "mock_rule_1");
-        let matches = first_group["matches"].as_array().unwrap();
-        let first = &matches[0];
+        let first = &json_output[0];
         assert_eq!(first["rule"]["name"], "MockRule");
         assert_eq!(first["finding"]["language"], "Rust");
         Ok(())
@@ -281,10 +264,8 @@ mod tests {
             reporter.json_format(&mut output, &create_default_args())?;
             let json_output: Vec<serde_json::Value> = serde_json::from_slice(&output.into_inner())?;
             assert!(!json_output.is_empty(), "JSON output should not be empty");
-            let first_group = &json_output[0];
-            let first_match = &first_group["matches"][0];
-            let validation_status =
-                first_match["finding"]["validation"]["status"].as_str().unwrap();
+            let first = &json_output[0];
+            let validation_status = first["finding"]["validation"]["status"].as_str().unwrap();
             assert_eq!(validation_status, expected_status);
         }
         Ok(())

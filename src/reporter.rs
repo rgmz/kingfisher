@@ -517,12 +517,6 @@ pub struct FindingRecordData {
     pub git_metadata: Option<serde_json::Value>,
 }
 
-#[derive(Serialize, JsonSchema, Clone, Debug)]
-pub struct RuleMatches {
-    pub id: String,
-    pub matches: Vec<FindingReporterRecord>,
-}
-
 impl From<finding_data::FindingDataEntry> for ReportMatch {
     fn from(e: finding_data::FindingDataEntry) -> Self {
         ReportMatch {
