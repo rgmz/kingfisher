@@ -91,6 +91,8 @@ impl TestContext {
             no_dedup: true,
             baseline_file: None,
             manage_baseline: false,
+            skip_regex: Vec::new(),
+            skip_word: Vec::new(),
         };
 
         let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;
@@ -185,6 +187,8 @@ async fn test_scan_slack_messages() -> Result<()> {
         no_dedup: true,
         baseline_file: None,
         manage_baseline: false,
+        skip_regex: Vec::new(),
+        skip_word: Vec::new(),
     };
 
     let global_args = GlobalArgs {

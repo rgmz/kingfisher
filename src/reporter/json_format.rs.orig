@@ -125,8 +125,6 @@ mod tests {
             output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
             baseline_file: None,
             manage_baseline: false,
-            skip_regex: Vec::new(),
-            skip_word: Vec::new(),
         }
     }
 

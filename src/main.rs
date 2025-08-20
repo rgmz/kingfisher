@@ -325,6 +325,8 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         no_dedup: false,
         baseline_file: None,
         manage_baseline: false,
+        skip_regex: Vec::new(),
+        skip_word: Vec::new(),
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
     }
 }

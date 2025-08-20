@@ -161,6 +161,8 @@ async fn test_validation_cache_and_depvars() -> Result<()> {
         no_dedup: true, // keep duplicates so the cache is stressed
         baseline_file: None,
         manage_baseline: false,
+        skip_regex: Vec::new(),
+        skip_word: Vec::new(),
     };
 
     /* --------------------------------------------------------- *

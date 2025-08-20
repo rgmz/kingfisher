@@ -34,7 +34,7 @@ use crate::{
     rule_profiling::{ConcurrentRuleProfiler, RuleStats, RuleTimer},
     rules::rule::Rule,
     rules_database::RulesDatabase,
-    safe_list::is_safe_match,
+    safe_list::{is_safe_match, is_user_match},
     scanner_pool::ScannerPool,
     snippet::Base64BString,
     util::{intern, redact_value},
@@ -472,16 +472,16 @@ fn filter_match<'b>(
         None => Cow::Borrowed(&blob.bytes()[start..end]),
     };
     for captures in re.captures_iter(byte_slice.as_ref()) {
-        let matching_input = captures.get(1).or_else(|| captures.get(0)).unwrap();
-        // let str_input = std::str::from_utf8(matching_input.as_bytes()).unwrap_or("");
-        // let calculated_entropy = calculate_shannon_entropy(str_input);
-        // if calculated_entropy <= rule.min_entropy() || is_safe_match(str_input) {
-        //     continue;
-        // }
+        let full_capture = captures.get(0).unwrap();
+        let matching_input = captures.get(1).unwrap_or(full_capture);
         let min_entropy = rule.min_entropy();
         let mi_bytes = matching_input.as_bytes();
+        let full_bytes = full_capture.as_bytes();
         let calculated_entropy = calculate_shannon_entropy(mi_bytes);
-        if calculated_entropy <= min_entropy || is_safe_match(mi_bytes) {
+        if calculated_entropy <= min_entropy
+            || is_safe_match(mi_bytes)
+            || is_user_match(mi_bytes, full_bytes)
+        {
             debug!(
                 "Skipping match with entropy {} <= {} or safe match",
                 calculated_entropy, min_entropy

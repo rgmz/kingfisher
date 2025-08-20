@@ -16,6 +16,7 @@ use crate::{
     rule_loader::RuleLoader,
     rule_profiling::ConcurrentRuleProfiler,
     rules_database::RulesDatabase,
+    safe_list,
     scanner::{
         clone_or_update_git_repos, enumerate_filesystem_inputs, enumerate_github_repos,
         repos::{
@@ -50,6 +51,15 @@ pub async fn run_async_scan(
             error!("Specified input path does not exist: {}", path.display());
             bail!("Invalid input: Path does not exist - {}", path.display());
         }
+    }
+
+    // Register user-provided allow-list patterns
+    for pattern in &args.skip_regex {
+        safe_list::add_user_regex(pattern)
+            .map_err(|e| anyhow::anyhow!("Invalid skip-regex '{pattern}': {e}"))?;
+    }
+    for word in &args.skip_word {
+        safe_list::add_user_skipword(word);
     }
 
     let start_time = Instant::now();

@@ -106,6 +106,14 @@ pub struct ScanArgs {
     /// Create or update the baseline file with current findings
     #[arg(long, default_value_t = false)]
     pub manage_baseline: bool,
+
+    /// Regex patterns to allow-list secret matches (repeatable)
+    #[arg(long = "skip-regex", value_name = "PATTERN")]
+    pub skip_regex: Vec<String>,
+
+    /// Skipwords to allow-list secret matches (case-insensitive, repeatable)
+    #[arg(long = "skip-word", value_name = "WORD")]
+    pub skip_word: Vec<String>,
 }
 
 /// Confidence levels for findings

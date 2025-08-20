@@ -15,7 +15,6 @@ Kingfisher originated as a fork of Praetorian's Nosey Parker, and is built atop 
 - **Extra targets**: GitLab repos, S3 buckets, Docker images, Jira issues, Confluence pages, and Slack messages
 - **Compressed Files**: Supports extracting and scanning compressed files for secrets
 - **Baseline mode**: ignore known secrets, flag only new ones
-- **Allowlist support**: suppress false positives with custom regexes or words
 - **Language-aware detection** (source-code parsing) for ~20 languages
 - **Native Windows** binary
 
@@ -598,31 +597,7 @@ kingfisher github repos list --organization my-org
 - `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
 - `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
 - `--manage-baseline`: Create or update the baseline file with current findings
-- `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
-- `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
 
-### Ignore known false positives
-
-Use `--skip-regex` and `--skip-word` to suppress findings you know are benign. Both flags may be provided multiple times and are tested against the secret value **and** the full match context. 
-
-With `--skip-regex`, these should be Rust compatible regular expressions, which you can test out at [regex101](https://regex101.com)
-
-```bash
-# Skip any finding where the finding mentions TEST_KEY
-kingfisher scan --skip-regex '(?i)TEST_KEY' path/
-
-# Skip findings that contain the word "dummy" anywhere in the match
-kingfisher scan --skip-word dummy path/
-
-# Combine multiple patterns
-kingfisher scan \
-  --skip-regex 'AKIA[0-9A-Z]{16}' \
-  --skip-word placeholder \
-  --skip-word dummy \
-  path/
-```
-
-If a `--skip-regex` regular expression fails to compile, the scan aborts with an error so that typos are caught early.
 
 ## Finding Fingerprint
 

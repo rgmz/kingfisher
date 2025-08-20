@@ -103,6 +103,8 @@ fn test_gitlab_remote_scan() -> Result<()> {
         no_dedup: true,
         baseline_file: None,
         manage_baseline: false,
+        skip_regex: Vec::new(),
+        skip_word: Vec::new(),
     };
 
     let global_args = GlobalArgs {
@@ -207,6 +209,8 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
         no_dedup: true,
         baseline_file: None,
         manage_baseline: false,
+        skip_regex: Vec::new(),
+        skip_word: Vec::new(),
     };
 
     let global_args = GlobalArgs {

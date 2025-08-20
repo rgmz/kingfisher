@@ -104,6 +104,8 @@ impl TestContext {
             no_dedup: true,
             baseline_file: None,
             manage_baseline: false,
+            skip_regex: Vec::new(),
+            skip_word: Vec::new(),
         };
 
         let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules)
@@ -183,6 +185,8 @@ impl TestContext {
             no_dedup: true,
             baseline_file: None,
             manage_baseline: false,
+            skip_regex: Vec::new(),
+            skip_word: Vec::new(),
         };
 
         let global_args = GlobalArgs {

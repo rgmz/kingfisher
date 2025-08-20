@@ -12,6 +12,7 @@
 
 use once_cell::sync::Lazy;
 use regex::bytes::Regex;
+use std::sync::Mutex;
 use tracing::debug;
 
 /// A rule that describes *why* a match is considered safe/benign.
@@ -130,6 +131,63 @@ static SAFE_LIST_FILTER_RULES: Lazy<Vec<SafeRule>> = Lazy::new(|| {
         },
     ]
 });
+
+// User-supplied allow-list patterns (regexes) and skipwords. These are empty by
+// default and populated via CLI flags at runtime.
+static USER_SAFE_REGEXES: Lazy<Mutex<Vec<Regex>>> = Lazy::new(|| Mutex::new(Vec::new()));
+static USER_SAFE_SKIPWORDS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+/// Register an additional allow-list regex provided by the user.
+/// If the pattern fails to compile, the error is returned so the caller can
+/// surface it.
+pub fn add_user_regex(pattern: &str) -> std::result::Result<(), regex::Error> {
+    let re = Regex::new(pattern)?;
+    USER_SAFE_REGEXES.lock().unwrap().push(re);
+    Ok(())
+}
+
+/// Register an allow-list skipword provided by the user. Comparisons are
+/// case-insensitive.
+pub fn add_user_skipword(word: &str) {
+    USER_SAFE_SKIPWORDS.lock().unwrap().push(word.to_lowercase());
+}
+
+/// Returns `true` if the given input matches any user-supplied allow-list
+/// patterns (regexes or skipwords).
+///
+/// `secret` is the primary capture group (typically just the secret value)
+/// while `full_match` includes the entire match, allowing regexes to target
+/// surrounding context such as variable names.
+pub fn is_user_match(secret: &[u8], full_match: &[u8]) -> bool {
+    {
+        let regexes = USER_SAFE_REGEXES.lock().unwrap();
+        if regexes.iter().any(|re| re.is_match(secret) || re.is_match(full_match)) {
+            debug!("Safe match: user skip-regex");
+            return true;
+        }
+    }
+
+    let skipwords = USER_SAFE_SKIPWORDS.lock().unwrap();
+    if skipwords.is_empty() {
+        return false;
+    }
+
+    // Check skipwords against both the secret and full match (case-insensitive)
+    let contains_skipword = |bytes: &[u8]| -> bool {
+        if let Ok(s) = std::str::from_utf8(bytes) {
+            let lower = s.to_lowercase();
+            return skipwords.iter().any(|w| lower.contains(w));
+        }
+        false
+    };
+
+    if contains_skipword(secret) || contains_skipword(full_match) {
+        debug!("Safe match: user skip-word");
+        return true;
+    }
+
+    false
+}
 
 /// Returns `Some(&'static str)` with the rule description if the input likely
 /// contains *benign* placeholder/test strings; otherwise `None`.

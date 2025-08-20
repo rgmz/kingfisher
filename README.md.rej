@@ -1,0 +1,53 @@
+@@ -575,50 +576,52 @@
+ 
+ ## Other Examples
+ 
+ ```bash
+ # Check custom rules - this ensures all regular expressions compile, and can match the rule's `examples` in the YML file
+ kingfisher rules check --rules-path ./my_rules.yml
+ 
+ # List GitHub repos
+ kingfisher github repos list --user my-user
+ kingfisher github repos list --organization my-org
+ 
+ ```
+ 
+ ## Notable Scan Options
+ 
+ - `--no-dedup`: Report every occurrence of a finding (disable the default de-duplicate behavior)
+ - `--confidence <LEVEL>`: (low|medium|high)
+ - `--min-entropy <VAL>`: Override default threshold
+ - `--no-binary`: Skip binary files
+ - `--no-extract-archives`: Do not scan inside archives
+ - `--extraction-depth <N>`: Specifies how deep nested archives should be extracted and scanned (default: 2)
+ - `--redact`: Replaces discovered secrets with a one-way hash for secure output
+ - `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
+ - `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
+ - `--manage-baseline`: Create or update the baseline file with current findings
++- `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
++- `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
+ 
+ 
+ ## Finding Fingerprint
+ 
+ The document below details the four-field formula (rule SHA-1, origin label, start & end offsets) hashed with XXH3-64 to create Kingfisher’s 64-bit finding fingerprint, and explains how this ID powers safe deduplication; plus how `--no-dedup` can be used shows every raw match.
+ See ([docs/FINGERPRINT.md](docs/FINGERPRINT.md))
+ 
+ ## Rule Performance Profiling
+ 
+ Use `--rule-stats` to collect timing information for every rule. After scanning, the summary prints a **Rule Performance Stats** section showing how many matches each rule produced along with its slowest and average match times. Useful when creating rules or debugging rules.
+ 
+ ## CLI Options
+ 
+ ```bash
+ kingfisher scan --help
+ ```
+ 
+ ## Business Value
+ 
+ By integrating Kingfisher into your development lifecycle, you can:
+ 
+ - **Prevent Costly Breaches**  
+   Early detection of embedded credentials avoids expensive incident response, legal fees, and reputation damage
+ - **Automate Compliance**  
+   Enforce secret‑scanning policies across GitOps, CI/CD, and pull requests to help satisfy SOC 2, PCI‑DSS, GDPR, and other standards

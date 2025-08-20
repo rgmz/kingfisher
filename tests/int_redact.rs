@@ -85,6 +85,8 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
         no_dedup: true,
         baseline_file: None,
         manage_baseline: false,
+        skip_regex: Vec::new(),
+        skip_word: Vec::new(),
     };
 
     let global_args = GlobalArgs {
