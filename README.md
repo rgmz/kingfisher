@@ -24,7 +24,8 @@ Kingfisher originated as a fork of Praetorian's Nosey Parker, and is built atop 
 - **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
 - **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
 - **Multiple targets**:
-  - **Git history**: local repos or GitHub/GitLab orgs/users  
+  - **Git history**: local repos or GitHub/GitLab orgs/users
+  - **Repository artifacts**: with `--repo-artifacts`, scan GitHub/GitLab repository artifacts such as issues, pull/merge requests, wikis, snippets, and owner gists in addition to code
   - **Docker images**: public or private via `--docker-image`
   - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`
   - **Confluence pages**: CQL‑driven scans with `--confluence-url` and `--cql`

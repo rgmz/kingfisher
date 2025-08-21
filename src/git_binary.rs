@@ -137,6 +137,9 @@ impl Git {
         if let Some(arg) = clone_mode.arg() {
             cmd.arg(arg);
         }
+        cmd.arg("--quiet");
+        cmd.arg("-c");
+        cmd.arg("remote.origin.fetch=+refs/*:refs/remotes/origin/*");
         cmd.arg(repo_url.as_str());
         cmd.arg(output_dir);
         debug!("{cmd:#?}");

@@ -1,7 +1,13 @@
 rules:
   - name: StackHawk API Key
     id: kingfisher.stackhawk.1
-    pattern: '\b(hawk\.[0-9A-Za-z_-]{20}\.[0-9A-Za-z_-]{20})\b'
+    pattern: |
+      (?xi)
+      \b
+      (
+        hawk\.[0-9A-Z_-]{20}\.[0-9A-Z_-]{20}
+      )
+      \b
     confidence: medium
     min_entropy: 3.0
     examples:
