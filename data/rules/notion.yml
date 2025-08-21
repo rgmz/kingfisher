@@ -72,6 +72,8 @@ rules:
     id: kingfisher.notion.3
     pattern: |
       (?xi)
+      notion
+      (?:.|[\\n\r]){0,32}?
       \b
       (
         nrt_[A-Z0-9_]{40,55}
@@ -80,4 +82,4 @@ rules:
     min_entropy: 3.5
     confidence: medium
     examples:
-      - "nrt_4Y29zY29vbF9leGFtcGxlX3JlZnJlc2hfdG9rZW4xMjM0NQ"
+      - "notion refresh token = nrt_4Y29zY29vbF9leGFtcGxlX3JlZnJlc2hfdG9rZW4xMjM0NQ"
