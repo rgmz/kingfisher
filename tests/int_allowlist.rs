@@ -81,8 +81,9 @@ fn run_skiplist(skip_regex: Vec<String>, skip_skipword: Vec<String>) -> Result<u
             docker_image: Vec::new(),
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,
-            scan_nested_repos: true,
             commit_metadata: true,
+            repo_artifacts: false,
+            scan_nested_repos: true,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 5.0,
@@ -125,7 +126,8 @@ fn run_skiplist(skip_regex: Vec<String>, skip_skipword: Vec<String>) -> Result<u
 
     rt.block_on(run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db))?;
 
-    let x = Ok(datastore.lock().unwrap().get_matches().len()); x
+    let x = Ok(datastore.lock().unwrap().get_matches().len());
+    x
 }
 
 #[test]

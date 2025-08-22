@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use indicatif::{HumanCount, ProgressBar, ProgressStyle};
 use tokio::time::Duration;
 use tracing::{debug, error, info};
+use url::Url;
 
 use crate::blob::BlobIdMap;
 use crate::{
@@ -102,7 +103,12 @@ pub fn clone_or_update_git_repos(
         progress.suspend(|| info!("Cloning {repo_url}..."));
         if let Err(e) = git.create_fresh_clone(repo_url, &output_dir, clone_mode) {
             progress.suspend(|| {
-                error!("Failed to clone {repo_url} to {}: {e}", output_dir.display());
+                if repo_url.as_str().ends_with(".wiki.git") {
+                    info!("Wiki repository not found for {repo_url}, skipping");
+                    debug!("Failed to clone {repo_url} to {}: {e}", output_dir.display());
+                } else {
+                    error!("Failed to clone {repo_url} to {}: {e}", output_dir.display());
+                }
                 debug!("Skipping scan of {repo_url}");
             });
             progress.inc(1);
@@ -326,6 +332,46 @@ pub async fn fetch_slack_messages(
         }
     }
     Ok(vec![output_dir])
+}
+
+pub async fn fetch_git_host_artifacts(
+    repo_urls: &[GitUrl],
+    global_args: &global::GlobalArgs,
+    datastore: &Arc<Mutex<findings_store::FindingsStore>>,
+) -> Result<Vec<PathBuf>> {
+    let output_root = {
+        let ds = datastore.lock().unwrap();
+        ds.clone_root()
+    };
+    let mut dirs = Vec::new();
+    for repo_url in repo_urls {
+        let host = Url::parse(repo_url.as_str())
+            .ok()
+            .and_then(|u| u.host_str().map(|s| s.to_string()))
+            .unwrap_or_default();
+        if host.contains("github") {
+            dirs.extend(
+                github::fetch_repo_items(
+                    repo_url,
+                    global_args.ignore_certs,
+                    &output_root,
+                    datastore,
+                )
+                .await?,
+            );
+        } else if host.contains("gitlab") {
+            dirs.extend(
+                gitlab::fetch_repo_items(
+                    repo_url,
+                    global_args.ignore_certs,
+                    &output_root,
+                    datastore,
+                )
+                .await?,
+            );
+        }
+    }
+    Ok(dirs)
 }
 
 pub async fn fetch_s3_objects(

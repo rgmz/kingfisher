@@ -56,7 +56,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
         info!(
             "{}",
             styles.style_finding_active_heading.apply_to(
-                "Homebrew install detected – will notify about updates but not self‑update"
+                "Homebrew install detected - will notify about updates but not self-update"
             )
         );
     }
@@ -105,7 +105,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     // Linux releases also ship as .deb and .rpm packages; select the .tgz asset for self‑updates
     #[cfg(not(target_os = "windows"))]
     builder.identifier("tgz");
-    
+
     // Build the updater.
     let Ok(updater) = builder.build() else {
         warn!("Failed to configure update checker");
@@ -158,9 +158,9 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
                     warn!(
                         "{}",
                         styles.style_finding_active_heading.apply_to(
-                            "Cannot replace the current binary – permission denied.\n\
+                            "Cannot replace the current binary - permission denied.\n\
                              If you installed via a package manager, run its upgrade command.\n\
-                             Otherwise reinstall to a user‑writable directory or re‑run with sudo."
+                             Otherwise reinstall to a user-writable directory or re-run with sudo."
                         )
                     );
                 }

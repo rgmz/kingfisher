@@ -10,6 +10,7 @@ use crate::{
     cli::{commands::scan, global},
     findings_store,
     findings_store::{FindingsStore, FindingsStoreMessage},
+    github, gitlab,
     liquid_filters::register_all,
     matcher::MatcherStats,
     reporter::styles::Styles,
@@ -20,8 +21,8 @@ use crate::{
     scanner::{
         clone_or_update_git_repos, enumerate_filesystem_inputs, enumerate_github_repos,
         repos::{
-            enumerate_gitlab_repos, fetch_confluence_pages, fetch_jira_issues, fetch_s3_objects,
-            fetch_slack_messages,
+            enumerate_gitlab_repos, fetch_confluence_pages, fetch_git_host_artifacts,
+            fetch_jira_issues, fetch_s3_objects, fetch_slack_messages,
         },
         run_secret_validation, save_docker_images,
         summary::print_scan_summary,
@@ -76,7 +77,30 @@ pub async fn run_async_scan(
     repo_urls.sort();
     repo_urls.dedup();
 
+    // Add wiki repositories for each URL when requested
+    if args.input_specifier_args.repo_artifacts {
+        let mut wiki_urls = Vec::new();
+        for url in &repo_urls {
+            if let Some(w) = github::wiki_url(url) {
+                wiki_urls.push(w);
+            }
+            if let Some(w) = gitlab::wiki_url(url) {
+                wiki_urls.push(w);
+            }
+        }
+        repo_urls.extend(wiki_urls);
+        repo_urls.sort();
+        repo_urls.dedup();
+    }
+
     let mut input_roots = clone_or_update_git_repos(args, global_args, &repo_urls, &datastore)?;
+
+    // Fetch issues, gists, and wikis if enabled
+    if args.input_specifier_args.repo_artifacts {
+        let repo_artifact_dirs =
+            fetch_git_host_artifacts(&repo_urls, global_args, &datastore).await?;
+        input_roots.extend(repo_artifact_dirs);
+    }
     // Fetch Jira issues if requested
     let jira_dirs = fetch_jira_issues(args, global_args, &datastore).await?;
     input_roots.extend(jira_dirs);

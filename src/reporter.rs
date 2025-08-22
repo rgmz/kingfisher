@@ -148,6 +148,11 @@ impl DetailsReporter {
         ds.slack_links().get(path).cloned()
     }
 
+    fn repo_artifact_url(&self, path: &std::path::Path) -> Option<String> {
+        let ds = self.datastore.lock().ok()?;
+        ds.repo_links().get(path).cloned()
+    }
+
     fn s3_display_path(&self, path: &std::path::Path) -> Option<String> {
         let ds = self.datastore.lock().ok()?;
         for (dir, bucket) in ds.s3_buckets().iter() {
@@ -338,7 +343,9 @@ impl DetailsReporter {
             .iter()
             .find_map(|origin| match origin {
                 Origin::File(e) => {
-                    if let Some(url) = self.jira_issue_url(&e.path, args) {
+                    if let Some(url) = self.repo_artifact_url(&e.path) {
+                        Some(url)
+                    } else if let Some(url) = self.jira_issue_url(&e.path, args) {
                         Some(url)
                     } else if let Some(url) = self.confluence_page_url(&e.path) {
                         Some(url)

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.45.0]
+- Added `--repo-artifacts` flag to scan repository issues, gists/snippets, and wikis when cloning via `--git-url`
+- Added rules for sendbird, mattermost, langchain, notion
+- JWT validation hardened to reject alg:none by default (only allowed if explicitly configured), require iss for OIDC/JWKS verification, ensuring "Active Credential" means cryptographically verified and time-valid, not just unexpired
+- Updated the Git cloning logic to include all refs and minimize clone output, allowing Kingfisher to analyze pull request and deleted branch history
+
 ## [1.44.0]
 - Fixed issue with self-update on Linux
 - Reverted the change to json and jsonl outputs by rule

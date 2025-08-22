@@ -46,10 +46,7 @@ fn normalize_path(p: &Path, roots: &[PathBuf]) -> String {
     for root in roots {
         if let Ok(stripped) = p.strip_prefix(root) {
             if let Some(name) = root.file_name() {
-                return PathBuf::from(name)
-                    .join(stripped)
-                    .to_string_lossy()
-                    .replace('\\', "/");
+                return PathBuf::from(name).join(stripped).to_string_lossy().replace('\\', "/");
             }
         }
     }

@@ -2,7 +2,6 @@ use once_cell::sync::Lazy;
 use std::path::Path;
 use tokei::LanguageType;
 
-
 // Precompute all (shebang_prefix_bytes, language) pairs once.
 // Sort longest-first so more specific shebangs win.
 static SHEBANG_PREFIXES: Lazy<Vec<(&'static [u8], LanguageType)>> = Lazy::new(|| {

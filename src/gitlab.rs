@@ -1,4 +1,9 @@
-use std::{env, time::Duration};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use anyhow::{Context, Result};
 use gitlab::{
@@ -12,7 +17,11 @@ use gitlab::{
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
-use url::Url;
+use serde_json::Value;
+use url::{form_urlencoded, Url};
+
+use crate::{findings_store, git_url::GitUrl};
+use std::str::FromStr;
 
 #[derive(Deserialize)]
 struct SimpleUser {
@@ -196,4 +205,118 @@ pub async fn list_repositories(
     }
 
     Ok(())
+}
+
+fn parse_repo(repo_url: &GitUrl) -> Option<(String, String)> {
+    let url = Url::parse(repo_url.as_str()).ok()?;
+    let host = url.host_str()?.to_string();
+    let mut path = url.path().trim_start_matches('/').to_string();
+    if let Some(stripped) = path.strip_suffix(".git") {
+        path = stripped.to_string();
+    }
+    Some((host, path))
+}
+
+pub fn wiki_url(repo_url: &GitUrl) -> Option<GitUrl> {
+    let (host, path) = parse_repo(repo_url)?;
+    let wiki = format!("https://{host}/{path}.wiki.git");
+    GitUrl::from_str(&wiki).ok()
+}
+
+pub async fn fetch_repo_items(
+    repo_url: &GitUrl,
+    ignore_certs: bool,
+    output_root: &Path,
+    datastore: &Arc<Mutex<findings_store::FindingsStore>>,
+) -> Result<Vec<PathBuf>> {
+    let (host, path) = parse_repo(repo_url).context("invalid GitLab repo URL")?;
+    let encoded = form_urlencoded::byte_serialize(path.as_bytes()).collect::<String>();
+    let client = reqwest::Client::builder().danger_accept_invalid_certs(ignore_certs).build()?;
+
+    let mut dirs = Vec::new();
+
+    // Issues
+    let issues_dir = output_root.join("gitlab_issues").join(path.replace('/', "_"));
+    fs::create_dir_all(&issues_dir)?;
+    let mut page = 1;
+    loop {
+        let url = format!(
+            "https://{host}/api/v4/projects/{encoded}/issues?scope=all&state=all&per_page=100&page={page}"
+        );
+        let mut req = client.get(&url);
+        if let Ok(token) = env::var("KF_GITLAB_TOKEN") {
+            if !token.is_empty() {
+                req = req.header("PRIVATE-TOKEN", token);
+            }
+        }
+        let resp = req.send().await?;
+        if !resp.status().is_success() {
+            break;
+        }
+        let issues: Vec<Value> = resp.json().await?;
+        if issues.is_empty() {
+            break;
+        }
+        for issue in issues {
+            let number = issue.get("iid").and_then(|v| v.as_u64()).unwrap_or(0);
+            let title = issue.get("title").and_then(|v| v.as_str()).unwrap_or("");
+            let body = issue.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            let content = format!("# {title}\n\n{body}");
+            let file_path = issues_dir.join(format!("issue_{number}.md"));
+            fs::write(&file_path, content)?;
+            let url = format!("https://{host}/{path}/-/issues/{number}");
+            let mut ds = datastore.lock().unwrap();
+            ds.register_repo_link(file_path, url);
+        }
+        page += 1;
+    }
+    if issues_dir.read_dir().ok().and_then(|mut d| d.next()).is_some() {
+        dirs.push(issues_dir);
+    }
+
+    // Snippets
+    let snippets_dir = output_root.join("gitlab_snippets").join(path.replace('/', "_"));
+    fs::create_dir_all(&snippets_dir)?;
+    page = 1;
+    loop {
+        let url =
+            format!("https://{host}/api/v4/projects/{encoded}/snippets?per_page=100&page={page}");
+        let mut req = client.get(&url);
+        if let Ok(token) = env::var("KF_GITLAB_TOKEN") {
+            if !token.is_empty() {
+                req = req.header("PRIVATE-TOKEN", token);
+            }
+        }
+        let resp = req.send().await?;
+        if !resp.status().is_success() {
+            break;
+        }
+        let snippets: Vec<Value> = resp.json().await?;
+        if snippets.is_empty() {
+            break;
+        }
+        for snip in snippets {
+            if let Some(id) = snip.get("id").and_then(|v| v.as_u64()) {
+                let raw_url = format!("https://{host}/api/v4/projects/{encoded}/snippets/{id}/raw");
+                let mut req_s = client.get(&raw_url);
+                if let Ok(token) = env::var("KF_GITLAB_TOKEN") {
+                    if !token.is_empty() {
+                        req_s = req_s.header("PRIVATE-TOKEN", token);
+                    }
+                }
+                let raw = req_s.send().await?.text().await?;
+                let file_path = snippets_dir.join(format!("snippet_{id}"));
+                fs::write(&file_path, raw)?;
+                let url = format!("https://{host}/{path}/-/snippets/{id}");
+                let mut ds = datastore.lock().unwrap();
+                ds.register_repo_link(file_path, url);
+            }
+        }
+        page += 1;
+    }
+    if snippets_dir.read_dir().ok().and_then(|mut d| d.next()).is_some() {
+        dirs.push(snippets_dir);
+    }
+
+    Ok(dirs)
 }

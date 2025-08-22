@@ -154,6 +154,10 @@ pub struct InputSpecifierArgs {
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set, help_heading = "Git Options")]
     pub commit_metadata: bool,
 
+    /// Also scan repository host artifacts like issues, wikis, and gists/snippets
+    #[arg(long, help_heading = "Git Options")]
+    pub repo_artifacts: bool,
+
     /// Enable or disable scanning nested git repositories
     #[arg(long, default_value_t = true)]
     pub scan_nested_repos: bool,

@@ -82,8 +82,9 @@ fn test_gitlab_remote_scan() -> Result<()> {
             docker_image: Vec::new(),
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::Full,
-            scan_nested_repos: true,
             commit_metadata: true,
+            repo_artifacts: false,
+            scan_nested_repos: true,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
@@ -188,8 +189,9 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
             docker_image: Vec::new(),
             git_clone: GitCloneMode::Bare,
             git_history: GitHistoryMode::None,
-            scan_nested_repos: true,
             commit_metadata: true,
+            repo_artifacts: false,
+            scan_nested_repos: true,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,

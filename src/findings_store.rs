@@ -56,6 +56,7 @@ pub struct FindingsStore {
     slack_links: FxHashMap<PathBuf, String>,
     confluence_links: FxHashMap<PathBuf, String>,
     s3_buckets: FxHashMap<PathBuf, String>,
+    repo_links: FxHashMap<PathBuf, String>,
 }
 impl FindingsStore {
     pub fn new(clone_dir: PathBuf) -> Self {
@@ -77,6 +78,7 @@ impl FindingsStore {
             slack_links: FxHashMap::default(),
             confluence_links: FxHashMap::default(),
             s3_buckets: FxHashMap::default(),
+            repo_links: FxHashMap::default(),
         }
     }
 
@@ -316,6 +318,14 @@ impl FindingsStore {
 
     pub fn confluence_links(&self) -> &FxHashMap<PathBuf, String> {
         &self.confluence_links
+    }
+
+    pub fn register_repo_link(&mut self, path: PathBuf, link: String) {
+        self.repo_links.insert(path, link);
+    }
+
+    pub fn repo_links(&self) -> &FxHashMap<PathBuf, String> {
+        &self.repo_links
     }
 
     pub fn register_s3_bucket(&mut self, dir: PathBuf, bucket: String) {
