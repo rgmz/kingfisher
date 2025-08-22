@@ -5,7 +5,7 @@ rules:
       (?xi)             
       \b                  
       (
-        (?:AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
+        (?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
         [2-7A-Z]{16}
       )
       \b                  
@@ -21,7 +21,7 @@ rules:
       (?xi)
       (?:
         \b
-        (?:AWS|AMAZON|AMZN|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
+        (?:AWS|AMAZON|AMZN|A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
         (?:.|[\n\r]){0,32}?
         \b
         (
@@ -29,7 +29,7 @@ rules:
         )
         \b
       |
-        \b(?:AWS|AMAZON|AMZN|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
+        \b(?:AWS|AMAZON|AMZN|A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
         (?:.|[\n\r]){0,96}?
         (?:SECRET|PRIVATE|ACCESS)
         (?:.|[\n\r]){0,16}?
