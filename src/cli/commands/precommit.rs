@@ -214,9 +214,9 @@ fn hook_content() -> String {
 
 fn hook_call_line() -> String {
     if cfg!(windows) {
-        "kingfisher --quiet --only-valid --no-update-check %*".to_string()
+        "kingfisher scan --quiet --only-valid --no-update-check %*".to_string()
     } else {
-        "kingfisher --quiet --only-valid --no-update-check \"$@\"".to_string()
+        "kingfisher scan --quiet --only-valid --no-update-check \"$@\"".to_string()
     }
 }
 
