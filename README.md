@@ -93,6 +93,14 @@ make darwin-all # builds both x64 and arm64
 make all # builds for every OS and architecture supported
 ```
 
+### Install as a Git pre-commit hook
+
+Run `kingfisher precommit --install` to set up a Git pre-commit hook that runs
+`kingfisher --quiet --only-valid --no-update-check` before each commit.
+Use `--global` to operate on all repositories or `--repo` to target only the
+current repository without prompting. Remove the hook with
+`kingfisher precommit --remove`.
+
 ### Run Kingfisher in Docker
 
 Run the dockerized Kingfisher container:

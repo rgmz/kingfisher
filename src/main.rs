@@ -69,6 +69,7 @@ use tracing_subscriber::{
 use url::Url;
 
 use crate::cli::commands::gitlab::{GitLabCommand, GitLabRepoType, GitLabReposCommand};
+use crate::cli::commands::precommit;
 
 fn main() -> anyhow::Result<()> {
     color_backtrace::install();
@@ -81,6 +82,7 @@ fn main() -> anyhow::Result<()> {
         Command::GitHub(_) => num_cpus::get(), // Default for GitHub commands
         Command::GitLab(_) => num_cpus::get(), // Default for GitLab commands
         Command::Rules(_) => num_cpus::get(),  // Default for Rules commands
+        Command::Precommit(_) => num_cpus::get(),
     };
 
     // Set up the Tokio runtime with the specified number of threads
@@ -219,6 +221,9 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                 run_rules_list(&list_args)?;
             }
         },
+        Command::Precommit(pre_args) => {
+            precommit::run(&pre_args)?;
+        }
         Command::GitHub(github_args) => match github_args.command {
             GitHubCommand::Repos(repos_command) => match repos_command {
                 GitHubReposCommand::List(list_args) => {
