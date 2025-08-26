@@ -2,8 +2,8 @@ rules:
   - name: MailGun Token
     id: kingfisher.mailgun.1
     pattern: |
-      (?xi)                   
-      \b                     
+      (?xi)
+      \b
       mailgun
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)

@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.46.0]
 - Improved rules: AWS, pem
+- Added rule for Ollama
 - Added a new precommit subcommand that installs a git pre-commit hook, prompting or accepting --global/--repo flags to control scope and configuring the hook to run kingfisher --quiet --only-valid --no-update-check
 
 ## [1.45.0]
