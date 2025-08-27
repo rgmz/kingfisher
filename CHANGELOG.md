@@ -4,8 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [1.46.0]
 - Improved rules: AWS, pem
-- Added rule for Ollama, Weights and Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, together.ai, zhipu,
-
+- Added rule for Ollama, Weights and Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, together.ai, zhipu
+- Added `self-update` command to update the binary independently. Now supports updating over homebrew managed binary
 
 ## [1.45.0]
 - Added `--repo-artifacts` flag to scan repository issues, gists/snippets, and wikis when cloning via `--git-url`

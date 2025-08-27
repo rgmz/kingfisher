@@ -15,28 +15,13 @@
 // `style_finding_active_heading` style so that they stand out alongside normal
 // scan output.
 
-use std::{
-    fs,
-    io::{ErrorKind, IsTerminal},
-    path::PathBuf,
-};
+use std::io::{ErrorKind, IsTerminal};
 
 use self_update::{backends::github::Update, cargo_crate_version, errors::Error as UpdError};
 use semver::Version;
 use tracing::{error, info, warn};
 
 use crate::{cli::global::GlobalArgs, reporter::styles::Styles};
-
-/// Return `true` when the canonical executable path lives inside a Homebrew Cellar.
-/// Works for Intel macOS (/usr/local/Cellar), Apple‑Silicon macOS (/opt/homebrew/Cellar)
-/// and Linuxbrew (~/.linuxbrew/Cellar).
-fn installed_via_homebrew() -> bool {
-    fn canonical_exe() -> Option<PathBuf> {
-        std::env::current_exe().ok().and_then(|p| fs::canonicalize(p).ok())
-    }
-
-    canonical_exe().map(|p| p.components().any(|c| c.as_os_str() == "Cellar")).unwrap_or(false)
-}
 
 /// Check GitHub for a newer Kingfisher release and optionally self‑update.
 ///
@@ -50,16 +35,6 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     // Decide once whether we want coloured output.
     let use_color = std::io::stderr().is_terminal() && !global_args.quiet;
     let styles = Styles::new(use_color);
-
-    let is_brew = installed_via_homebrew();
-    if is_brew {
-        info!(
-            "{}",
-            styles.style_finding_active_heading.apply_to(
-                "Homebrew install detected - will notify about updates but not self-update"
-            )
-        );
-    }
 
     info!("{}", "Checking for updates…");
 
@@ -145,7 +120,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     info!("{}", styles.style_finding_active_heading.apply_to(&plain));
 
     // Attempt self‑update when allowed and feasible.
-    if global_args.self_update && !is_brew {
+    if global_args.self_update {
         match updater.update() {
             Ok(status) => info!(
                 "{}",
@@ -167,13 +142,6 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
                 _ => error!("Failed to update: {e}"),
             },
         }
-    } else if is_brew {
-        info!(
-            "{}",
-            styles
-                .style_finding_active_heading
-                .apply_to("Run `brew upgrade kingfisher` to install the new version.")
-        );
     }
 
     Some(plain)

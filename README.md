@@ -8,21 +8,12 @@
 Kingfisher is a blazingly fast secret‑scanning and live validation tool built in Rust. It combines Intel’s hardware‑accelerated Hyperscan regex engine with language‑aware parsing via Tree‑Sitter, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
 </p>
 
-Kingfisher originated as a fork of Praetorian's Nosey Parker, and is built atop their incredible work and the work contributed by the Nosey Parker community.
-
-## What Kingfisher Adds
-- **Live validation** via cloud-provider APIs
-- **Extra targets**: GitLab repos, S3 buckets, Docker images, Jira issues, Confluence pages, and Slack messages
-- **Compressed Files**: Supports extracting and scanning compressed files for secrets
-- **Baseline mode**: ignore known secrets, flag only new ones
-- **Allowlist support**: suppress false positives with custom regexes or words
-- **Language-aware detection** (source-code parsing) for ~20 languages
-- **Native Windows** binary
-
+Originally forked from Praetorian’s Nosey Parker, Kingfisher adds live cloud-API validation; many more targets (GitLab, S3, Docker, Jira, Confluence, Slack); compressed-file extraction and scanning; baseline and allowlist controls; language-aware detection (~20 languages); and a native Windows binary. See [Origins and Divergence](#origins-and-divergence) for details.
 
 ## Key Features
 - **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
 - **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
+  - **Broad AI SaaS coverage**: finds and validates tokens for OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), Ollama, Langchain, Perplexity, Weights & Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, Together.ai, Zhipu, and many more
 - **Multiple targets**:
   - **Git history**: local repos or GitHub/GitLab orgs/users
   - **Repository artifacts**: with `--repo-artifacts`, scan GitHub/GitLab repository artifacts such as issues, pull/merge requests, wikis, snippets, and owner gists in addition to code
@@ -154,18 +145,18 @@ docker run --rm \
 
 # 🔐 Detection Rules at a Glance
 
-Kingfisher ships with hundreds of rules that cover everything from classic cloud keys to the latest LLM-API secrets. Below is an overview:
+Kingfisher ships with [hundreds of rules](/data/rules/) that cover everything from classic cloud keys to the latest AI SaaS tokens. Below is an overview:
 
 | Category | What we catch |
 |----------|---------------|
-| **AI / LLM APIs** | OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), and more
-| **Cloud Providers** | AWS, Azure, GCP, Alibaba Cloud, DigitalOcean, IBM Cloud, Cloudflare, and more
-| **Dev & CI/CD** | GitHub/GitLab tokens, CircleCI, TravisCI, TeamCity, Docker Hub, npm, PyPI, and more
-| **Messaging & Comms** | Slack, Discord, Microsoft Teams, Twilio, Mailgun, SendGrid, Mailchimp, and more
-| **Databases & Data Ops** | MongoDB Atlas, PlanetScale, Postgres DSNs, Grafana Cloud, Datadog, Dynatrace, and more
-| **Payments & Billing** | Stripe, PayPal, Square, GoCardless, and more
-| **Security & DevSecOps** | Snyk, Dependency-Track, CodeClimate, Codacy, OpsGenie, PagerDuty, and more
-| **Misc. SaaS & Tools** | 1Password, Adobe, Atlassian/Jira, Asana, Netlify, Baremetrics, and more
+| **AI SaaS APIs** | OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), Ollama, Langchain, Perplexity, Weights & Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, together.ai, Zhipu, and more |
+| **Cloud Providers** | AWS, Azure, GCP, Alibaba Cloud, DigitalOcean, IBM Cloud, Cloudflare, and more |
+| **Dev & CI/CD** | GitHub/GitLab tokens, CircleCI, TravisCI, TeamCity, Docker Hub, npm, PyPI, and more |
+| **Messaging & Comms** | Slack, Discord, Microsoft Teams, Twilio, Mailgun, SendGrid, Mailchimp, and more |
+| **Databases & Data Ops** | MongoDB Atlas, PlanetScale, Postgres DSNs, Grafana Cloud, Datadog, Dynatrace, and more |
+| **Payments & Billing** | Stripe, PayPal, Square, GoCardless, and more |
+| **Security & DevSecOps** | Snyk, Dependency-Track, CodeClimate, Codacy, OpsGenie, PagerDuty, and more |
+| **Misc. SaaS & Tools** | 1Password, Adobe, Atlassian/Jira, Asana, Netlify, Baremetrics, and more |
 
 ## Write Custom Rules!
 
@@ -543,8 +534,10 @@ Kingfisher automatically queries GitHub for a newer release when it starts and t
 
 - **Hands-free updates** – Add `--self-update` to any Kingfisher command
 
-  * If a newer version exists, Kingfisher will download it, replace the running binary, and re-launch itself with the **exact same arguments**.  
+  * If a newer version exists, Kingfisher will download it, replace the running binary, and re-launch itself with the **exact same arguments**.
   * If the update fails or no newer release is found, the current run proceeds as normal
+
+- **Manual update** – Run `kingfisher self-update` to update the binary without scanning
 
 - **Disable version checks** – Pass `--no-update-check` to skip both the startup and shutdown checks entirely
 
@@ -660,6 +653,20 @@ Use `--rule-stats` to collect timing information for every rule. After scanning,
 ```bash
 kingfisher scan --help
 ```
+
+
+## Origins and Divergence
+
+Kingfisher began as a fork of Praetorian’s Nosey Parker, as our experiment with adding live validation support and embedding that validation directly inside each rule.  
+
+Since that initial fork, it has diverged heavily from Nosey Parker:
+- Replaced the SQLite datastore with an in-memory store + Bloom filter
+- Collapsed the workflow into a single scan-and-report phase with direct JSON/BSON/SARIF outputs  
+- Added Tree-Sitter parsing on top of Hyperscan for deeper language-aware detection  
+- Removed datastore-driven reporting/annotations in favor of live validation, baselines, allowlists, and compressed-file extraction  
+- Expanded support for new targets (GitLab, Jira, Confluence, Slack, S3, Docker, etc.)  
+- Delivered cross-platform builds, including native Windows  
+
 
 # Roadmap
 

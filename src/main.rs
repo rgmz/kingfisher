@@ -78,9 +78,10 @@ fn main() -> anyhow::Result<()> {
     // Determine the number of jobs, defaulting to the number of CPUs
     let num_jobs = match args.command {
         Command::Scan(ref scan_args) => scan_args.num_jobs,
+        Command::SelfUpdate => 1, // Self-update doesn't need a thread pool
         Command::GitHub(_) => num_cpus::get(), // Default for GitHub commands
         Command::GitLab(_) => num_cpus::get(), // Default for GitLab commands
-        Command::Rules(_) => num_cpus::get(),  // Default for Rules commands
+        Command::Rules(_) => num_cpus::get(), // Default for Rules commands
     };
 
     // Set up the Tokio runtime with the specified number of threads
@@ -171,92 +172,97 @@ pub fn determine_exit_code(datastore: &Arc<Mutex<findings_store::FindingsStore>>
 }
 
 async fn async_main(args: CommandLineArgs) -> Result<()> {
-    // Create a temporary directory
-    let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
-    let clone_dir = temp_dir.path().to_path_buf();
-
-    // Create the in-memory datastore
-    let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
     setup_logging(&args.global_args);
-    let update_msg = check_for_update(&args.global_args, None);
+    let global_args = args.global_args.clone();
+
     match args.command {
-        Command::Scan(mut scan_args) => {
-            // —————————————————————————————————————————
-            // If no paths or a single "-", slurp stdin into a temp file
-            // —————————————————————————————————————————
-            info!(
-                "Launching with {} concurrent scan jobs. Use --num-jobs to override.",
-                &scan_args.num_jobs
-            );
-            let paths = &scan_args.input_specifier_args.path_inputs;
-            let is_dash = paths.iter().any(|p| p.as_os_str() == "-");
-            if (paths.is_empty() || is_dash) && !atty::is(atty::Stream::Stdin) {
-                // read all stdin
-                let mut buf = Vec::new();
-                std::io::stdin().read_to_end(&mut buf)?;
-                // write into temp_dir
-                let stdin_file = temp_dir.path().join("stdin_input");
-                std::fs::write(&stdin_file, buf)?;
-                // replace inputs
-                scan_args.input_specifier_args.path_inputs = vec![stdin_file.into()];
-            }
-
-            // now proceed exactly as before
-            let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
-            run_scan(&args.global_args, &scan_args, &rules_db, Arc::clone(&datastore)).await?;
-            let exit_code = determine_exit_code(&datastore);
-
-            if let Err(e) = temp_dir.close() {
-                eprintln!("Failed to close temporary directory: {}", e);
-            }
-            std::process::exit(exit_code);
+        Command::SelfUpdate => {
+            let mut g = global_args;
+            g.self_update = true;
+            g.no_update_check = false;
+            check_for_update(&g, None);
+            Ok(())
         }
-        Command::Rules(ref rule_args) => match &rule_args.command {
-            RulesCommand::Check(check_args) => {
-                run_rules_check(&check_args)?;
-            }
-            RulesCommand::List(list_args) => {
-                run_rules_list(&list_args)?;
-            }
-        },
-        Command::GitHub(github_args) => match github_args.command {
-            GitHubCommand::Repos(repos_command) => match repos_command {
-                GitHubReposCommand::List(list_args) => {
-                    github::list_repositories(
-                        github_args.github_api_url,
-                        args.global_args.ignore_certs,
-                        args.global_args.use_progress(),
-                        &list_args.repo_specifiers.user,
-                        &list_args.repo_specifiers.organization,
-                        list_args.repo_specifiers.all_organizations,
-                        list_args.repo_specifiers.repo_type.into(),
-                    )
-                    .await?;
+        command => {
+            let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
+            let clone_dir = temp_dir.path().to_path_buf();
+
+            let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
+            let update_msg = check_for_update(&global_args, None);
+            match command {
+                Command::Scan(mut scan_args) => {
+                    info!(
+                        "Launching with {} concurrent scan jobs. Use --num-jobs to override.",
+                        &scan_args.num_jobs
+                    );
+                    let paths = &scan_args.input_specifier_args.path_inputs;
+                    let is_dash = paths.iter().any(|p| p.as_os_str() == "-");
+                    if (paths.is_empty() || is_dash) && !atty::is(atty::Stream::Stdin) {
+                        let mut buf = Vec::new();
+                        std::io::stdin().read_to_end(&mut buf)?;
+                        let stdin_file = temp_dir.path().join("stdin_input");
+                        std::fs::write(&stdin_file, buf)?;
+                        scan_args.input_specifier_args.path_inputs = vec![stdin_file.into()];
+                    }
+
+                    let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
+                    run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore)).await?;
+                    let exit_code = determine_exit_code(&datastore);
+
+                    if let Err(e) = temp_dir.close() {
+                        eprintln!("Failed to close temporary directory: {}", e);
+                    }
+                    std::process::exit(exit_code);
                 }
-            },
-        },
-        Command::GitLab(gitlab_args) => match gitlab_args.command {
-            GitLabCommand::Repos(repos_command) => match repos_command {
-                GitLabReposCommand::List(list_args) => {
-                    kingfisher::gitlab::list_repositories(
-                        gitlab_args.gitlab_api_url,
-                        args.global_args.ignore_certs,
-                        args.global_args.use_progress(),
-                        &list_args.repo_specifiers.user,
-                        &list_args.repo_specifiers.group,
-                        list_args.repo_specifiers.all_groups,
-                        list_args.repo_specifiers.include_subgroups,
-                        list_args.repo_specifiers.repo_type.into(),
-                    )
-                    .await?;
-                }
-            },
-        },
+                Command::Rules(ref rule_args) => match &rule_args.command {
+                    RulesCommand::Check(check_args) => {
+                        run_rules_check(&check_args)?;
+                    }
+                    RulesCommand::List(list_args) => {
+                        run_rules_list(&list_args)?;
+                    }
+                },
+                Command::GitHub(github_args) => match github_args.command {
+                    GitHubCommand::Repos(repos_command) => match repos_command {
+                        GitHubReposCommand::List(list_args) => {
+                            github::list_repositories(
+                                github_args.github_api_url,
+                                global_args.ignore_certs,
+                                global_args.use_progress(),
+                                &list_args.repo_specifiers.user,
+                                &list_args.repo_specifiers.organization,
+                                list_args.repo_specifiers.all_organizations,
+                                list_args.repo_specifiers.repo_type.into(),
+                            )
+                            .await?;
+                        }
+                    },
+                },
+                Command::GitLab(gitlab_args) => match gitlab_args.command {
+                    GitLabCommand::Repos(repos_command) => match repos_command {
+                        GitLabReposCommand::List(list_args) => {
+                            kingfisher::gitlab::list_repositories(
+                                gitlab_args.gitlab_api_url,
+                                global_args.ignore_certs,
+                                global_args.use_progress(),
+                                &list_args.repo_specifiers.user,
+                                &list_args.repo_specifiers.group,
+                                list_args.repo_specifiers.all_groups,
+                                list_args.repo_specifiers.include_subgroups,
+                                list_args.repo_specifiers.repo_type.into(),
+                            )
+                            .await?;
+                        }
+                    },
+                },
+                Command::SelfUpdate => unreachable!(),
+            }
+            if let Some(msg) = update_msg {
+                info!("{msg}");
+            }
+            Ok(())
+        }
     }
-    if let Some(msg) = update_msg {
-        info!("{msg}");
-    }
-    Ok(())
 }
 
 /// Create a default ScanArgs instance for rule loading

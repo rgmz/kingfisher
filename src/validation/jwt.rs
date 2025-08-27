@@ -101,7 +101,6 @@ pub async fn validate_jwt_with(token: &str, opts: &ValidateOptions) -> Result<(b
     let header_val: serde_json::Value =
         serde_json::from_slice(&header_json).map_err(|e| anyhow!("invalid header json: {e}"))?;
     let alg_str = header_val.get("alg").and_then(|v| v.as_str()).unwrap_or("");
- 
 
     // --- Policy: reject `alg: none` unless explicitly allowed ------------------
     if alg_str.eq_ignore_ascii_case("none") {
@@ -119,7 +118,7 @@ pub async fn validate_jwt_with(token: &str, opts: &ValidateOptions) -> Result<(b
             return Ok((false, "unsigned JWT (alg: none) not allowed".into()));
         }
     }
- 
+
     // Safe to decode full header now that we know alg != none
     let header = decode_header(token).map_err(|e| anyhow!("decode header: {e}"))?;
     let alg = header.alg;
