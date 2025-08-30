@@ -22,7 +22,7 @@ rules:
       (?:
         \b
         (?:AWS|AMAZON|AMZN|A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
-        (?:.|[\n\r]){0,32}?
+        (?:.|[\n\r]){0,64}?
         \b
         (
           [A-Z0-9/+=]{40}
@@ -34,7 +34,7 @@ rules:
         (?:SECRET|PRIVATE|ACCESS)
         (?:.|[\n\r]){0,16}?
         (?:KEY|TOKEN)
-        (?:.|[\n\r]){0,32}?
+        (?:.|[\n\r]){0,64}?
         \b
         (
           [A-Z0-9/+=]{40}

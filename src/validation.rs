@@ -553,17 +553,24 @@ async fn timed_validate_single_match<'a>(
                 return;
             }
 
+            let cache_key = mongodb::generate_mongodb_cache_key(&uri);
+            if let Some(cached) = cache.get(&cache_key) {
+                let c = cached.value();
+                if c.timestamp.elapsed() < Duration::from_secs(VALIDATION_CACHE_SECONDS) {
+                    m.validation_success = c.is_valid;
+                    m.validation_response_body = c.body.clone();
+                    m.validation_response_status = c.status;
+                    commit_and_return(m);
+                    return;
+                }
+            }
+
             match mongodb::validate_mongodb(&uri).await {
                 Ok((ok, msg)) => {
                     m.validation_success = ok;
                     m.validation_response_body = msg;
-                    m.validation_response_status = if uri.starts_with("mongodb+srv://") {
-                        StatusCode::CONTINUE
-                    } else if ok {
-                        StatusCode::OK
-                    } else {
-                        StatusCode::UNAUTHORIZED
-                    };
+                    m.validation_response_status =
+                        if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
                 }
                 Err(e) => {
                     m.validation_success = false;

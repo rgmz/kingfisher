@@ -255,7 +255,7 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         }
                     },
                 },
-                Command::SelfUpdate => unreachable!(),
+                Command::SelfUpdate => anyhow::bail!("SelfUpdate command should not reach this branch"),
             }
             if let Some(msg) = update_msg {
                 info!("{msg}");
