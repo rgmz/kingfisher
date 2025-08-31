@@ -20,6 +20,7 @@ fn detects_base64_encoded_secret() -> anyhow::Result<()> {
             "--confidence=low",
             "--format",
             "json",
+            "--no-validate",
             "--no-update-check",
         ])
         .assert()
