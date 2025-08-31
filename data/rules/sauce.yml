@@ -27,7 +27,7 @@ rules:
       (?xi)
       \b
       (
-        (:?api|ondemand)\.(?:us|eu)-(?:west|east|central)-[0-9]\.saucelabs\.com
+        (?:api|ondemand)\.(?:us|eu)-(?:west|east|central)-[0-9]\.saucelabs\.com
       )
       \b
     confidence: medium
