@@ -100,6 +100,9 @@ impl<'a> Display for PrettyFindingRecord<'a> {
         };
         let finding = &record.finding;
         writeln!(f, " |Finding.......: {}", style_fn(&finding.snippet))?;
+        if let Some(enc) = &finding.encoding {
+            writeln!(f, " |Encoding.....: {}", enc)?;
+        }
         writeln!(f, " |Fingerprint...: {}", finding.fingerprint)?;
         writeln!(f, " |Confidence....: {}", finding.confidence)?;
         writeln!(f, " |Entropy.......: {}", finding.entropy)?;

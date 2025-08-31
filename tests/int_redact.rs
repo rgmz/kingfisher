@@ -88,6 +88,7 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
         manage_baseline: false,
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
+        no_base64: false,
     };
 
     let global_args = GlobalArgs {

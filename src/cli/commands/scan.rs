@@ -92,6 +92,10 @@ pub struct ScanArgs {
     #[arg(long, short = 'r', default_value_t = false)]
     pub redact: bool,
 
+    /// Skip decoding Base64 blobs before scanning
+    #[arg(long, default_value_t = false)]
+    pub no_base64: bool,
+
     /// Timeout for Git repository scanning in seconds
     #[arg(long, default_value_t = 1800, value_name = "SECONDS")]
     pub git_repo_timeout: u64,

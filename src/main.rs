@@ -255,7 +255,9 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         }
                     },
                 },
-                Command::SelfUpdate => unreachable!(),
+                Command::SelfUpdate => {
+                    anyhow::bail!("SelfUpdate command should not reach this branch")
+                }
             }
             if let Some(msg) = update_msg {
                 info!("{msg}");
@@ -335,6 +337,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
+        no_base64: false,
     }
 }
 /// Run the rules check command

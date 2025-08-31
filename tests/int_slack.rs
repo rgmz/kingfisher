@@ -94,6 +94,7 @@ impl TestContext {
             manage_baseline: false,
             skip_regex: Vec::new(),
             skip_word: Vec::new(),
+            no_base64: false,
         };
 
         let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;
@@ -191,6 +192,7 @@ async fn test_scan_slack_messages() -> Result<()> {
         manage_baseline: false,
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
+        no_base64: false,
     };
 
     let global_args = GlobalArgs {

@@ -384,6 +384,7 @@ impl DetailsReporter {
                 column_start: source_span.start.column as u32,
                 column_end: source_span.end.column as u32,
                 path: file_path,
+                encoding: if rm.m.is_base64 { Some("base64".to_string()) } else { None },
                 git_metadata: git_metadata_val,
             },
         }
@@ -520,6 +521,8 @@ pub struct FindingRecordData {
     pub column_start: u32,
     pub column_end: u32,
     pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub git_metadata: Option<serde_json::Value>,
 }

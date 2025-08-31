@@ -15,7 +15,7 @@ fn scan_rules_has_no_validated_findings() -> Result<()> {
         Some(i) => i,
         None => return Ok(()), // no array found
     };
-
+ 
     let mut depth = 0usize;
     let mut end = None;
     for (i, ch) in stdout.char_indices().skip(start) {

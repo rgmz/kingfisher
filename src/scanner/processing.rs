@@ -25,11 +25,12 @@ impl<'a> BlobProcessor<'a> {
         blob: Blob,
         no_dedup: bool,
         redact: bool,
+        no_base64: bool,
     ) -> Result<Option<DatastoreMessage>> {
         let blob_id = blob.id.hex();
         let _span = debug_span!("matcher", blob_id).entered();
         let t1 = Instant::now();
-        let res = self.matcher.scan_blob(&blob, &origin, None, redact, no_dedup)?;
+        let res = self.matcher.scan_blob(&blob, &origin, None, redact, no_dedup, no_base64)?;
         let scan_us = t1.elapsed().as_micros();
         match res {
             // blob already seen, but with no matches; nothing to do!

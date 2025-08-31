@@ -23,7 +23,8 @@ Originally forked from Praetorian’s Nosey Parker, Kingfisher adds live cloud-A
   - **Slack messages**: query‑based scans with `--slack-query`
   - **AWS S3**: bucket scans via `--s3-bucket`/`--s3-prefix` with credentials from `KF_AWS_KEY`/`KF_AWS_SECRET`, `--role-arn`, `--aws-local-profile`, or anonymous
 - **Compressed Files**: Supports extracting and scanning compressed files for secrets
-- **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))  
+- Decode Base64 blobs and scan their contents for secrets while skipping short strings for performance. This has a small performance impact and can be disabled with `--no-base64`
+- **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))
 
 **Learn more:** [Introducing Kingfisher: Real‑Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
 

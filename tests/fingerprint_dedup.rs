@@ -47,6 +47,7 @@ fn make_match(fp: u64) -> Match {
         validation_success: false,
         calculated_entropy: 0.0,
         visible: true,
+        is_base64: false,
     }
 }
 

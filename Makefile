@@ -183,14 +183,15 @@ ubuntu-arm64: setup-zig   # ensures Zig & cargo-zigbuild exist
 
 	$(MAKE) list-archives
 
-
 darwin-arm64:
 	@echo "Checking Rust for darwin-arm64..."
 	@$(MAKE) check-rust || ( \
 		echo "Rust not found or out-of-date. Installing via Homebrew..." && \
 		brew install rust \
 	)
-	@brew install boost cmake gcc libpcap pkg-config ragel sqlite coreutils gnu-tar || true
+	@brew list cmake >/dev/null 2>&1 || brew install cmake
+	@brew list boost >/dev/null 2>&1 || brew install boost
+	@brew install gcc libpcap pkg-config ragel sqlite coreutils gnu-tar
 	@rustup target add aarch64-apple-darwin
 	cargo build --release --target aarch64-apple-darwin --features system-alloc
 	@cd target/aarch64-apple-darwin/release && \
@@ -212,7 +213,9 @@ darwin-x64:
 		echo "Rust not found or out-of-date. Installing via Homebrew..." && \
 		brew install rust \
 	)
-	@brew install boost cmake gcc libpcap pkg-config ragel sqlite coreutils gnu-tar || true
+	@brew list cmake >/dev/null 2>&1 || brew install cmake
+	@brew list boost >/dev/null 2>&1 || brew install boost
+	@brew install gcc libpcap pkg-config ragel sqlite coreutils gnu-tar
 	@rustup target add x86_64-apple-darwin
 	source $$HOME/.cargo/env && cargo build --release --target x86_64-apple-darwin --features system-alloc
 	@cd target/x86_64-apple-darwin/release && \

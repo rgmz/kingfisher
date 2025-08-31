@@ -2,10 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.47.0]
+- MongoDB validator now validates `mongodb+srv://` URIs with a fast timeout instead of skipping them
+- Improved rules: github oauth2, diffbot, mailchimp, aws
+- Added validation to SauceLabs rule
+- Added rules: shodan, bitly, flickr
+- Decode Base64 blobs and scan their contents for secrets while skipping short strings for performance. This has a small performance impact and can be disabled with `--no-base64`
+
 ## [1.46.0]
 - Improved rules: AWS, pem
 - Added rule for Ollama, Weights and Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, together.ai, zhipu
 - Added `self-update` command to update the binary independently. Now supports updating over homebrew managed binary
+- MongoDB validator now checks `mongodb+srv://` URIs with fast-fail timeouts
 
 ## [1.45.0]
 - Added `--repo-artifacts` flag to scan repository issues, gists/snippets, and wikis when cloning via `--git-url`

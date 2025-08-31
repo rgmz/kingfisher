@@ -427,7 +427,7 @@ pub async fn fetch_s3_objects(
         let blob = crate::blob::Blob::from_bytes(bytes);
 
         if let Some((origin, blob_md, scored_matches)) =
-            processor.run(origin, blob, args.no_dedup, args.redact)?
+            processor.run(origin, blob, args.no_dedup, args.redact, args.no_base64)?
         {
             // Wrap origin & metadata once:
             let origin_arc = Arc::new(origin);

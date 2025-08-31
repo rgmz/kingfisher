@@ -193,3 +193,21 @@ rules:
       - |
         user = 'Aladdin'
         password = 'open sesame'
+  - name: Docker Robot Credentials (plaintext pair)
+    id: kingfisher.generic.9
+    pattern: |
+      (?xi)
+      \b
+      (                                  
+        (?P<USER> [a-z0-9._-]+ \+ [a-z0-9._-]+ )  
+        :
+        (?P<PASS> [A-Z0-9]{32,80} )
+      )
+      \b
+    min_entropy: 2.0
+    confidence: low
+    examples:
+      - some+thing:02PDFMQN2PL2ZAB9OX3IOHC1XMIW1SE5NWG3RETG58JUZJ310WFYESRA7F0LM461
+      - org+builder:1C2F9D0BB1E67E9F6B3B5B9A2A3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1
+    references:
+      - https://docs.quay.io/use_quay.html#robot-accounts

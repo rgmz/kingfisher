@@ -3,8 +3,9 @@ rules:
     id: kingfisher.mailchimp.1
     pattern: |
       (?xi)
+      \b
       mailchimp
-      (?:.|[\n\r]){0,32}?
+      (?:.|[\n\r]){0,128}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b

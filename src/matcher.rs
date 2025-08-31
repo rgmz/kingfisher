@@ -65,6 +65,7 @@ pub struct OwnedBlobMatch {
     pub validation_response_status: StatusCode,
     pub validation_success: bool,
     pub calculated_entropy: f32,
+    pub is_base64: bool,
 }
 impl<'a> Matcher<'a> {
     pub fn get_profiling_report(&self) -> Option<Vec<RuleStats>> {
@@ -85,6 +86,7 @@ impl OwnedBlobMatch {
                 .unwrap_or(StatusCode::CONTINUE),
             validation_success: m.validation_success,
             calculated_entropy: m.calculated_entropy,
+            is_base64: m.is_base64,
         }
     }
 
@@ -108,6 +110,7 @@ impl OwnedBlobMatch {
             validation_success: blob_match.validation_success,
             calculated_entropy: blob_match.calculated_entropy,
             finding_fingerprint: 0, //default
+            is_base64: blob_match.is_base64,
         };
 
         // Convert matching_finding to a &str (using lossy conversion if needed)
@@ -154,6 +157,7 @@ pub struct BlobMatch<'a> {
 
     pub validation_success: bool,
     pub calculated_entropy: f32,
+    pub is_base64: bool,
 }
 #[derive(Clone)]
 struct UserData {
@@ -273,6 +277,7 @@ impl<'a> Matcher<'a> {
         lang: Option<String>,
         redact: bool,
         no_dedup: bool,
+        no_base64: bool,
     ) -> Result<ScanResult<'b>>
     where
         'a: 'b,
@@ -305,8 +310,12 @@ impl<'a> Matcher<'a> {
         // Perform the scan
         self.scan_bytes_raw(&blob.bytes(), &filename)?;
 
-        // Early exit if no matches found
-        if self.user_data.raw_matches_scratch.is_empty() {
+        // Opportunistically look for standalone Base64 blobs. If neither
+        // the raw scan nor this check yields anything, we can return early
+        // before doing any heavier work.
+        let mut b64_items = if no_base64 { Vec::new() } else { get_base64_strings(blob.bytes()) };
+
+        if self.user_data.raw_matches_scratch.is_empty() && b64_items.is_empty() {
             // Only record in seen_blobs if deduplication is enabled
             if !no_dedup {
                 return Ok(match self.seen_blobs.insert(blob.id, false) {
@@ -322,18 +331,22 @@ impl<'a> Matcher<'a> {
         let rules_db = self.rules_db;
         let mut seen_matches = FxHashSet::default();
         let mut previous_matches = Vec::new();
-        let tree_sitter_result = lang.and_then(|lang_str| {
-            get_language_and_queries(&lang_str).and_then(|(language, queries)| {
-                let checker = Checker { language, rules: queries };
-                match checker.check(&blob.bytes()) {
-                    Ok(results) => Some(results),
-                    Err(e) => {
-                        println!("Error in checker.check: {}", e);
-                        None
+        let tree_sitter_result = if self.user_data.raw_matches_scratch.is_empty() {
+            None
+        } else {
+            lang.and_then(|lang_str| {
+                get_language_and_queries(&lang_str).and_then(|(language, queries)| {
+                    let checker = Checker { language, rules: queries };
+                    match checker.check(&blob.bytes()) {
+                        Ok(results) => Some(results),
+                        Err(e) => {
+                            println!("Error in checker.check: {}", e);
+                            None
+                        }
                     }
-                }
+                })
             })
-        });
+        };
         // Process matches
         let mut matches = Vec::new();
         let owned_ts_results = tree_sitter_result.map(|ts_results| {
@@ -383,6 +396,7 @@ impl<'a> Matcher<'a> {
                 &mut seen_matches,
                 origin,
                 None,
+                false,
                 redact,
                 &filename,
                 self.profiler.as_ref(),
@@ -406,10 +420,53 @@ impl<'a> Matcher<'a> {
                             &mut seen_matches,
                             origin,
                             Some(ts_match.clone()),
+                            *is_base64_decoded,
                             redact,
                             &filename,
                             self.profiler.as_ref(),
                         );
+                    }
+                }
+            }
+        }
+
+        if !no_base64 {
+            // If the blob contains standalone Base64 blobs, decode and scan them as well
+            const MAX_B64_DEPTH: usize = 2; // decode at most two levels deep
+            let mut b64_stack: Vec<(DecodedData, usize)> =
+                b64_items.drain(..).map(|d| (d, 0)).collect();
+            while let Some((item, depth)) = b64_stack.pop() {
+                for (rule_id_usize, rule) in rules_db.rules.iter().enumerate() {
+                    let re = &rules_db.anchored_regexes[rule_id_usize];
+                    filter_match(
+                        blob,
+                        rule.clone(),
+                        re,
+                        item.pos_start,
+                        item.pos_end,
+                        &mut matches,
+                        &mut previous_matches,
+                        rule_id_usize,
+                        &mut seen_matches,
+                        origin,
+                        Some(item.decoded.clone()),
+                        true,
+                        redact,
+                        &filename,
+                        self.profiler.as_ref(),
+                    );
+                }
+                if depth + 1 < MAX_B64_DEPTH {
+                    for nested in get_base64_strings(item.decoded.as_bytes()) {
+                        b64_stack.push((
+                            DecodedData {
+                                original: nested.original,
+                                decoded: nested.decoded,
+                                pos_start: item.pos_start,
+                                pos_end: item.pos_end,
+                            },
+                            depth + 1,
+                        ));
                     }
                 }
             }
@@ -457,6 +514,7 @@ fn filter_match<'b>(
     seen_matches: &mut FxHashSet<u64>,
     _origin: &OriginSet,
     ts_match: Option<String>,
+    is_base64: bool,
     redact: bool,
     filename: &str,
     profiler: Option<&Arc<ConcurrentRuleProfiler>>,
@@ -521,6 +579,7 @@ fn filter_match<'b>(
             validation_response_status: StatusCode::from_u16(0).unwrap_or(StatusCode::CONTINUE),
             validation_success: false,
             calculated_entropy,
+            is_base64,
         });
         previous_matches.push((rule_id, matching_input_offset_span));
     }
@@ -729,6 +788,8 @@ pub struct Match {
     pub calculated_entropy: f32,
 
     pub visible: bool,
+    #[serde(default)]
+    pub is_base64: bool,
 }
 impl Match {
     #[inline]
@@ -780,6 +841,7 @@ impl Match {
             validation_response_status: owned_blob_match.validation_response_status.as_u16(),
             validation_success: owned_blob_match.validation_success,
             calculated_entropy: owned_blob_match.calculated_entropy,
+            is_base64: owned_blob_match.is_base64,
         }
     }
 
@@ -832,33 +894,26 @@ pub struct DecodedData {
 }
 pub fn get_base64_strings(input: &[u8]) -> Vec<DecodedData> {
     lazy_static! {
-        static ref RE_BASE64: Regex =
-            Regex::new(r"(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?").unwrap();
+        // Require a reasonably long run of valid Base64 characters to reduce
+        // noise. 32 bytes corresponds to 24 decoded bytes.
+        static ref RE_BASE64: Regex = Regex::new(r"[A-Za-z0-9+/]{32,}={0,2}").unwrap();
     }
     let mut results = Vec::new();
-    for capture in RE_BASE64.captures_iter(input) {
-        let base64_match = capture.get(0).unwrap();
-
-        if base64_match.is_empty() {
-            continue;
-        }
-
-        let start = base64_match.start();
-        let end = base64_match.end();
-        let base64_string = &input[start..end];
-        // Check if the length is a multiple of 4
+    for m in RE_BASE64.find_iter(input) {
+        let base64_string = m.as_bytes();
+        // Skip candidates whose length isn't a multiple of four – they cannot
+        // be valid Base64.
         if base64_string.len() % 4 != 0 {
             continue;
         }
         if let Ok(decoded) = general_purpose::STANDARD.decode(base64_string) {
-            // Check if the decoded string is valid UTF-8
             if let Ok(decoded_str) = std::str::from_utf8(&decoded) {
                 if decoded_str.is_ascii() {
                     results.push(DecodedData {
                         original: String::from_utf8_lossy(base64_string).into_owned(),
                         decoded: decoded_str.to_string(),
-                        pos_start: start,
-                        pos_end: end,
+                        pos_start: m.start(),
+                        pos_end: m.end(),
                     });
                 }
             }
@@ -1026,12 +1081,13 @@ mod test {
     /// and report correct byte-offsets.
     #[test]
     fn test_get_base64_strings_basic() {
-        let raw = b"foo SGVsbG8gV29ybGQ= bar"; // "Hello World"
+        let raw = b"foo MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY= bar";
+        // decodes to "0123456789abcdef0123456789abcdef"
         let hits = get_base64_strings(raw);
         assert_eq!(hits.len(), 1);
         let item = &hits[0];
-        assert_eq!(item.decoded, "Hello World");
-        assert_eq!(item.original, "SGVsbG8gV29ybGQ=");
+        assert_eq!(item.decoded, "0123456789abcdef0123456789abcdef");
+        assert_eq!(item.original, "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
         // "foo␠" is 4 bytes, so the start offset is 4
         assert_eq!((item.pos_start, item.pos_end), (4, 4 + item.original.len()));
     }

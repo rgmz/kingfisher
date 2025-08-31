@@ -108,6 +108,7 @@ fn test_github_remote_scan() -> Result<()> {
         manage_baseline: false,
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
+        no_base64: false,
     };
     // Create global arguments
     let global_args = GlobalArgs {

@@ -181,7 +181,7 @@ pub fn enumerate_filesystem_inputs(
                     return Ok(());
                 }
                 progress.inc(blob.len().try_into().unwrap());
-                match processor.run(origin, blob, args.no_dedup, args.redact) {
+                match processor.run(origin, blob, args.no_dedup, args.redact, args.no_base64) {
                     Ok(None) => {
                         // nothing to record
                     }

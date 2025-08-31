@@ -1028,7 +1028,6 @@ rules:
             validation_response_status: StatusCode::OK,
             validation_success: false,
             calculated_entropy: 0.0, // or compute your own
-            is_base64: false,
         };
         let parser = register_all(liquid::ParserBuilder::with_stdlib()).build()?;
         let client = reqwest::Client::new();
