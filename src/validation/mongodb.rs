@@ -107,10 +107,7 @@ pub async fn validate_mongodb(uri: &str) -> Result<(bool, String)> {
 
     // ---- refuse localhost/loopback/UDS outright
     if uri_targets_localhost(uri) {
-        return Ok((
-            false,
-            "Refusing to validate localhost/loopback MongoDB URIs.".to_string(),
-        ));
+        return Ok((false, "Refusing to validate localhost/loopback MongoDB URIs.".to_string()));
     }
 
     let is_srv = uri.starts_with("mongodb+srv://");

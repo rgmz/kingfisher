@@ -6,7 +6,11 @@ use rustls::{client::ClientConfig, RootCertStore};
 use rustls_native_certs::{load_native_certs, CertificateResult};
 use sha1::{Digest, Sha1};
 use tokio::time::{error::Elapsed, timeout};
-use tokio_postgres::{config::{Host, SslMode}, tls::NoTls, Config, Error};
+use tokio_postgres::{
+    config::{Host, SslMode},
+    tls::NoTls,
+    Config, Error,
+};
 use tokio_postgres_rustls::MakeRustlsConnect;
 use tracing::debug;
 
@@ -59,10 +63,12 @@ fn is_local_tcp_host(s: &str) -> bool {
     // Direct IPs
     if let Ok(ip) = host.parse::<std::net::IpAddr>() {
         return match ip {
-            std::net::IpAddr::V4(v4) =>
-                v4.is_loopback() || v4.is_unspecified() || v4.is_link_local(),
-            std::net::IpAddr::V6(v6) =>
-                v6.is_loopback() || v6.is_unspecified() || v6.is_unicast_link_local(),
+            std::net::IpAddr::V4(v4) => {
+                v4.is_loopback() || v4.is_unspecified() || v4.is_link_local()
+            }
+            std::net::IpAddr::V6(v6) => {
+                v6.is_loopback() || v6.is_unspecified() || v6.is_unicast_link_local()
+            }
         };
     }
 
@@ -73,7 +79,6 @@ fn is_local_tcp_host(s: &str) -> bool {
         || lower == "localhost6"
         || lower.starts_with("localhost6.")
 }
-
 
 async fn check_postgres_db_connection(
     mut cfg: Config,
@@ -201,7 +206,15 @@ mod tests {
 
     #[test]
     fn detects_local_hosts() {
-        for h in ["localhost", "LOCALHOST", "localhost.localdomain", "localhost6", "127.0.0.1", "[::1]", "::"] {
+        for h in [
+            "localhost",
+            "LOCALHOST",
+            "localhost.localdomain",
+            "localhost6",
+            "127.0.0.1",
+            "[::1]",
+            "::",
+        ] {
             assert!(is_local_tcp_host(h), "should treat {h} as local");
         }
         for h in ["db.example.com", "10.0.0.1"] {

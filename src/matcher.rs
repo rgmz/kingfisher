@@ -430,7 +430,7 @@ impl<'a> Matcher<'a> {
             }
         }
 
-        if !no_base64 {        
+        if !no_base64 {
             // If the blob contains standalone Base64 blobs, decode and scan them as well
             const MAX_B64_DEPTH: usize = 2; // decode at most two levels deep
             let mut b64_stack: Vec<(DecodedData, usize)> =
