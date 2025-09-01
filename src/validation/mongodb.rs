@@ -94,8 +94,8 @@ fn is_local_host(h: &str) -> bool {
 const FAST_CONNECT_MS: u64 = 700; // direct single-host URIs
 const FAST_SELECT_MS: u64 = 300;
 const SRV_PARSE_MS: u64 = 2_000; // limit DNS resolution time
-const SRV_CONNECT_MS: u64 = 2500; 
-const SRV_SELECT_MS: u64 = 2500; 
+const SRV_CONNECT_MS: u64 = 2500;
+const SRV_SELECT_MS: u64 = 2500;
 
 /// Validates a MongoDB URI in ≤ 2 s. Returns `(bool, String)` where the
 /// boolean indicates success and the string provides a status message.
