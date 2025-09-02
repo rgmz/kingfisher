@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+- Improved error message when self-update cannot find the current binary.
+
 ## [1.47.0]
 - MongoDB validator now validates `mongodb+srv://` URIs with a fast timeout instead of skipping them
 - Improved rules: github oauth2, diffbot, mailchimp, aws
