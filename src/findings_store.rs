@@ -18,6 +18,7 @@ use crate::{
     matcher::Match,
     origin::{Origin, OriginSet},
     rules::rule::Rule,
+    util::intern,
 };
 
 // share with Arc so every blob/origin is materialised once
@@ -151,7 +152,7 @@ impl FindingsStore {
                     .captures
                     .get(1)
                     .or_else(|| m.groups.captures.get(0))
-                    .map_or("", |c| c.value.as_ref());
+                    .map_or("", |c| c.value);
 
                 let origin_kind = match origin.first() {
                     Origin::GitRepo(_) => "git",
@@ -160,7 +161,7 @@ impl FindingsStore {
                 };
 
                 let key = xxh3_64(
-                    format!("{}|{}|{}", m.rule_text_id.to_uppercase(), origin_kind, snippet)
+                    format!("{}|{}|{}", m.rule.id().to_uppercase(), origin_kind, snippet)
                         .as_bytes(),
                 );
 
@@ -280,7 +281,7 @@ impl FindingsStore {
     pub fn get_summary(&self) -> FxHashMap<&'static str, usize> {
         self.matches.iter().fold(FxHashMap::default(), |mut acc, msg| {
             let (_, _, m) = &**msg;
-            *acc.entry(m.rule_name).or_insert(0) += 1; // borrow, no alloc
+            *acc.entry(intern(m.rule.name())).or_insert(0) += 1;
             acc
         })
     }
@@ -342,13 +343,13 @@ impl FindingsStore {
         self.matches.iter().map(|msg| {
             let (_, _, match_item) = &**msg;
             finding_data::FindingMetadata {
-                rule_name: match_item.rule_name.to_string(),
+                rule_name: match_item.rule.name().to_string(),
                 num_matches: 1,
                 comment: None,
                 visible: match_item.visible,
                 finding_id: match_item.finding_id(),
-                rule_finding_fingerprint: match_item.rule_finding_fingerprint.to_string(),
-                rule_text_id: match_item.rule_text_id.to_string(),
+                rule_finding_fingerprint: match_item.rule.finding_sha1_fingerprint().to_string(),
+                rule_text_id: match_item.rule.id().to_string(),
             }
         })
     }
@@ -362,7 +363,7 @@ impl FindingsStore {
             .iter()
             .filter(|msg| {
                 let (_, _, match_item) = &***msg;
-                match_item.rule_name == metadata.rule_name
+                match_item.rule.name() == metadata.rule_name
             })
             .map(|msg| {
                 let (origin, blob_metadata, match_item) = &**msg;
@@ -373,7 +374,7 @@ impl FindingsStore {
                     match_id: MatchIdInt::from_str(&match_item.finding_id())?,
                     match_comment: None,
                     visible: match_item.visible,
-                    match_confidence: match_item.rule_confidence,
+                    match_confidence: match_item.rule.confidence(),
                     validation_response_body: match_item.validation_response_body.clone(),
                     validation_response_status: match_item.validation_response_status,
                     validation_success: match_item.validation_success,

@@ -35,6 +35,7 @@ mod tests {
     use crate::cli::commands::github::GitHistoryMode;
     use crate::cli::commands::rules::RuleSpecifierArgs;
     use crate::matcher::{SerializableCapture, SerializableCaptures};
+    use crate::rules::rule::{Rule, RuleSyntax, Confidence};
     use crate::util::intern;
     use crate::{
         blob::BlobId,
@@ -54,6 +55,7 @@ mod tests {
         path::PathBuf,
         sync::{Arc, Mutex},
     };
+    use smallvec::smallvec;
     use url::Url;
     fn create_default_args() -> cli::commands::scan::ScanArgs {
         use crate::cli::commands::gitlab::GitLabRepoType; // bring enum into scope
@@ -132,12 +134,21 @@ mod tests {
         }
     }
 
-    fn create_mock_match(
-        rule_name: &str,
-        rule_text_id: &str,
-        rule_finding_fingerprint: &str,
-        validation_success: bool,
-    ) -> Match {
+    fn create_mock_match(rule_name: &str, rule_text_id: &str, validation_success: bool) -> Match {
+        let syntax = RuleSyntax {
+            name: rule_name.to_string(),
+            id: rule_text_id.to_string(),
+            pattern: "dummy".to_string(),
+            min_entropy: 0.0,
+            confidence: Confidence::Medium,
+            visible: true,
+            examples: vec![],
+            negative_examples: vec![],
+            references: vec![],
+            validation: None,
+            depends_on_rule: vec![],
+        };
+        let rule = Arc::new(Rule::new(syntax));
         Match {
             location: Location {
                 offset_span: OffsetSpan { start: 10, end: 20 },
@@ -147,20 +158,17 @@ mod tests {
                 },
             },
             groups: SerializableCaptures {
-                captures: vec![SerializableCapture {
+                captures: smallvec![SerializableCapture {
                     name: Some("token".to_string()),
                     match_number: 1,
                     start: 10,
                     end: 20,
-                    value: "mock_token".into(),
+                    value: intern("mock_token"),
                 }],
             },
             blob_id: BlobId::new(b"mock_blob"),
             finding_fingerprint: 0123,
-            rule_finding_fingerprint: intern(rule_finding_fingerprint),
-            rule_text_id: intern(rule_text_id),
-            rule_name: intern(rule_name),
-            rule_confidence: Confidence::Medium,
+            rule,
             validation_response_body: "validation response".to_string(),
             validation_response_status: 200,
             validation_success,
@@ -204,8 +212,7 @@ mod tests {
 
     #[test]
     fn test_json_format() -> Result<()> {
-        let mock_match =
-            create_mock_match("MockRule", "mock_rule_1", "mock_finding_fingerprint", true);
+        let mock_match = create_mock_match("MockRule", "mock_rule_1", true);
         let matches = vec![ReportMatch {
             origin: OriginSet::new(Origin::from_file(PathBuf::from("/mock/path/file.rs")), vec![]),
             blob_metadata: BlobMetadata {
@@ -238,12 +245,8 @@ mod tests {
     fn test_validation_status_in_json() -> Result<()> {
         let test_cases = vec![(true, "Active Credential"), (false, "Inactive Credential")];
         for (validation_success, expected_status) in test_cases {
-            let mock_match = create_mock_match(
-                "MockRule",
-                "mock_rule_1",
-                "mock_finding_fingerprint",
-                validation_success,
-            );
+            let mock_match =
+                create_mock_match("MockRule", "mock_rule_1", validation_success);
             let matches = vec![ReportMatch {
                 origin: OriginSet::new(
                     Origin::from_file(PathBuf::from("/mock/path/file.rs")),

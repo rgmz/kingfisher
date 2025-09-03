@@ -162,10 +162,10 @@ fn handle_zip_archive_streaming(
 }
 
 fn handle_asar_archive_in_memory(
-    buffer: Vec<u8>,
+    buffer: &[u8],
     archive_path: &Path,
 ) -> Result<CompressedContent> {
-    match AsarReader::new(&buffer, None) {
+    match AsarReader::new(buffer, None) {
         Ok(reader) => {
             let mut contents = Vec::new();
             for (path_in_asar, file) in reader.files() {
@@ -200,7 +200,7 @@ fn decompress_once(path: &Path, base_dir: Option<&Path>) -> Result<CompressedCon
         match ext {
             "asar" => {
                 let mmap = unsafe { Mmap::map(&file)? };
-                return handle_asar_archive_in_memory(mmap.to_vec(), path);
+                return handle_asar_archive_in_memory(&mmap, path);
             }
             "tar" => {
                 if let Some(base) = base_dir {

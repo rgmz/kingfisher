@@ -13,7 +13,7 @@ use futures::{stream, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use liquid::Parser;
 use reqwest::{Client, StatusCode};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use tokio::{sync::Notify, time::timeout};
 
 use crate::{
@@ -21,7 +21,6 @@ use crate::{
     findings_store::{FindingsStore, FindingsStoreMessage},
     location::OffsetSpan,
     matcher::{Match, OwnedBlobMatch},
-    rules::rule,
     validation::{collect_variables_and_dependencies, validate_single_match, CachedResponse},
 };
 
@@ -40,7 +39,7 @@ pub async fn run_secret_validation(
     let fail_count = Arc::new(AtomicUsize::new(0));
 
     // ── 2. Fetch rules + matches ────────────────────────────────────────────
-    let (all_rules, all_matches_by_blob) = {
+    let (_all_rules, all_matches_by_blob) = {
         let ds = datastore.lock().unwrap();
         let rules = ds.get_rules()?;
         let mut map: FxHashMap<BlobId, Vec<Arc<FindingsStoreMessage>>> = FxHashMap::default();
@@ -51,16 +50,13 @@ pub async fn run_secret_validation(
     };
 
     // ── 3. Partition blobs ──────────────────────────────────────────────────
-    let rules_with_deps: FxHashSet<&str> = all_rules
-        .iter()
-        .filter(|r| !r.syntax().depends_on_rule.is_empty())
-        .map(|r| r.id())
-        .collect();
-
     let mut simple_matches = Vec::new();
     let mut dependent_blobs = FxHashMap::default(); // blob_id -- Vec<Arc<…>>
     for (blob_id, matches) in all_matches_by_blob {
-        if matches.iter().any(|m| rules_with_deps.contains(m.2.rule_text_id)) {
+        if matches
+            .iter()
+            .any(|m| !m.2.rule.syntax().depends_on_rule.is_empty())
+        {
             dependent_blobs.insert(blob_id, matches);
         } else {
             simple_matches.extend(matches);
@@ -80,9 +76,9 @@ pub async fn run_secret_validation(
                 .captures
                 .get(1)
                 .or_else(|| arc_msg.2.groups.captures.get(0))
-                .map_or("", |c| c.value.as_ref());
+                .map_or("", |c| c.value);
             groups
-                .entry(format!("{}|{}", arc_msg.2.rule_text_id, secret))
+                .entry(format!("{}|{}", arc_msg.2.rule.id(), secret))
                 .or_default()
                 .push(arc_msg);
         }
@@ -109,7 +105,6 @@ pub async fn run_secret_validation(
             let client = client.clone();
             let cache_glob = cache.clone();
             let val_res = &validation_results;
-            let rules = &all_rules;
             let success = success_count.clone();
             let fail = fail_count.clone();
             // *** FIX: Clone the progress bar for each concurrent task ***
@@ -122,8 +117,8 @@ pub async fn run_secret_validation(
                     .captures
                     .get(1)
                     .or_else(|| rep_arc.2.groups.captures.get(0))
-                    .map_or("", |c| c.value.as_ref());
-                let key = format!("{}|{}", rep_arc.2.rule_text_id, secret);
+                    .map_or("", |c| c.value);
+                let key = format!("{}|{}", rep_arc.2.rule.id(), secret);
 
                 match val_res.entry(key.clone()) {
                     dashmap::mapref::entry::Entry::Occupied(_) => return,
@@ -138,8 +133,8 @@ pub async fn run_secret_validation(
                     }
                 }
 
-                let rule = find_rule_for_match(rules, rep_arc.2.rule_text_id).unwrap();
-                let mut om = OwnedBlobMatch::convert_match_to_owned_blobmatch(&rep_arc.2, rule);
+                let mut om =
+                    OwnedBlobMatch::convert_match_to_owned_blobmatch(&rep_arc.2, rep_arc.2.rule.clone());
 
                 validate_single(
                     &mut om,
@@ -211,7 +206,6 @@ pub async fn run_secret_validation(
 
         let val_cache = Arc::new(DashMap::<String, CachedResponse>::new());
         let in_flight = Arc::new(DashMap::<String, ()>::new());
-        let rules_ref = Arc::new(all_rules.clone());
 
         for chunk in blob_ids.chunks(chunk_size) {
             let tasks: Vec<_> = chunk
@@ -225,15 +219,15 @@ pub async fn run_secret_validation(
                     let success = success_count.clone();
                     let fail = fail_count.clone();
                     let cache_glob = cache.clone();
-                    let rules = rules_ref.clone();
 
                     async move {
                         let owned = matches_for_blob
                             .iter()
                             .map(|arc_msg| {
-                                let rule = find_rule_for_match(&rules, arc_msg.2.rule_text_id)
-                                    .expect("rule");
-                                OwnedBlobMatch::convert_match_to_owned_blobmatch(&arc_msg.2, rule)
+                                OwnedBlobMatch::convert_match_to_owned_blobmatch(
+                                    &arc_msg.2,
+                                    arc_msg.2.rule.clone(),
+                                )
                             })
                             .collect::<Vec<_>>();
 
@@ -336,21 +330,6 @@ pub async fn run_secret_validation(
     }
 
     Ok(())
-}
-
-/// Returns `Some(Arc<Rule>)` if a matching rule is found; otherwise returns `None`.
-/// Callers can decide how to handle the `None` case (e.g., skip processing).
-fn find_rule_for_match(
-    all_rules: &[Arc<rule::Rule>],
-    rule_text_id: &str,
-) -> Option<Arc<rule::Rule>> {
-    match all_rules.iter().find(|r| r.syntax().id == rule_text_id).cloned() {
-        Some(rule) => Some(rule),
-        None => {
-            eprintln!("Warning: no rule found with id '{}'. Skipping.", rule_text_id);
-            None
-        }
-    }
 }
 
 // ---------------------------------------------------

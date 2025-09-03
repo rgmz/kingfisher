@@ -175,9 +175,11 @@ impl Docker {
 
         pb.set_length(layer_paths.len() as u64);
         for p in layer_paths {
-            let mut data = Vec::new();
-            File::open(&p)?.read_to_end(&mut data)?;
-            let digest = format!("{:x}", Sha256::digest(&data));
+            let mut file = File::open(&p)?;
+            let mut hasher = Sha256::new();
+            std::io::copy(&mut file, &mut hasher)?;
+            let digest = format!("{:x}", hasher.finalize());
+
             let new_path = out_dir.join(format!("layer_{digest}.tar"));
             std::fs::rename(&p, &new_path)?;
             // extract layer contents so inner filenames appear in scan results

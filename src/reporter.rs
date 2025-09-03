@@ -216,7 +216,7 @@ impl DetailsReporter {
                     m: match_item.clone(),
                     comment: None,
                     visible: match_item.visible,
-                    match_confidence: match_item.rule_confidence,
+                    match_confidence: match_item.rule.confidence(),
                     validation_response_body: match_item.validation_response_body.clone(),
                     validation_response_status: match_item.validation_response_status,
                     validation_success: match_item.validation_success,
@@ -366,13 +366,13 @@ impl DetailsReporter {
 
         FindingReporterRecord {
             rule: RuleMetadata {
-                name: rm.m.rule_name.to_string(),
-                id: rm.m.rule_text_id.to_string(),
+                name: rm.m.rule.name().to_string(),
+                id: rm.m.rule.id().to_string(),
             },
             finding: FindingRecordData {
                 snippet,
                 fingerprint: rm.m.finding_fingerprint.to_string(),
-                confidence: rm.match_confidence.to_string(),
+                confidence: rm.m.rule.confidence().to_string(),
                 entropy: format!("{:.2}", rm.m.calculated_entropy),
                 validation: ValidationInfo { status: validation_status, response: response_body },
                 language: rm

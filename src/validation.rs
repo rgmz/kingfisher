@@ -910,6 +910,7 @@ mod tests {
     use crossbeam_skiplist::SkipMap;
     use http::StatusCode;
     use rustc_hash::FxHashMap;
+    use smallvec::smallvec;
 
     use crate::{
         blob::BlobId,
@@ -920,6 +921,7 @@ mod tests {
             rule::{Confidence, Rule},
             Rules,
         },
+        util::intern,
         validation::{validate_single_match, Cache},
     };
     #[tokio::test]
@@ -1016,12 +1018,12 @@ rules:
             // matching_input: token.as_bytes().to_vec(),
             matching_input_offset_span: OffsetSpan { start: 0, end: token.len() },
             captures: SerializableCaptures {
-                captures: vec![SerializableCapture {
+                captures: smallvec![SerializableCapture {
                     name: Some("TOKEN".to_string()),
                     match_number: -1,
                     start: 0,
                     end: token.len(),
-                    value: token.into(),
+                    value: intern(token),
                 }],
             },
             validation_response_body: String::new(),

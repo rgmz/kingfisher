@@ -3,7 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-- Improved error message when self-update cannot find the current binary.
+- Improved error message when self-update cannot find the current binary
+- Optimized memory usage via string interning and extensive data sharing
 
 ## [1.47.0]
 - MongoDB validator now validates `mongodb+srv://` URIs with a fast timeout instead of skipping them

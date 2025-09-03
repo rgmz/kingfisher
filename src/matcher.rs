@@ -682,20 +682,20 @@ impl JsonSchema for Groups {
 //     pub end: usize,    // End position of the match
 //     pub value: String, // The actual captured value
 // }
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct SerializableCapture {
     pub name: Option<String>,
     pub match_number: i32,
     pub start: usize,
     pub end: usize,
-    // Instead of storing an owned String, store a borrowed or interned value.
-    // Here we use Cow to allow either borrowing or owning as needed.
-    pub value: std::borrow::Cow<'static, str>,
+    /// Interned value of the capture.
+    pub value: &'static str,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct SerializableCaptures {
-    pub captures: Vec<SerializableCapture>, // All captures (named and unnamed)
+    #[schemars(with = "Vec<SerializableCapture>")]
+    pub captures: SmallVec<[SerializableCapture; 2]>, // All captures (named and unnamed)
 }
 impl SerializableCaptures {
     pub fn from_captures(
@@ -704,7 +704,7 @@ impl SerializableCaptures {
         re: &Regex,
         redact: bool,
     ) -> Self {
-        let mut serialized_captures = Vec::new();
+        let mut serialized_captures: SmallVec<[SerializableCapture; 2]> = SmallVec::new();
         // Process named captures
         for name in re.capture_names().flatten() {
             if let Some(capture) = captures.name(name) {
@@ -718,7 +718,7 @@ impl SerializableCaptures {
                     match_number: -1,
                     start: capture.start(),
                     end: capture.end(),
-                    value: value.into(),
+                    value: intern(&value),
                 });
             }
         }
@@ -735,7 +735,7 @@ impl SerializableCaptures {
                     match_number: i32::try_from(i).unwrap_or(0),
                     start: capture.start(),
                     end: capture.end(),
-                    value: value.into(),
+                    value: intern(&value),
                 });
             }
         }
@@ -764,16 +764,9 @@ pub struct Match {
     pub finding_fingerprint: u64,
 
     /// The rule that produced this match
-    pub rule_finding_fingerprint: &'static str,
-
-    /// The text identifier of the rule that produced this match
-    pub rule_text_id: &'static str,
-
-    /// The name of the rule that produced this match
-    pub rule_name: &'static str,
-
-    /// The confidence property of the rule that produced this match
-    pub rule_confidence: crate::rules::rule::Confidence,
+    #[serde(skip_serializing)]
+    #[schemars(skip)]
+    pub rule: Arc<Rule>,
 
     /// Validation Body
     pub validation_response_body: String,
@@ -813,8 +806,6 @@ impl Match {
         let finding_value_for_fp = std::str::from_utf8(matching_finding_bytes).unwrap_or("");
 
         let source_span = loc_mapping.get_source_span(&offset_span);
-        let rule_finding_fingerprint = owned_blob_match.rule.finding_sha1_fingerprint().to_owned();
-
         let offset_start: u64 =
             owned_blob_match.matching_input_offset_span.start.try_into().unwrap();
         let offset_end: u64 = owned_blob_match.matching_input_offset_span.end.try_into().unwrap();
@@ -828,10 +819,7 @@ impl Match {
 
         // matching_snippet
         Match {
-            rule_finding_fingerprint: intern(&rule_finding_fingerprint),
-            rule_name: intern(owned_blob_match.rule.name()),
-            rule_confidence: owned_blob_match.rule.confidence(),
-            rule_text_id: intern(owned_blob_match.rule.id()),
+            rule: owned_blob_match.rule.clone(),
             visible: owned_blob_match.rule.visible().to_owned(),
             location: Location { offset_span, source_span: source_span.clone() },
             groups: owned_blob_match.captures.clone(),
@@ -852,7 +840,7 @@ impl Match {
 
     pub fn finding_id(&self) -> String {
         let mut h = Sha1::new();
-        write!(&mut h, "{}\0", self.rule_finding_fingerprint)
+        write!(&mut h, "{}\0", self.rule.finding_sha1_fingerprint())
             .expect("should be able to write to memory");
         serde_json::to_writer(&mut h, &self.groups)
             .expect("should be able to serialize groups as JSON");
