@@ -75,8 +75,8 @@ pub async fn check_url_resolvable(url: &Url) -> Result<(), Box<dyn std::error::E
 mod tests {
     use super::*;
     use crate::matcher::{SerializableCapture, SerializableCaptures};
-    use smallvec::smallvec;
     use pretty_assertions::assert_eq;
+    use smallvec::smallvec;
 
     #[test]
     fn single_unnamed_capture_is_returned() {
@@ -135,13 +135,7 @@ mod tests {
                     end: 2,
                     value: "aa",
                 },
-                SerializableCapture {
-                    name: None,
-                    match_number: 1,
-                    start: 4,
-                    end: 6,
-                    value: "cc",
-                },
+                SerializableCapture { name: None, match_number: 1, start: 4, end: 6, value: "cc" },
             ],
         };
         let result = process_captures(&captures);

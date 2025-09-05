@@ -161,10 +161,7 @@ fn handle_zip_archive_streaming(
     Ok(CompressedContent::ArchiveFiles(entries_on_disk))
 }
 
-fn handle_asar_archive_in_memory(
-    buffer: &[u8],
-    archive_path: &Path,
-) -> Result<CompressedContent> {
+fn handle_asar_archive_in_memory(buffer: &[u8], archive_path: &Path) -> Result<CompressedContent> {
     match AsarReader::new(buffer, None) {
         Ok(reader) => {
             let mut contents = Vec::new();

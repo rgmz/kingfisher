@@ -53,10 +53,7 @@ pub async fn run_secret_validation(
     let mut simple_matches = Vec::new();
     let mut dependent_blobs = FxHashMap::default(); // blob_id -- Vec<Arc<…>>
     for (blob_id, matches) in all_matches_by_blob {
-        if matches
-            .iter()
-            .any(|m| !m.2.rule.syntax().depends_on_rule.is_empty())
-        {
+        if matches.iter().any(|m| !m.2.rule.syntax().depends_on_rule.is_empty()) {
             dependent_blobs.insert(blob_id, matches);
         } else {
             simple_matches.extend(matches);
@@ -77,10 +74,7 @@ pub async fn run_secret_validation(
                 .get(1)
                 .or_else(|| arc_msg.2.groups.captures.get(0))
                 .map_or("", |c| c.value);
-            groups
-                .entry(format!("{}|{}", arc_msg.2.rule.id(), secret))
-                .or_default()
-                .push(arc_msg);
+            groups.entry(format!("{}|{}", arc_msg.2.rule.id(), secret)).or_default().push(arc_msg);
         }
 
         let validation_results = DashMap::<String, CachedResponse>::new();
@@ -133,8 +127,10 @@ pub async fn run_secret_validation(
                     }
                 }
 
-                let mut om =
-                    OwnedBlobMatch::convert_match_to_owned_blobmatch(&rep_arc.2, rep_arc.2.rule.clone());
+                let mut om = OwnedBlobMatch::convert_match_to_owned_blobmatch(
+                    &rep_arc.2,
+                    rep_arc.2.rule.clone(),
+                );
 
                 validate_single(
                     &mut om,

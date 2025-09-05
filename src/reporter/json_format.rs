@@ -35,7 +35,7 @@ mod tests {
     use crate::cli::commands::github::GitHistoryMode;
     use crate::cli::commands::rules::RuleSpecifierArgs;
     use crate::matcher::{SerializableCapture, SerializableCaptures};
-    use crate::rules::rule::{Rule, RuleSyntax, Confidence};
+    use crate::rules::rule::{Confidence, Rule, RuleSyntax};
     use crate::util::intern;
     use crate::{
         blob::BlobId,
@@ -50,12 +50,12 @@ mod tests {
         origin::Origin,
         reporter::styles::Styles,
     };
+    use smallvec::smallvec;
     use std::{
         io::Cursor,
         path::PathBuf,
         sync::{Arc, Mutex},
     };
-    use smallvec::smallvec;
     use url::Url;
     fn create_default_args() -> cli::commands::scan::ScanArgs {
         use crate::cli::commands::gitlab::GitLabRepoType; // bring enum into scope
@@ -243,8 +243,7 @@ mod tests {
     fn test_validation_status_in_json() -> Result<()> {
         let test_cases = vec![(true, "Active Credential"), (false, "Inactive Credential")];
         for (validation_success, expected_status) in test_cases {
-            let mock_match =
-                create_mock_match("MockRule", "mock_rule_1", validation_success);
+            let mock_match = create_mock_match("MockRule", "mock_rule_1", validation_success);
             let matches = vec![ReportMatch {
                 origin: OriginSet::new(
                     Origin::from_file(PathBuf::from("/mock/path/file.rs")),

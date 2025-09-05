@@ -6,7 +6,6 @@ use std::{
 
 use anyhow::Result;
 use gix::{date, ObjectId};
-use smallvec::smallvec;
 use kingfisher::{
     blob::{BlobId, BlobMetadata},
     findings_store::FindingsStore,
@@ -18,6 +17,7 @@ use kingfisher::{
     rules::rule::{Confidence, Rule, RuleSyntax},
     util::intern,
 };
+use smallvec::smallvec;
 // ---- helpers -------------------------------------------------------------------------------
 
 fn make_match(fp: u64) -> Match {
