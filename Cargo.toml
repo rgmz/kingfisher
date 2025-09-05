@@ -65,7 +65,6 @@ smallvec = { version = "1", features = [
 tracing = "0.1.41"
 indicatif = { version = "0.17", features = ["improved_unicode"] }
 rayon = "1.10"
-sha1 = { version = "0.10.6", features = ["asm"] }
 hex = "0.4.3"
 vectorscan-rs = "0.0.5"
 regex = "1.11.1"
@@ -191,10 +190,15 @@ ed25519-dalek = { version = "2.2", features = ["pkcs8"] }
 aws-sdk-s3 = "1.100.0"
 tokei = "12.1.2"
 
+[target.'cfg(not(windows))'.dependencies]
+sha1 = { version = "0.10.6", features = ["asm"] }
+
+[target.'cfg(windows)'.dependencies]
+sha1 = "0.10.6"
+
 [dependencies.tikv-jemallocator]
 version = "0.6"
 optional = true
-
 
 [features]
 default       = ["use-mimalloc"]         
