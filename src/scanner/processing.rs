@@ -110,7 +110,6 @@ impl<'a> BlobProcessor<'a> {
 struct MetadataResult {
     mime_essence: Option<String>,
     language: Option<String>,
-    charset: Option<String>,
 }
 impl MetadataResult {
     fn from_blob_and_origin(blob: &Blob, origin: &OriginSet) -> MetadataResult {
@@ -119,7 +118,6 @@ impl MetadataResult {
         let mime_essence = Some(tree_magic_mini::from_u8(bytes).to_string());
         let inspector = ContentInspector::default();
         let language = blob_path.and_then(|p| inspector.guess_language(p, bytes));
-        let charset = inspector.guess_charset(bytes);
-        MetadataResult { mime_essence, language, charset }
+        MetadataResult { mime_essence, language }
     }
 }

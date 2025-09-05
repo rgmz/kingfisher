@@ -925,13 +925,12 @@ pub fn get_base64_strings(input: &[u8]) -> Vec<DecodedData> {
             i += 1;
         }
 
-        let mut end = i;
         let mut eq_count = 0;
         while i < input.len() && input[i] == b'=' && eq_count < 2 {
             i += 1;
             eq_count += 1;
         }
-        end = i;
+        let end = i;
 
         let len = end - start;
         if len >= 32 && len % 4 == 0 {
