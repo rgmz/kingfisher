@@ -14,11 +14,27 @@ use kingfisher::{
     matcher::{Match, SerializableCapture, SerializableCaptures},
     origin::{Origin, OriginSet},
     reporter::{styles::Styles, DetailsReporter, ReportMatch},
-    rules::rule::Confidence,
+    rules::rule::{Confidence, Rule, RuleSyntax},
+    util::intern,
 };
+use smallvec::smallvec;
 // ---- helpers -------------------------------------------------------------------------------
 
 fn make_match(fp: u64) -> Match {
+    let syntax = RuleSyntax {
+        name: "Example Rule".to_string(),
+        id: "RULE.1".to_string(),
+        pattern: "dummy".to_string(),
+        min_entropy: 0.0,
+        confidence: Confidence::Medium,
+        visible: true,
+        examples: vec![],
+        negative_examples: vec![],
+        references: vec![],
+        validation: None,
+        depends_on_rule: vec![],
+    };
+    let rule = Arc::new(Rule::new(syntax));
     Match {
         location: Location {
             offset_span: OffsetSpan { start: 0, end: 10 },
@@ -28,20 +44,17 @@ fn make_match(fp: u64) -> Match {
             },
         },
         groups: SerializableCaptures {
-            captures: vec![SerializableCapture {
+            captures: smallvec![SerializableCapture {
                 name: None,
                 match_number: 0,
                 start: 0,
                 end: 10,
-                value: "dummy".into(),
+                value: intern("dummy"),
             }],
         },
         blob_id: BlobId::new(b"dummy"),
         finding_fingerprint: fp,
-        rule_finding_fingerprint: "structural.1".into(),
-        rule_text_id: "RULE.1".into(),
-        rule_name: "Example Rule".into(),
-        rule_confidence: Confidence::Medium,
+        rule,
         validation_response_body: String::new(),
         validation_response_status: 0,
         validation_success: false,
@@ -106,7 +119,6 @@ fn reporter_deduplicates_across_git_commits() -> Result<()> {
                 id: BlobId::new(b"dummy"),
                 num_bytes: 10,
                 mime_essence: None,
-                charset: None,
                 language: None,
             },
             m: m1,
@@ -123,7 +135,6 @@ fn reporter_deduplicates_across_git_commits() -> Result<()> {
                 id: BlobId::new(b"dummy"),
                 num_bytes: 10,
                 mime_essence: None,
-                charset: None,
                 language: None,
             },
             m: m2,

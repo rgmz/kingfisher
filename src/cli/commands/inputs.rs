@@ -169,7 +169,7 @@ pub struct InputSpecifierArgs {
 #[derive(Args, Debug, Clone)]
 pub struct ContentFilteringArgs {
     /// Ignore files larger than the given size in MB
-    #[arg(long("max-file-size"), default_value_t = 25.0)]
+    #[arg(long("max-file-size"), default_value_t = 64.0)]
     pub max_file_size_mb: f64,
 
     // /// Use custom path-based ignore rules from the given file(s)

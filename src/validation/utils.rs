@@ -22,7 +22,7 @@ pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String,
         .map(|cap| {
             let name =
                 cap.name.as_ref().map(|n| n.to_uppercase()).unwrap_or_else(|| "TOKEN".to_string());
-            (name, cap.value.clone().into_owned(), cap.start, cap.end)
+            (name, cap.value.to_string(), cap.start, cap.end)
         })
         .collect()
 }
@@ -76,16 +76,17 @@ mod tests {
     use super::*;
     use crate::matcher::{SerializableCapture, SerializableCaptures};
     use pretty_assertions::assert_eq;
+    use smallvec::smallvec;
 
     #[test]
     fn single_unnamed_capture_is_returned() {
         let captures = SerializableCaptures {
-            captures: vec![SerializableCapture {
+            captures: smallvec![SerializableCapture {
                 name: None,
                 match_number: 0,
                 start: 1,
                 end: 4,
-                value: "abc".into(),
+                value: "abc",
             }],
         };
         let result = process_captures(&captures);
@@ -95,20 +96,20 @@ mod tests {
     #[test]
     fn skips_whole_match_when_multiple() {
         let captures = SerializableCaptures {
-            captures: vec![
+            captures: smallvec![
                 SerializableCapture {
                     name: None,
                     match_number: 0,
                     start: 0,
                     end: 5,
-                    value: "abcde".into(),
+                    value: "abcde",
                 },
                 SerializableCapture {
                     name: Some("foo".to_string()),
                     match_number: -1,
                     start: 1,
                     end: 4,
-                    value: "bcd".into(),
+                    value: "bcd",
                 },
             ],
         };
@@ -119,28 +120,22 @@ mod tests {
     #[test]
     fn includes_unnamed_groups_but_skips_whole_match() {
         let captures = SerializableCaptures {
-            captures: vec![
+            captures: smallvec![
                 SerializableCapture {
                     name: None,
                     match_number: 0,
                     start: 0,
                     end: 6,
-                    value: "aabbcc".into(),
+                    value: "aabbcc",
                 },
                 SerializableCapture {
                     name: Some("foo".to_string()),
                     match_number: -1,
                     start: 0,
                     end: 2,
-                    value: "aa".into(),
+                    value: "aa",
                 },
-                SerializableCapture {
-                    name: None,
-                    match_number: 1,
-                    start: 4,
-                    end: 6,
-                    value: "cc".into(),
-                },
+                SerializableCapture { name: None, match_number: 1, start: 4, end: 6, value: "cc" },
             ],
         };
         let result = process_captures(&captures);

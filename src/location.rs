@@ -1,4 +1,5 @@
 use core::ops::Range;
+use std::cell::RefCell;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -87,25 +88,35 @@ impl std::fmt::Display for SourceSpan {
 }
 
 /// Records newline byte‑offsets to map offsets -- (line, column).
-pub struct LocationMapping {
-    newline_offsets: Vec<usize>,
+pub struct LocationMapping<'a> {
+    bytes: &'a [u8],
+    newline_offsets: RefCell<Vec<usize>>,
 }
 
-impl LocationMapping {
-    /// Scan once for all `\n` positions.
-    pub fn new(input: &[u8]) -> Self {
-        let newline_offsets =
-            input.iter().enumerate().filter_map(|(i, &b)| (b == b'\n').then_some(i)).collect();
-        LocationMapping { newline_offsets }
+impl<'a> LocationMapping<'a> {
+    /// Create a new mapping without pre-scanning the entire input.
+    pub fn new(input: &'a [u8]) -> Self {
+        LocationMapping { bytes: input, newline_offsets: RefCell::new(Vec::new()) }
     }
 
-    /// Map a byte offset to a `SourcePoint`.
-    pub fn get_source_point(&self, offset: usize) -> SourcePoint {
-        let line = match self.newline_offsets.binary_search(&offset) {
-            Ok(idx) => idx + 2, // exact newline -- next line
+    fn ensure_offsets_up_to(&self, offset: usize) {
+        let mut offsets = self.newline_offsets.borrow_mut();
+        let start = offsets.last().map_or(0, |&last| last + 1);
+        if offset < start {
+            return;
+        }
+        let end = offset.min(self.bytes.len());
+        for nl in memchr::memchr_iter(b'\n', &self.bytes[start..end]) {
+            offsets.push(start + nl);
+        }
+    }
+
+    fn source_point_from_offsets(offsets: &[usize], offset: usize) -> SourcePoint {
+        let line = match offsets.binary_search(&offset) {
+            Ok(idx) => idx + 2,
             Err(idx) => idx + 1,
         };
-        let column = if let Some(&last) = self.newline_offsets.get(line.saturating_sub(2)) {
+        let column = if let Some(&last) = offsets.get(line.saturating_sub(2)) {
             offset.saturating_sub(last + 1)
         } else {
             offset
@@ -113,10 +124,19 @@ impl LocationMapping {
         SourcePoint { line, column }
     }
 
+    /// Map a byte offset to a `SourcePoint`.
+    pub fn get_source_point(&self, offset: usize) -> SourcePoint {
+        self.ensure_offsets_up_to(offset);
+        let offsets = self.newline_offsets.borrow();
+        Self::source_point_from_offsets(&offsets, offset)
+    }
+
     /// Map an `OffsetSpan` -- `SourceSpan` (closed interval).
     pub fn get_source_span(&self, span: &OffsetSpan) -> SourceSpan {
-        let start = self.get_source_point(span.start);
-        let end = self.get_source_point(span.end.saturating_sub(1));
+        self.ensure_offsets_up_to(span.end.saturating_sub(1));
+        let offsets = self.newline_offsets.borrow();
+        let start = Self::source_point_from_offsets(&offsets, span.start);
+        let end = Self::source_point_from_offsets(&offsets, span.end.saturating_sub(1));
         SourceSpan { start, end }
     }
 }

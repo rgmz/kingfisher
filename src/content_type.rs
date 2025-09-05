@@ -96,9 +96,8 @@ impl ContentInspector {
     #[inline]
     #[must_use]
     pub fn guess_charset(&self, bytes: &[u8]) -> Option<String> {
-        String::from_utf8(bytes.to_vec()).ok().map(|_| "UTF-8".to_string())
+        std::str::from_utf8(bytes).ok().map(|_| "UTF-8".to_string())
     }
-
     /// Guess programming language with broad coverage using `tokei`.
     ///
     /// Strategy (no disk I/O):

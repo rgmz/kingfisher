@@ -172,10 +172,15 @@ pub fn enumerate_filesystem_inputs(
                 };
                 if should_skip {
                     progress.suspend(|| {
+                        let path = origin
+                            .first()
+                            .blob_path()
+                            .map(|p| p.display().to_string())
+                            .unwrap_or_else(|| blob.temp_id().to_string());
                         if is_archive {
-                            debug!("Skipping archive: {}", blob.id);
+                            debug!("Skipping archive: {path}");
                         } else {
-                            debug!("Skipping binary blob: {}", blob.id);
+                            debug!("Skipping binary blob: {path}");
                         }
                     });
                     return Ok(());

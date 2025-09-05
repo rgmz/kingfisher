@@ -10,15 +10,19 @@ use anyhow::Result;
 use bstr::{BString, ByteSlice};
 use gix::ObjectId;
 use hex;
+use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use smallvec::SmallVec;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::git_commit_metadata::CommitMetadata;
 // const LARGE_FILE_THRESHOLD: u64 = 512 * 1024; // 512 KB
 const LARGE_FILE_THRESHOLD: u64 = 0; // always mmap
+
+static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 /// The data of a blob, either owned (small files) or memory mapped (large files).
 pub enum BlobData<'a> {
@@ -75,47 +79,68 @@ pub type BlobAppearanceSet = SmallVec<[BlobAppearance; 1]>;
 /// A Git blob, storing its SHA-1 id and its contents.
 
 pub struct Blob<'a> {
-    pub id: BlobId,
-    pub data: BlobData<'a>,
+    id: OnceCell<BlobId>,
+    data: BlobData<'a>,
+    temp_id: u64,
 }
 
 impl Blob<'_> {
     #[inline]
-
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut file = File::open(&path)?;
         let file_size = file.metadata()?.len();
+        let temp_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
 
         if file_size > LARGE_FILE_THRESHOLD {
             // Large files: one mmap, zero extra copies.
             let mmap = unsafe { memmap2::Mmap::map(&file)? };
-            let id = BlobId::new(mmap.as_ref());
-            Ok(Blob { id, data: BlobData::Mapped(mmap) })
+            Ok(Blob { id: OnceCell::new(), data: BlobData::Mapped(mmap), temp_id })
         } else {
             // Small files: reuse the same handle and pre-allocate exact capacity
             let mut bytes = Vec::with_capacity(file_size as usize);
             file.read_to_end(&mut bytes)?;
-            let id = BlobId::new(&bytes);
-            Ok(Blob { id, data: BlobData::Owned(bytes) })
+            Ok(Blob { id: OnceCell::new(), data: BlobData::Owned(bytes), temp_id })
         }
     }
+
     /// Returns the blob's bytes as a slice.
     #[inline]
     pub fn bytes(&self) -> &[u8] {
         self.data.as_ref()
     }
 
+    /// Lazily compute and return the blob's SHA-1 `BlobId`.
+    #[inline]
+    pub fn id(&self) -> BlobId {
+        *self.id.get_or_init(|| BlobId::new(self.bytes()))
+    }
+
+    /// Get a reference to the blob's SHA-1 `BlobId`, computing it if necessary.
+    #[inline]
+    pub fn id_ref(&self) -> &BlobId {
+        self.id.get_or_init(|| BlobId::new(self.bytes()))
+    }
+
+    /// Return the temporary identifier assigned on blob creation.
+    #[inline]
+    pub fn temp_id(&self) -> u64 {
+        self.temp_id
+    }
+
     /// Create a new `Blob` from a vector of bytes.
     #[inline]
     pub fn from_bytes(bytes: Vec<u8>) -> Self {
-        let id = BlobId::compute_from_bytes(&bytes);
-        Blob { id, data: BlobData::Owned(bytes) }
+        let temp_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        Blob { id: OnceCell::new(), data: BlobData::Owned(bytes), temp_id }
     }
 
     /// Create a new `Blob` with the given id and data.
     #[inline]
     pub fn new(id: BlobId, bytes: Vec<u8>) -> Self {
-        Blob { id, data: BlobData::Owned(bytes) }
+        let temp_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        let cell = OnceCell::new();
+        let _ = cell.set(id);
+        Blob { id: cell, data: BlobData::Owned(bytes), temp_id }
     }
 
     #[inline]
@@ -269,9 +294,15 @@ impl BlobId {
     /// Create a new BlobId computed from the given input.
     #[inline]
     pub fn new(input: &[u8]) -> Self {
+        const CHUNK: usize = 64 * 1024; // 64KB from start and end
         let mut hasher = Sha1::new();
         write!(&mut hasher, "blob {}\0", input.len()).unwrap();
-        hasher.update(input);
+        if input.len() <= CHUNK * 2 {
+            hasher.update(input);
+        } else {
+            hasher.update(&input[..CHUNK]);
+            hasher.update(&input[input.len() - CHUNK..]);
+        }
         BlobId(hasher.finalize().as_slice().try_into().expect("SHA-1 output size mismatch"))
     }
 
@@ -360,9 +391,6 @@ pub struct BlobMetadata {
     /// The guessed multimedia type of the blob
     pub mime_essence: Option<String>,
 
-    /// The guessed charset of the blob
-    pub charset: Option<String>,
-
     /// The guessed programming language of the blob
     pub language: Option<String>,
 }
@@ -383,10 +411,5 @@ impl BlobMetadata {
     #[inline]
     pub fn mime_essence(&self) -> Option<&str> {
         self.mime_essence.as_deref()
-    }
-
-    #[inline]
-    pub fn charset(&self) -> Option<&str> {
-        self.charset.as_deref()
     }
 }

@@ -5,7 +5,7 @@ rules:
       (?x)
       \b
       (
-        ey[A-Za-z0-9_-]{12,}  (?# header )
+        (?:ey|ewogIC)[A-Za-z0-9_-]{12,}  (?# header )
         \.
         ey[A-Za-z0-9_-]{12,}  (?# payload )
         \.

@@ -10,7 +10,7 @@ publish = false
 
 [package]
 name = "kingfisher"
-version = "1.47.0"
+version = "1.48.0"
 description = "MongoDB's blazingly fast secret scanning and validation tool"
 edition.workspace = true
 rust-version.workspace = true
@@ -65,7 +65,7 @@ smallvec = { version = "1", features = [
 tracing = "0.1.41"
 indicatif = { version = "0.17", features = ["improved_unicode"] }
 rayon = "1.10"
-sha1 = "0.10.6"
+sha1 = { version = "0.10.6", features = ["asm"] }
 hex = "0.4.3"
 vectorscan-rs = "0.0.5"
 regex = "1.11.1"
@@ -151,6 +151,7 @@ tar = "0.4.44"
 xz2 = "0.1.7"
 asar = "0.3.0"
 blake3 = "1.8.2"
+memchr = "2.7"
 memmap2 = "0.9.7"
 futures = "0.3.31"
 dashmap = "6.1.0"

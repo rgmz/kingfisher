@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.48.0]
+- Improved error message when self-update cannot find the current binary
+- Optimized memory usage via string interning and extensive data sharing
+- Replaced quadratic match filtering with a per-rule span map, fixing missed secrets in extremely large files and improving scan performance
+- Support scanning extremely large files by chunking input into 1 GiB segments with small overlaps, avoiding vectorscan buffer limits while preserving match offsets
+- Always use chunked vectorscan, eliminating the slow regex fallback for blobs over 4 GiB
+- Skip Base64 scanning for blobs over 64 MB to avoid a second pass over massive files
+- Increased max-file-size default to 64 MB (up from 25 MB)
+
 ## [1.47.0]
 - MongoDB validator now validates `mongodb+srv://` URIs with a fast timeout instead of skipping them
 - Improved rules: github oauth2, diffbot, mailchimp, aws

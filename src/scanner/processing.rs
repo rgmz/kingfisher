@@ -12,6 +12,8 @@ use crate::{
     Path,
 };
 
+const LOCATION_LIMIT_BYTES: usize = 256 * 1024 * 1024;
+
 /// A matcher along with parameters that remain constant during a single
 /// `scan` run
 pub struct BlobProcessor<'a> {
@@ -27,8 +29,7 @@ impl<'a> BlobProcessor<'a> {
         redact: bool,
         no_base64: bool,
     ) -> Result<Option<DatastoreMessage>> {
-        let blob_id = blob.id.hex();
-        let _span = debug_span!("matcher", blob_id).entered();
+        let _span = debug_span!("matcher", temp_id = blob.temp_id()).entered();
         let t1 = Instant::now();
         let res = self.matcher.scan_blob(&blob, &origin, None, redact, no_dedup, no_base64)?;
         let scan_us = t1.elapsed().as_micros();
@@ -43,10 +44,9 @@ impl<'a> BlobProcessor<'a> {
             ScanResult::SeenWithMatches => {
                 trace!("({scan_us}us) blob already scanned with matches");
                 let metadata = BlobMetadata {
-                    id: blob.id,
+                    id: blob.id(),
                     num_bytes: blob.len(),
                     mime_essence: None,
-                    charset: None,
                     language: None,
                 };
                 Ok(Some((origin, metadata, Vec::new())))
@@ -63,10 +63,9 @@ impl<'a> BlobProcessor<'a> {
                 }
                 let md = MetadataResult::from_blob_and_origin(&blob, &origin);
                 let metadata = BlobMetadata {
-                    id: blob.id,
+                    id: blob.id(),
                     num_bytes: blob.len(),
                     mime_essence: md.mime_essence,
-                    charset: md.charset,
                     language: md.language,
                 };
 
@@ -84,12 +83,17 @@ impl<'a> BlobProcessor<'a> {
                     }
                 }
 
-                let loc_mapping = LocationMapping::new(&blob.bytes());
+                let bytes = blob.bytes();
+                let loc_mapping = if bytes.len() <= LOCATION_LIMIT_BYTES {
+                    Some(LocationMapping::new(bytes))
+                } else {
+                    None
+                };
                 let converted_matches: Vec<(Option<f64>, Match)> = matches
                     .into_iter()
                     .map(|m| {
                         let converted_match = Match::convert_owned_blobmatch_to_match(
-                            &loc_mapping,
+                            loc_mapping.as_ref(),
                             &OwnedBlobMatch::from_blob_match(m),
                             origin_type,
                         );
@@ -106,7 +110,6 @@ impl<'a> BlobProcessor<'a> {
 struct MetadataResult {
     mime_essence: Option<String>,
     language: Option<String>,
-    charset: Option<String>,
 }
 impl MetadataResult {
     fn from_blob_and_origin(blob: &Blob, origin: &OriginSet) -> MetadataResult {
@@ -115,7 +118,6 @@ impl MetadataResult {
         let mime_essence = Some(tree_magic_mini::from_u8(bytes).to_string());
         let inspector = ContentInspector::default();
         let language = blob_path.and_then(|p| inspector.guess_language(p, bytes));
-        let charset = inspector.guess_charset(bytes);
-        MetadataResult { mime_essence, language, charset }
+        MetadataResult { mime_essence, language }
     }
 }

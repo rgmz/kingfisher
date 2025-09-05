@@ -129,16 +129,29 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
                     .apply_to(&format!("Updated to version {}", status.version()))
             ),
             Err(e) => match e {
-                UpdError::Io(ref io_err) if io_err.kind() == ErrorKind::PermissionDenied => {
-                    warn!(
-                        "{}",
-                        styles.style_finding_active_heading.apply_to(
-                            "Cannot replace the current binary - permission denied.\n\
-                             If you installed via a package manager, run its upgrade command.\n\
-                             Otherwise reinstall to a user-writable directory or re-run with sudo."
-                        )
-                    );
-                }
+                UpdError::Io(ref io_err) => match io_err.kind() {
+                    ErrorKind::PermissionDenied => {
+                        warn!(
+                            "{}",
+                            styles.style_finding_active_heading.apply_to(
+                                "Cannot replace the current binary - permission denied.\n\
+                                 If you installed via a package manager, run its upgrade command.\n\
+                                 Otherwise reinstall to a user-writable directory or re-run with sudo."
+                            )
+                        );
+                    }
+                    ErrorKind::NotFound => {
+                        warn!(
+                            "{}",
+                            styles.style_finding_active_heading.apply_to(
+                                "Cannot replace the current binary - file not found.\n\
+                                 If you installed via a package manager, run its upgrade command.\n\
+                                 Otherwise reinstall to a user-writable directory."
+                            )
+                        );
+                    }
+                    _ => error!("Failed to update: {e}"),
+                },
                 _ => error!("Failed to update: {e}"),
             },
         }

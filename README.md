@@ -36,6 +36,64 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
   <img src="docs/runtime-comparison.png" alt="Kingfisher Runtime Comparison" style="vertical-align: center;" />
 </p>
 
+- [Kingfisher](#kingfisher)
+  - [Key Features](#key-features)
+- [Benchmark Results](#benchmark-results)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+    - [Run Kingfisher in Docker](#run-kingfisher-in-docker)
+- [🔐 Detection Rules at a Glance](#-detection-rules-at-a-glance)
+  - [Write Custom Rules!](#write-custom-rules)
+- [Usage](#usage)
+  - [Basic Examples](#basic-examples)
+    - [Scan with secret validation](#scan-with-secret-validation)
+    - [Scan a directory containing multiple Git repositories](#scan-a-directory-containing-multiple-git-repositories)
+    - [Scan a Git repository without validation](#scan-a-git-repository-without-validation)
+    - [Display only secrets confirmed active by third‑party APIs](#display-only-secrets-confirmed-active-by-thirdparty-apis)
+    - [Output JSON and capture to a file](#output-json-and-capture-to-a-file)
+    - [Output SARIF directly to disk](#output-sarif-directly-to-disk)
+    - [Pipe any text directly into Kingfisher by passing `-`](#pipe-any-text-directly-into-kingfisher-by-passing--)
+    - [Limit maximum file size scanned (`--max-file-size`)](#limit-maximum-file-size-scanned---max-file-size)
+    - [Scan using a rule _family_ with one flag](#scan-using-a-rule-family-with-one-flag)
+    - [Display rule performance statistics](#display-rule-performance-statistics)
+    - [Scan while ignoring likely test files](#scan-while-ignoring-likely-test-files)
+    - [Exclude specific paths](#exclude-specific-paths)
+  - [Scan an S3 bucket](#scan-an-s3-bucket)
+  - [Scanning Docker Images](#scanning-docker-images)
+  - [Scanning GitHub](#scanning-github)
+    - [Scan GitHub organisation (requires `KF_GITHUB_TOKEN`)](#scan-github-organisation-requires-kf_github_token)
+    - [Scan remote GitHub repository](#scan-remote-github-repository)
+  - [Scanning GitLab](#scanning-gitlab)
+    - [Scan GitLab group (requires `KF_GITLAB_TOKEN`)](#scan-gitlab-group-requires-kf_gitlab_token)
+    - [Scan GitLab user](#scan-gitlab-user)
+    - [Scan remote GitLab repository by URL](#scan-remote-gitlab-repository-by-url)
+    - [List GitLab repositories](#list-gitlab-repositories)
+  - [Scanning Jira](#scanning-jira)
+    - [Scan Jira issues matching a JQL query](#scan-jira-issues-matching-a-jql-query)
+    - [Scan the last 1,000 Jira issues:](#scan-the-last-1000-jira-issues)
+  - [Scanning Confluence](#scanning-confluence)
+    - [Scan Confluence pages matching a CQL query](#scan-confluence-pages-matching-a-cql-query)
+  - [Scanning Slack](#scanning-slack)
+    - [Scan Slack messages matching a search query](#scan-slack-messages-matching-a-search-query)
+  - [Environment Variables for Tokens](#environment-variables-for-tokens)
+  - [Exit Codes](#exit-codes)
+  - [Update Checks](#update-checks)
+- [Advanced Options](#advanced-options)
+  - [Build a Baseline / Detect New Secrets](#build-a-baseline--detect-new-secrets)
+  - [List Builtin Rules](#list-builtin-rules)
+  - [To scan using **only** your own `my_rules.yaml` you could run:](#to-scan-using-only-your-own-my_rulesyaml-you-could-run)
+  - [To add your rules alongside the built‑ins:](#to-add-your-rules-alongside-the-builtins)
+  - [Other Examples](#other-examples)
+  - [Notable Scan Options](#notable-scan-options)
+  - [Understanding `--confidence`](#understanding---confidence)
+    - [Ignore known false positives](#ignore-known-false-positives)
+  - [Finding Fingerprint](#finding-fingerprint)
+  - [Rule Performance Profiling](#rule-performance-profiling)
+  - [CLI Options](#cli-options)
+  - [Origins and Divergence](#origins-and-divergence)
+- [Roadmap](#roadmap)
+- [License](#license)
+
 # Getting Started
 ## Installation
 
@@ -225,9 +283,18 @@ cat /path/to/file.py | kingfisher scan -
 
 ```
 
+### Limit maximum file size scanned (`--max-file-size`)
+
+By default, Kingfisher skips files larger than **64 MB**. You can raise or lower this cap per run with `--max-file-size`, which takes a value in **megabytes**.
+
+```bash
+# Scan files up to 250 mb in size
+kingfisher scan /some/file --max-file-size 250
+```
+
 ### Scan using a rule _family_ with one flag
 
-_(prefix matching: `--rule kingfisher.aws` loads `kingfisher.aws._`)\*
+_(prefix matching: `--rule kingfisher.aws` loads `kingfisher.aws.*`)_
 
 ```bash
 # Only apply AWS-related rules (kingfisher.aws.1 + kingfisher.aws.2)
@@ -616,6 +683,14 @@ kingfisher github repos list --organization my-org
 - `--manage-baseline`: Create or update the baseline file with current findings
 - `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
 - `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
+
+## Understanding `--confidence`
+
+The `--confidence` flag sets a minimum confidence threshold, not an exact match.
+
+- If you pass `--confidence medium`, findings with **medium and higher** confidence (medium + high) will be included.
+- If you pass `--confidence low`, you’ll see **all levels** (low, medium, high).
+
 
 ### Ignore known false positives
 
