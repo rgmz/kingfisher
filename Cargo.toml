@@ -65,9 +65,7 @@ smallvec = { version = "1", features = [
 tracing = "0.1.41"
 indicatif = { version = "0.17", features = ["improved_unicode"] }
 rayon = "1.10"
-# sha1 = { version = "0.10.6", features = ["asm"] }
-
-sha1 = "0.10.6"
+sha1 = { version = "0.10.6", features = ["asm"] }
 hex = "0.4.3"
 vectorscan-rs = "0.0.5"
 regex = "1.11.1"
