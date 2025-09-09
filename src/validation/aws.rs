@@ -3,13 +3,54 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use aws_config::BehaviorVersion;
 use aws_credential_types::Credentials;
-use aws_sdk_sts::Client as StsClient;
+use aws_sdk_sts::{config::Builder as StsConfigBuilder, Client as StsClient};
+use aws_smithy_http_client::{
+    proxy::ProxyConfig, tls, Builder as HttpClientBuilder, ConnectorBuilder,
+};
+use aws_smithy_runtime_api::{
+    box_error::BoxError,
+    client::{
+        http::SharedHttpClient,
+        interceptors::{context::BeforeTransmitInterceptorContextMut, Intercept},
+        runtime_components::RuntimeComponents,
+    },
+};
+use aws_smithy_types::config_bag::ConfigBag;
 use aws_types::region::Region;
 use base32::Alphabet;
 use byteorder::{BigEndian, ByteOrder};
-use http::StatusCode;
+use http::{
+    header::{HeaderValue, USER_AGENT},
+    StatusCode,
+};
+
+use crate::validation::GLOBAL_USER_AGENT;
 
 use crate::validation::{Cache, CachedResponse, VALIDATION_CACHE_SECONDS};
+
+#[derive(Debug)]
+struct UaInterceptor;
+
+impl Intercept for UaInterceptor {
+    fn name(&self) -> &'static str {
+        "ua"
+    }
+
+    fn modify_before_transmit(
+        &self,
+        context: &mut BeforeTransmitInterceptorContextMut<'_>,
+        _rc: &RuntimeComponents,
+        _cfg: &mut ConfigBag,
+    ) -> std::result::Result<(), BoxError> {
+        let req = context.request_mut();
+        req.headers_mut().insert(
+            USER_AGENT,
+            HeaderValue::from_str(GLOBAL_USER_AGENT.as_str())
+                .map_err(|e| format!("invalid USER_AGENT header: {e}"))?,
+        );
+        Ok(())
+    }
+}
 
 /// Generate a standardized cache key for AWS validation attempts
 pub fn generate_aws_cache_key(aws_access_key_id: &str, aws_secret_access_key: &str) -> String {
@@ -62,14 +103,30 @@ pub async fn validate_aws_credentials(
         None,     // expiry
         "static", // provider name
     );
+    // Create HTTP client that respects proxy settings from the environment
+    let http_client: SharedHttpClient =
+        HttpClientBuilder::new().build_with_connector_fn(|settings, runtime_components| {
+            let mut conn_builder = ConnectorBuilder::default()
+                .tls_provider(tls::Provider::Rustls(tls::rustls_provider::CryptoMode::AwsLc));
+
+            conn_builder.set_connector_settings(settings.cloned());
+            if let Some(components) = runtime_components {
+                conn_builder.set_sleep_impl(components.sleep_impl());
+            }
+            conn_builder.set_proxy_config(Some(ProxyConfig::from_env()));
+            conn_builder.build()
+        });
+
     // Create AWS config
     let config = aws_config::defaults(BehaviorVersion::latest())
         .region(Region::new("us-east-1"))
         .credentials_provider(credentials)
+        .http_client(http_client)
         .load()
         .await;
     // Create STS client
-    let sts_client = StsClient::new(&config);
+    let sts_config = StsConfigBuilder::from(&config).interceptor(UaInterceptor).build();
+    let sts_client = StsClient::from_conf(sts_config);
     // Call get-caller-identity
     match sts_client.get_caller_identity().send().await {
         Ok(identity) => {

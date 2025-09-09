@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, future::Future, str::FromStr, time::Duration};
 
+use crate::validation::GLOBAL_USER_AGENT;
 use anyhow::{anyhow, Error, Result};
 use http::StatusCode;
 use liquid::Object;
@@ -76,14 +77,9 @@ pub fn build_request_builder(
         .map_err(|e| format!("Error processing headers: {}", e))?;
 
     // Prepare a standard set of headers.
-    let user_agent = format!(
-        "{}/{}",
-        //"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
-        env!("CARGO_PKG_NAME"),
-        env!("CARGO_PKG_VERSION")
-    );
+    let user_agent = GLOBAL_USER_AGENT.as_str();
     let standard_headers = [
-        (header::USER_AGENT, user_agent.as_str()),
+        (header::USER_AGENT, user_agent),
         (
             header::ACCEPT,
             "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",

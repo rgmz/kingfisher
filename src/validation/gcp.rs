@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use crate::validation::GLOBAL_USER_AGENT;
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use chrono::{Duration as ChronoDuration, Utc};
 use once_cell::sync::OnceCell;
 use pem::parse;
-use reqwest::Client;
+use reqwest::{Client, Proxy};
 use ring::{rand, signature};
 use serde_json::Value as JsonValue;
 use tokio::sync::Semaphore;
@@ -36,7 +37,13 @@ impl GcpValidator {
     pub fn new() -> Result<Self> {
         const MAX_CONCURRENT_VALIDATIONS: usize = 500;
         let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_VALIDATIONS));
-        let client = Client::builder().build()?;
+        let mut builder = Client::builder();
+
+        if let Ok(proxy) = std::env::var("HTTPS_PROXY").or_else(|_| std::env::var("https_proxy")) {
+            builder = builder.proxy(Proxy::all(&proxy)?);
+        }
+
+        let client = builder.user_agent(GLOBAL_USER_AGENT.as_str()).build()?;
         Ok(Self { semaphore, client })
     }
 

@@ -12,7 +12,7 @@ use dashmap::DashMap;
 use http::StatusCode;
 use liquid::Object;
 use liquid_core::{Value, ValueView};
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use reqwest::{header, header::HeaderValue, multipart, Client, Url};
 use rustc_hash::FxHashMap;
 use tokio::{sync::Notify, time};
@@ -36,6 +36,17 @@ mod utils;
 
 const VALIDATION_CACHE_SECONDS: u64 = 1200; // 20 minutes
 const MAX_VALIDATION_BODY_LEN: usize = 2048;
+
+pub static GLOBAL_USER_AGENT: Lazy<String> = Lazy::new(|| {
+    format!(
+        "{} {}/{}",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \\ \
+         AppleWebKit/537.36 (KHTML, like Gecko) \\ \
+         Chrome/140.0.0.0 Safari/537.36",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    )
+});
 
 // Use SkipMap-based cache instead of a mutex-wrapped FxHashMap.
 type Cache = Arc<SkipMap<String, CachedResponse>>;
@@ -405,16 +416,8 @@ async fn timed_validate_single_match<'a>(
                         &url,
                     ) {
                         // add realistic UA & accept headers
-                        let ua = format!(
-                            "{} {}/{}",
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-                             AppleWebKit/537.36 (KHTML, like Gecko) \
-                             Chrome/132.0.0.0 Safari/537.36",
-                            env!("CARGO_PKG_NAME"),
-                            env!("CARGO_PKG_VERSION")
-                        );
                         let std_headers = [
-                            (header::USER_AGENT, ua.as_str()),
+                            (header::USER_AGENT, GLOBAL_USER_AGENT.as_str()),
                             (header::ACCEPT , "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"),
                             (header::ACCEPT_LANGUAGE, "en-US,en;q=0.5"),
                             (header::ACCEPT_ENCODING, "gzip, deflate, br"),
