@@ -39,12 +39,12 @@ const MAX_VALIDATION_BODY_LEN: usize = 2048;
 
 pub static GLOBAL_USER_AGENT: Lazy<String> = Lazy::new(|| {
     format!(
-        "{} {}/{}",
+        "{}/{} {}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
          AppleWebKit/537.36 (KHTML, like Gecko) \
-         Chrome/140.0.0.0 Safari/537.36",
-        env!("CARGO_PKG_NAME"),
-        env!("CARGO_PKG_VERSION")
+         Chrome/140.0.0.0 Safari/537.36"
     )
 });
 
