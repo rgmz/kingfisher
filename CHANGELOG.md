@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.49.0]
+- Enabled MongoDB URI validation
+- AWS + GCP validators now respect HTTPS_PROXY and share a consistent user agent across AWS, GCP, and HTTP validation
+- Increase max-file-size default to 256 mb (up from 64 mb)
+- Improved AWS rule
+
 ## [1.48.0]
 - Improved error message when self-update cannot find the current binary
 - Optimized memory usage via string interning and extensive data sharing

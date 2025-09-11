@@ -290,6 +290,32 @@ impl DetailsReporter {
             }
             matches = expanded;
         }
+        matches.sort_by(|a, b| {
+            let path_a = a
+                .origin
+                .first()
+                .full_path()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let path_b = b
+                .origin
+                .first()
+                .full_path()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            path_a
+                .cmp(&path_b)
+                .then_with(|| {
+                    a.m.location.source_span.start.line.cmp(&b.m.location.source_span.start.line)
+                })
+                .then_with(|| {
+                    a.m.location
+                        .source_span
+                        .start
+                        .column
+                        .cmp(&b.m.location.source_span.start.column)
+                })
+        });
         Ok(matches)
     }
 

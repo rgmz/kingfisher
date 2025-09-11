@@ -14,13 +14,12 @@ pub struct Styles {
     is_term: bool,
 }
 impl Styles {
-    pub fn new(_use_color: bool) -> Self {
+    pub fn new(use_color: bool) -> Self {
         let stdout_is_tty = std::io::stdout().is_terminal();
         let is_term = Term::stdout().is_term();
 
-        let use_color = stdout_is_tty && is_term; // Enable color only if both checks agree it's a terminal
-
-        let styles_enabled = use_color;
+        // Enable color only when explicitly requested and stdout is a terminal.
+        let styles_enabled = use_color && stdout_is_tty && is_term;
         let style_finding_heading = Style::new().bright().white().force_styling(styles_enabled);
         let style_finding_active_heading =
             Style::new().bold().bright().cyan().force_styling(styles_enabled);

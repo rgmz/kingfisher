@@ -285,11 +285,11 @@ cat /path/to/file.py | kingfisher scan -
 
 ### Limit maximum file size scanned (`--max-file-size`)
 
-By default, Kingfisher skips files larger than **64 MB**. You can raise or lower this cap per run with `--max-file-size`, which takes a value in **megabytes**.
+By default, Kingfisher skips files larger than **256 MB**. You can raise or lower this cap per run with `--max-file-size`, which takes a value in **megabytes**.
 
 ```bash
-# Scan files up to 250 mb in size
-kingfisher scan /some/file --max-file-size 250
+# Scan files up to 500 mb in size
+kingfisher scan /some/file --max-file-size 500
 ```
 
 ### Scan using a rule _family_ with one flag

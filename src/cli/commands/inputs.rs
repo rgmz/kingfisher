@@ -169,27 +169,30 @@ pub struct InputSpecifierArgs {
 #[derive(Args, Debug, Clone)]
 pub struct ContentFilteringArgs {
     /// Ignore files larger than the given size in MB
-    #[arg(long("max-file-size"), default_value_t = 64.0)]
+    #[arg(
+        long = "max-file-size",
+        visible_alias = "max-filesize",      // also show in --help
+        // alias = "max-filesize",            // use this instead if you DON’T want it shown in --help
+        default_value_t = 256.0,
+        value_name = "MB"
+    )]
     pub max_file_size_mb: f64,
 
-    // /// Use custom path-based ignore rules from the given file(s)
-    // #[arg(long, short, value_hint = ValueHint::FilePath)]
-    // pub ignore: Vec<PathBuf>,
     /// Skip any file or directory whose path matches this glob pattern. Multiple
     /// patterns may be provided by repeating the flag.
     #[arg(long, value_name = "PATTERN")]
     pub exclude: Vec<String>,
 
     /// If true, do NOT extract archive files
-    #[arg(long("no-extract-archives"), default_value_t = false)]
+    #[arg(long = "no-extract-archives", default_value_t = false)]
     pub no_extract_archives: bool,
 
     /// Maximum allowed depth for extracting nested archives
-    #[arg(long("extraction-depth"), default_value_t = 2, value_parser = clap::value_parser!(u8).range(1..=25))]
+    #[arg(long = "extraction-depth", default_value_t = 2, value_parser = clap::value_parser!(u8).range(1..=25))]
     pub extraction_depth: u8,
 
     /// If true, do NOT scan binary files
-    #[arg(long("no-binary"), default_value_t = false)]
+    #[arg(long = "no-binary", default_value_t = false)]
     pub no_binary: bool,
 }
 
@@ -197,7 +200,7 @@ impl ContentFilteringArgs {
     /// Convert the maximum file size in MB to bytes
     pub fn max_file_size_bytes(&self) -> Option<u64> {
         if self.max_file_size_mb < 0.0 {
-            Some(25 * 1024 * 1024) // default 25 MB if negative
+            Some(256 * 1024 * 1024) // default 256 MB if negative
         } else {
             Some((self.max_file_size_mb * 1024.0 * 1024.0) as u64)
         }

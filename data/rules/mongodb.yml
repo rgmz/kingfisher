@@ -80,6 +80,8 @@ rules:
       - client = mongoc_client_new ("mongodb+srv://someuser:hunter2@my-atlas-rd941.mongodb.net/test?retryWrites=true&w=majority");
       - "mongodb+srv://user:passw0rd@cluster0.something.mongodb.net/"
       - "mongodb://mongoadmin:contoso@something.foo.mongodb.net/myFirstDatabase"
+    validation:
+      type: MongoDB
   - name: MongoDB Atlas Service Account Token
     id: kingfisher.mongodb.4
     pattern: |
