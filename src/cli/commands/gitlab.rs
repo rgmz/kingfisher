@@ -49,6 +49,15 @@ pub struct GitLabRepoSpecifiers {
     #[arg(long, alias = "gitlab-group")]
     pub group: Vec<String>,
 
+    /// Skip specific repositories when enumerating GitLab sources (format: group/project)
+    #[arg(
+        long = "gitlab-exclude",
+        alias = "gitlab-exclude-project",
+        alias = "gitlab-exclude-repo",
+        value_name = "GROUP/PROJECT"
+    )]
+    pub exclude_repos: Vec<String>,
+
     /// Repositories for all groups (Enterprise only)
     #[arg(long, alias = "all-groups", alias = "all-gitlab-groups", requires = "gitlab_api_url")]
     pub all_groups: bool,

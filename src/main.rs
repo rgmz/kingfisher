@@ -232,6 +232,7 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                                 &list_args.repo_specifiers.user,
                                 &list_args.repo_specifiers.organization,
                                 list_args.repo_specifiers.all_organizations,
+                                &list_args.repo_specifiers.exclude_repos,
                                 list_args.repo_specifiers.repo_type.into(),
                             )
                             .await?;
@@ -249,6 +250,7 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                                 &list_args.repo_specifiers.group,
                                 list_args.repo_specifiers.all_groups,
                                 list_args.repo_specifiers.include_subgroups,
+                                &list_args.repo_specifiers.exclude_repos,
                                 list_args.repo_specifiers.repo_type.into(),
                             )
                             .await?;
@@ -282,12 +284,14 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             git_url: Vec::new(),
             github_user: Vec::new(),
             github_organization: Vec::new(),
+            github_exclude: Vec::new(),
             all_github_organizations: false,
             github_api_url: url::Url::parse("https://api.github.com/").unwrap(),
             github_repo_type: GitHubRepoType::Source,
             // new GitLab defaults
             gitlab_user: Vec::new(),
             gitlab_group: Vec::new(),
+            gitlab_exclude: Vec::new(),
             all_gitlab_groups: false,
             gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
             gitlab_repo_type: GitLabRepoType::All,

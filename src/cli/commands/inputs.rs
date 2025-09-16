@@ -48,6 +48,10 @@ pub struct InputSpecifierArgs {
     #[arg(long, alias = "github-org")]
     pub github_organization: Vec<String>,
 
+    /// Skip repositories when enumerating GitHub users or organizations (format: owner/repo)
+    #[arg(long = "github-exclude", alias = "github-exclude-repo", value_name = "OWNER/REPO")]
+    pub github_exclude: Vec<String>,
+
     /// Scan repositories from all GitHub organizations (requires non-default --github-api-url)
     #[arg(long, alias = "all-github-orgs", requires = "github_api_url")]
     pub all_github_organizations: bool,
@@ -72,6 +76,15 @@ pub struct InputSpecifierArgs {
     /// Scan repositories belonging to the specified GitLab group
     #[arg(long, alias = "gitlab-group")]
     pub gitlab_group: Vec<String>,
+
+    /// Skip repositories when enumerating GitLab users or groups (format: group/project)
+    #[arg(
+        long = "gitlab-exclude",
+        alias = "gitlab-exclude-project",
+        alias = "gitlab-exclude-repo",
+        value_name = "GROUP/PROJECT"
+    )]
+    pub gitlab_exclude: Vec<String>,
 
     /// Scan repositories from all GitLab groups (requires non-default --gitlab-api-url)
     #[arg(long, alias = "all-gitlab-groups", requires = "gitlab_api_url")]
