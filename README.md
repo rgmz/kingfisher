@@ -349,9 +349,8 @@ The same diff-focused workflow works when cloning repositories on the fly with `
 ```bash
 kingfisher scan \
   --git-url https://github.com/org/repo.git \
-  --since-commit origin/main \
-  --branch origin/feature-1
-  --fail
+  --since-commit main \
+  --branch development
 ```
 
 In CI systems that expose the base and head commits explicitly, you can pass those SHAs directly while still using `--git-url`:
