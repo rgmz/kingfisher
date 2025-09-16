@@ -174,6 +174,14 @@ pub struct InputSpecifierArgs {
     /// Enable or disable scanning nested git repositories
     #[arg(long, default_value_t = true)]
     pub scan_nested_repos: bool,
+
+    /// Limit Git scanning to changes made since this commit or ref
+    #[arg(long = "since-commit", value_name = "GIT-REF", help_heading = "Git Options")]
+    pub since_commit: Option<String>,
+
+    /// Branch or ref containing changes to scan (defaults to HEAD)
+    #[arg(long, value_name = "GIT-REF", requires = "since_commit", help_heading = "Git Options")]
+    pub branch: Option<String>,
 }
 
 // -----------------------------------------------------------------------------

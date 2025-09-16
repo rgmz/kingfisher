@@ -1,5 +1,6 @@
 use std::{
     marker::PhantomData,
+    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -7,10 +8,10 @@ use std::{
     time::{Duration, Instant as StdInstant, Instant},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use base64::{engine::general_purpose::STANDARD, Engine};
-use bstr::BString;
-use gix::Repository as GixRepo;
+use bstr::{BString, ByteSlice};
+use gix::{object::tree::diff::ChangeDetached, object::tree::EntryKind, Repository as GixRepo};
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::{
     iter::plumbing::Folder,
@@ -19,12 +20,16 @@ use rayon::{
 use serde::{Deserialize, Deserializer};
 use tracing::{debug, error};
 
+use smallvec::smallvec;
+
 use crate::{
     binary::is_binary,
-    blob::{Blob, BlobId, BlobIdMap},
+    blob::{Blob, BlobAppearance, BlobId, BlobIdMap},
     cli::commands::{github::GitHistoryMode, scan},
     decompress::{decompress_file_to_temp, CompressedContent},
     findings_store,
+    git_commit_metadata::CommitMetadata,
+    git_repo_enumerator::GitBlobMetadata,
     matcher::{Matcher, MatcherStats},
     open_git_repo,
     origin::{Origin, OriginSet},
@@ -36,8 +41,9 @@ use crate::{
         util::is_compressed_file,
     },
     scanner_pool::ScannerPool,
-    EnumeratorConfig, EnumeratorFileResult, FileResult, FilesystemEnumerator, FoundInput,
-    GitRepoEnumerator, GitRepoResult, GitRepoWithMetadataEnumerator, PathBuf,
+    DirectoryResult, EnumeratorConfig, EnumeratorFileResult, FileResult, FilesystemEnumerator,
+    FoundInput, GitDiffConfig, GitRepoEnumerator, GitRepoResult, GitRepoWithMetadataEnumerator,
+    PathBuf,
 };
 
 type OwnedBlob = Blob<'static>;
@@ -53,6 +59,11 @@ pub fn enumerate_filesystem_inputs(
     matcher_stats: &Mutex<MatcherStats>,
 ) -> Result<()> {
     let repo_scan_timeout = Duration::from_secs(args.git_repo_timeout);
+
+    let diff_config = args.input_specifier_args.since_commit.as_ref().map(|since| GitDiffConfig {
+        since_ref: since.clone(),
+        branch_ref: args.input_specifier_args.branch.clone(),
+    });
 
     let progress = if progress_enabled {
         let style =
@@ -81,16 +92,24 @@ pub fn enumerate_filesystem_inputs(
     .context("Failed to initialize filesystem enumerator")?;
 
     let (enum_thread, input_recv, exclude_globset) = {
-        let fs_enumerator = make_fs_enumerator(args, input_roots.into())
+        let fs_enumerator = make_fs_enumerator(args, input_roots.to_vec())
             .context("Failed to initialize filesystem enumerator")?;
         let exclude_globset = fs_enumerator.as_ref().and_then(|ie| ie.exclude_globset());
         let channel_size = std::cmp::max(args.num_jobs * 128, 1024);
 
         let (input_send, input_recv) = crossbeam_channel::bounded(channel_size);
+        let diff_config_for_thread = diff_config.clone();
+        let roots_for_thread = input_roots.to_vec();
         let input_enumerator_thread = std::thread::Builder::new()
             .name("input_enumerator".to_string())
             .spawn(move || -> Result<_> {
-                if let Some(fs_enumerator) = fs_enumerator {
+                if diff_config_for_thread.is_some() {
+                    for root in roots_for_thread {
+                        input_send
+                            .send(FoundInput::Directory(DirectoryResult { path: root }))
+                            .context("Failed to queue repository for scanning")?;
+                    }
+                } else if let Some(fs_enumerator) = fs_enumerator {
                     fs_enumerator.run(input_send.clone())?;
                 }
                 Ok(())
@@ -106,7 +125,8 @@ pub fn enumerate_filesystem_inputs(
         },
         collect_git_metadata: args.input_specifier_args.commit_metadata,
         repo_scan_timeout,
-        exclude_globset,
+        exclude_globset: exclude_globset.clone(),
+        git_diff: diff_config.clone(),
     };
     let (send_ds, recv_ds) = create_datastore_channel(args.num_jobs);
     let datastore_writer_thread =
@@ -578,7 +598,7 @@ impl<'cfg> ParallelBlobIterator for (&'cfg EnumeratorConfig, FoundInput) {
             FoundInput::Directory(i) => {
                 let path = &i.path;
 
-                if !cfg.enumerate_git_history {
+                if cfg.git_diff.is_none() && !cfg.enumerate_git_history {
                     return Ok(None);
                 }
 
@@ -597,8 +617,17 @@ impl<'cfg> ParallelBlobIterator for (&'cfg EnumeratorConfig, FoundInput) {
                 let path_clone = path.to_path_buf();
                 let (tx, rx) = std::sync::mpsc::channel();
                 let exclude_globset = cfg.exclude_globset.clone();
+                let diff_cfg = cfg.git_diff.clone();
                 let handle = std::thread::spawn(move || {
-                    let res = if collect_git_metadata {
+                    let res = if let Some(diff_cfg) = diff_cfg {
+                        enumerate_git_diff_repo(
+                            &path_clone,
+                            repository,
+                            diff_cfg,
+                            exclude_globset.clone(),
+                            collect_git_metadata,
+                        )
+                    } else if collect_git_metadata {
                         GitRepoWithMetadataEnumerator::new(
                             &path_clone,
                             repository,
@@ -668,6 +697,247 @@ impl<'cfg> ParallelBlobIterator for (&'cfg EnumeratorConfig, FoundInput) {
                 Ok(i.into_blob_iter()?.map(FoundInputIter::EnumeratorFile))
             }
         }
+    }
+}
+
+fn enumerate_git_diff_repo(
+    path: &Path,
+    repository: gix::Repository,
+    diff_cfg: GitDiffConfig,
+    exclude_globset: Option<std::sync::Arc<globset::GlobSet>>,
+    collect_commit_metadata: bool,
+) -> Result<GitRepoResult> {
+    let since_ref = diff_cfg.since_ref.clone();
+    let branch_ref = diff_cfg.branch_ref.clone().unwrap_or_else(|| "HEAD".to_string());
+
+    let base_id = resolve_diff_ref(&repository, path, &since_ref).with_context(|| {
+        format!("Failed to resolve --since-commit '{}' in repository {}", since_ref, path.display())
+    })?;
+    let head_id = resolve_diff_ref(&repository, path, &branch_ref).with_context(|| {
+        format!("Failed to resolve --branch '{}' in repository {}", branch_ref, path.display())
+    })?;
+
+    let base_commit = base_id
+        .object()
+        .with_context(|| format!("Failed to load commit {} for diffing", base_id.to_hex()))?
+        .try_into_commit()
+        .with_context(|| format!("Referenced object {} is not a commit", base_id.to_hex()))?;
+    let head_commit = head_id
+        .object()
+        .with_context(|| format!("Failed to load commit {} for diffing", head_id.to_hex()))?
+        .try_into_commit()
+        .with_context(|| format!("Referenced object {} is not a commit", head_id.to_hex()))?;
+
+    let base_tree = base_commit
+        .tree()
+        .with_context(|| format!("Failed to read tree for commit {}", base_id.to_hex()))?;
+    let head_tree = head_commit
+        .tree()
+        .with_context(|| format!("Failed to read tree for commit {}", head_id.to_hex()))?;
+
+    let changes =
+        repository.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None).with_context(
+            || format!("Failed to compute diff between '{}' and '{}'", since_ref, branch_ref),
+        )?;
+
+    // Release tree handles before returning the repository to avoid borrow check conflicts.
+    drop(base_tree);
+    drop(head_tree);
+
+    let commit_metadata = if collect_commit_metadata {
+        let committer = head_commit
+            .committer()
+            .with_context(|| format!("Failed to read committer for {}", branch_ref))?
+            .trim();
+        let timestamp = committer.time().unwrap_or_else(|_| gix::date::Time::new(0, 0));
+        Arc::new(CommitMetadata {
+            commit_id: head_commit.id,
+            committer_name: committer.name.to_str_lossy().into_owned(),
+            committer_email: committer.email.to_str_lossy().into_owned(),
+            committer_timestamp: timestamp,
+        })
+    } else {
+        Arc::new(CommitMetadata {
+            commit_id: head_commit.id,
+            committer_name: String::new(),
+            committer_email: String::new(),
+            committer_timestamp: gix::date::Time::new(0, 0),
+        })
+    };
+
+    let mut blobs = Vec::new();
+    for change in changes {
+        let (entry_mode, id, location) = match change {
+            ChangeDetached::Addition { entry_mode, id, location, .. } => (entry_mode, id, location),
+            ChangeDetached::Modification { entry_mode, id, location, .. } => {
+                (entry_mode, id, location)
+            }
+            ChangeDetached::Rewrite { entry_mode, id, location, .. } => (entry_mode, id, location),
+            ChangeDetached::Deletion { .. } => continue,
+        };
+
+        match entry_mode.kind() {
+            EntryKind::Blob | EntryKind::BlobExecutable | EntryKind::Link => {}
+            _ => continue,
+        }
+
+        let relative_path_str = String::from_utf8_lossy(location.as_ref()).into_owned();
+        let relative_path = Path::new(&relative_path_str);
+        if let Some(gs) = &exclude_globset {
+            if gs.is_match(relative_path) || gs.is_match(&path.join(relative_path)) {
+                debug!(
+                    "Skipping {} due to --exclude while diffing {}",
+                    relative_path.display(),
+                    path.display()
+                );
+                continue;
+            }
+        }
+
+        let appearance =
+            BlobAppearance { commit_metadata: Arc::clone(&commit_metadata), path: location };
+        blobs.push(GitBlobMetadata { blob_oid: id, first_seen: smallvec![appearance] });
+    }
+
+    // Release commit handles before returning the repository to avoid borrow check conflicts.
+    drop(base_commit);
+    drop(head_commit);
+
+    Ok(GitRepoResult { repository, path: path.to_owned(), blobs })
+}
+
+fn resolve_diff_ref<'repo>(
+    repository: &'repo gix::Repository,
+    path: &Path,
+    reference: &str,
+) -> Result<gix::Id<'repo>> {
+    let mut candidates = reference_candidates(reference);
+    if candidates.is_empty() {
+        candidates.push(reference.to_string());
+    }
+
+    let mut last_err: Option<anyhow::Error> = None;
+    for candidate in &candidates {
+        match repository.rev_parse_single(candidate.as_bytes()) {
+            Ok(id) => return Ok(id),
+            Err(err) => last_err = Some(err.into()),
+        }
+    }
+
+    let attempted = candidates.join(", ");
+    let err = last_err.unwrap_or_else(|| {
+        anyhow!("Reference resolution failed for '{}' without a more specific error", reference)
+    });
+    Err(err).with_context(|| {
+        if attempted.is_empty() {
+            format!("Failed to resolve reference '{}' in repository {}", reference, path.display())
+        } else {
+            format!(
+                "Failed to resolve reference '{}' in repository {} (tried: {})",
+                reference,
+                path.display(),
+                attempted
+            )
+        }
+    })
+}
+
+fn reference_candidates(reference: &str) -> Vec<String> {
+    fn push_unique(vec: &mut Vec<String>, candidate: String) {
+        if !vec.iter().any(|existing| existing == &candidate) {
+            vec.push(candidate);
+        }
+    }
+
+    let trimmed = reference.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+
+    let mut candidates = Vec::new();
+    push_unique(&mut candidates, trimmed.to_string());
+
+    if trimmed.eq_ignore_ascii_case("HEAD") {
+        return candidates;
+    }
+
+    if trimmed.starts_with("refs/") {
+        return candidates;
+    }
+
+    push_unique(&mut candidates, format!("refs/heads/{trimmed}"));
+    push_unique(&mut candidates, format!("refs/tags/{trimmed}"));
+
+    if let Some((remote, rest)) = trimmed.split_once('/') {
+        if remote == "origin" {
+            if !rest.is_empty() {
+                push_unique(&mut candidates, format!("refs/remotes/{remote}/{rest}"));
+            }
+        } else if !rest.is_empty() {
+            push_unique(&mut candidates, format!("refs/remotes/origin/{trimmed}"));
+            push_unique(&mut candidates, format!("refs/remotes/{remote}/{rest}"));
+        }
+    } else {
+        push_unique(&mut candidates, format!("origin/{trimmed}"));
+        push_unique(&mut candidates, format!("refs/remotes/origin/{trimmed}"));
+    }
+
+    candidates
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reference_candidates;
+
+    #[test]
+    fn reference_candidates_for_plain_branch() {
+        assert_eq!(
+            reference_candidates("main"),
+            vec![
+                "main".to_string(),
+                "refs/heads/main".to_string(),
+                "refs/tags/main".to_string(),
+                "origin/main".to_string(),
+                "refs/remotes/origin/main".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn reference_candidates_for_remote_branch() {
+        assert_eq!(
+            reference_candidates("origin/feature"),
+            vec![
+                "origin/feature".to_string(),
+                "refs/heads/origin/feature".to_string(),
+                "refs/tags/origin/feature".to_string(),
+                "refs/remotes/origin/feature".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn reference_candidates_for_branch_with_path() {
+        assert_eq!(
+            reference_candidates("feature/foo"),
+            vec![
+                "feature/foo".to_string(),
+                "refs/heads/feature/foo".to_string(),
+                "refs/tags/feature/foo".to_string(),
+                "refs/remotes/origin/feature/foo".to_string(),
+                "refs/remotes/feature/foo".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn reference_candidates_for_explicit_ref() {
+        assert_eq!(reference_candidates("refs/heads/main"), vec!["refs/heads/main".to_string()]);
+    }
+
+    #[test]
+    fn reference_candidates_for_head_symbol() {
+        assert_eq!(reference_candidates("HEAD"), vec!["HEAD".to_string()]);
     }
 }
 

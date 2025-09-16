@@ -52,11 +52,18 @@ use ignore::{DirEntry, WalkBuilder, WalkState};
 use tokio::time::Duration;
 use tracing::debug;
 
+#[derive(Clone)]
+pub struct GitDiffConfig {
+    pub since_ref: String,
+    pub branch_ref: Option<String>,
+}
+
 struct EnumeratorConfig {
     enumerate_git_history: bool,
     collect_git_metadata: bool,
     repo_scan_timeout: Duration,
     exclude_globset: Option<std::sync::Arc<GlobSet>>,
+    git_diff: Option<GitDiffConfig>,
 }
 
 pub enum FoundInput {

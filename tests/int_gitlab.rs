@@ -87,6 +87,8 @@ fn test_gitlab_remote_scan() -> Result<()> {
             commit_metadata: true,
             repo_artifacts: false,
             scan_nested_repos: true,
+            since_commit: None,
+            branch: None,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
@@ -197,6 +199,8 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
             commit_metadata: true,
             repo_artifacts: false,
             scan_nested_repos: true,
+            since_commit: None,
+            branch: None,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
