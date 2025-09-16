@@ -76,6 +76,7 @@ mod tests {
                 // GitHub
                 github_user: Vec::new(),
                 github_organization: Vec::new(),
+                github_exclude: Vec::new(),
                 all_github_organizations: false,
                 github_api_url: Url::parse("https://api.github.com/").unwrap(),
                 github_repo_type: GitHubRepoType::Source,
@@ -83,6 +84,7 @@ mod tests {
                 // GitLab
                 gitlab_user: Vec::new(),
                 gitlab_group: Vec::new(),
+                gitlab_exclude: Vec::new(),
                 all_gitlab_groups: false,
                 gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
                 gitlab_repo_type: GitLabRepoType::All,

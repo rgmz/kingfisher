@@ -130,6 +130,7 @@ pub async fn enumerate_github_repos(
         organization: args.input_specifier_args.github_organization.clone(),
         all_organizations: args.input_specifier_args.all_github_organizations,
         repo_filter: args.input_specifier_args.github_repo_type.into(),
+        exclude_repos: args.input_specifier_args.github_exclude.clone(),
     };
     let mut repo_urls = args.input_specifier_args.git_url.clone();
     if !repo_specifiers.is_empty() {
@@ -188,6 +189,7 @@ pub async fn enumerate_gitlab_repos(
         all_groups: args.input_specifier_args.all_gitlab_groups,
         include_subgroups: args.input_specifier_args.gitlab_include_subgroups,
         repo_filter: args.input_specifier_args.gitlab_repo_type.into(),
+        exclude_repos: args.input_specifier_args.gitlab_exclude.clone(),
     };
 
     let mut repo_urls = args.input_specifier_args.git_url.clone();

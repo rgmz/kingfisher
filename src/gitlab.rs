@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     env, fs,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -15,9 +16,11 @@ use gitlab::{
     },
     Gitlab, GitlabBuilder,
 };
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 use serde_json::Value;
+use tracing::warn;
 use url::{form_urlencoded, Url};
 
 use crate::{findings_store, git_url::GitUrl};
@@ -54,12 +57,133 @@ pub struct RepoSpecifiers {
     pub all_groups: bool,
     pub include_subgroups: bool,
     pub repo_filter: RepoType,
+    pub exclude_repos: Vec<String>,
 }
 
 impl RepoSpecifiers {
     pub fn is_empty(&self) -> bool {
         self.user.is_empty() && self.group.is_empty() && !self.all_groups
     }
+}
+
+fn normalize_project_path(path: &str) -> Option<String> {
+    let trimmed = path.trim().trim_matches('/');
+    if trimmed.is_empty() {
+        return None;
+    }
+    let without_git = trimmed.strip_suffix(".git").unwrap_or(trimmed);
+    let segments: Vec<&str> = without_git.split('/').filter(|s| !s.is_empty()).collect();
+    if segments.len() < 2 {
+        return None;
+    }
+    Some(segments.join("/").to_lowercase())
+}
+
+fn parse_project_path_from_url(repo_url: &str) -> Option<String> {
+    let url = Url::parse(repo_url).ok()?;
+    normalize_project_path(url.path())
+}
+
+fn parse_project_path(raw: &str) -> Option<String> {
+    normalize_project_path(raw)
+}
+
+fn parse_excluded_project(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Some(name) = parse_project_path_from_url(trimmed) {
+        return Some(name);
+    }
+
+    if let Some(idx) = trimmed.rfind(':') {
+        if let Some(name) = parse_project_path(&trimmed[idx + 1..]) {
+            return Some(name);
+        }
+    }
+
+    parse_project_path(trimmed)
+}
+
+struct ExcludeMatcher {
+    exact: HashSet<String>,
+    globs: Option<GlobSet>,
+}
+
+impl ExcludeMatcher {
+    fn is_empty(&self) -> bool {
+        self.exact.is_empty() && self.globs.is_none()
+    }
+
+    fn matches(&self, name: &str) -> bool {
+        if self.exact.contains(name) {
+            return true;
+        }
+        if let Some(globs) = &self.globs {
+            return globs.is_match(name);
+        }
+        false
+    }
+}
+
+fn looks_like_glob(pattern: &str) -> bool {
+    pattern.contains('*') || pattern.contains('?') || pattern.contains('[')
+}
+
+fn build_exclude_matcher(exclude_repos: &[String]) -> ExcludeMatcher {
+    let mut exact = HashSet::new();
+    let mut glob_builder = GlobSetBuilder::new();
+    let mut has_glob = false;
+
+    for raw in exclude_repos {
+        match parse_excluded_project(raw) {
+            Some(name) => {
+                if looks_like_glob(&name) {
+                    match Glob::new(&name) {
+                        Ok(glob) => {
+                            glob_builder.add(glob);
+                            has_glob = true;
+                        }
+                        Err(err) => {
+                            warn!("Ignoring invalid GitLab exclusion pattern '{raw}': {err}");
+                            exact.insert(name);
+                        }
+                    }
+                } else {
+                    exact.insert(name);
+                }
+            }
+            None => {
+                warn!("Ignoring invalid GitLab exclusion '{raw}' (expected group/project)");
+            }
+        }
+    }
+
+    let globs = if has_glob {
+        match glob_builder.build() {
+            Ok(set) => Some(set),
+            Err(err) => {
+                warn!("Failed to build GitLab exclusion patterns: {err}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    ExcludeMatcher { exact, globs }
+}
+
+fn should_exclude_repo(clone_url: &str, excludes: &ExcludeMatcher) -> bool {
+    if excludes.is_empty() {
+        return false;
+    }
+    if let Some(name) = parse_project_path_from_url(clone_url) {
+        return excludes.matches(&name);
+    }
+    false
 }
 
 fn create_gitlab_client(gitlab_url: &Url, ignore_certs: bool) -> Result<Gitlab> {
@@ -89,6 +213,7 @@ pub async fn enumerate_repo_urls(
 ) -> Result<Vec<String>> {
     let client = create_gitlab_client(&gitlab_url, ignore_certs)?;
     let mut repo_urls = Vec::new();
+    let exclude_set = build_exclude_matcher(&repo_specifiers.exclude_repos);
 
     // 1) Process each GitLab username
     for username in &repo_specifiers.user {
@@ -118,6 +243,9 @@ pub async fn enumerate_repo_urls(
         let projects_ep = builder.build()?;
         let projects: Vec<SimpleProject> = paged(projects_ep, Pagination::All).query(&client)?;
         for proj in projects {
+            if should_exclude_repo(&proj.http_url_to_repo, &exclude_set) {
+                continue;
+            }
             repo_urls.push(proj.http_url_to_repo);
         }
 
@@ -153,6 +281,9 @@ pub async fn enumerate_repo_urls(
         let gp_ep = gp_builder.build()?;
         let projects: Vec<SimpleProject> = paged(gp_ep, Pagination::All).query(&client)?;
         for proj in projects {
+            if should_exclude_repo(&proj.http_url_to_repo, &exclude_set) {
+                continue;
+            }
             repo_urls.push(proj.http_url_to_repo);
         }
         if let Some(pb) = progress.as_mut() {
@@ -175,6 +306,7 @@ pub async fn list_repositories(
     groups: &[String],
     all_groups: bool,
     include_subgroups: bool,
+    exclude_repos: &[String],
     repo_filter: RepoType,
 ) -> Result<()> {
     let repo_specifiers = RepoSpecifiers {
@@ -183,6 +315,7 @@ pub async fn list_repositories(
         all_groups,
         include_subgroups,
         repo_filter,
+        exclude_repos: exclude_repos.to_vec(),
     };
 
     // Create a progress bar for displaying status
@@ -319,4 +452,55 @@ pub async fn fetch_repo_items(
     }
 
     Ok(dirs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_excluded_project_variants() {
+        assert_eq!(parse_excluded_project("Group/Project").as_deref(), Some("group/project"));
+        assert_eq!(parse_excluded_project("group/project.git").as_deref(), Some("group/project"));
+        assert_eq!(
+            parse_excluded_project("https://gitlab.com/Group/Project.git").as_deref(),
+            Some("group/project")
+        );
+        assert_eq!(
+            parse_excluded_project("git@gitlab.com:Group/Sub/Project.git").as_deref(),
+            Some("group/sub/project")
+        );
+        assert_eq!(
+            parse_excluded_project("ssh://git@gitlab.example.com/Group/Sub/Project.git").as_deref(),
+            Some("group/sub/project")
+        );
+        assert_eq!(
+            parse_excluded_project("  group/sub/project  ").as_deref(),
+            Some("group/sub/project")
+        );
+        assert_eq!(parse_excluded_project("not-a-project"), None);
+    }
+
+    #[test]
+    fn should_exclude_repo_matches_normalized_paths() {
+        let excludes = build_exclude_matcher(&vec!["Group/Sub/Project".to_string()]);
+        assert!(should_exclude_repo("https://gitlab.com/group/sub/project.git", &excludes));
+        assert!(!should_exclude_repo("https://gitlab.com/group/other/project.git", &excludes));
+    }
+
+    #[test]
+    fn should_exclude_repo_matches_ssh_urls() {
+        let excludes = build_exclude_matcher(&vec!["group/sub/project".to_string()]);
+        assert!(should_exclude_repo(
+            "ssh://git@gitlab.example.com/group/sub/project.git",
+            &excludes
+        ));
+    }
+
+    #[test]
+    fn should_exclude_repo_matches_globs() {
+        let excludes = build_exclude_matcher(&vec!["group/**/archive-*".to_string()]);
+        assert!(should_exclude_repo("https://gitlab.com/group/sub/archive-2023.git", &excludes));
+        assert!(!should_exclude_repo("https://gitlab.com/group/sub/project.git", &excludes));
+    }
 }

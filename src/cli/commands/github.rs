@@ -49,6 +49,10 @@ pub struct GitHubRepoSpecifiers {
     #[arg(long, alias = "org", alias = "github-organization", alias = "github-org")]
     pub organization: Vec<String>,
 
+    /// Skip specific repositories when enumerating GitHub sources (format: owner/repo)
+    #[arg(long = "github-exclude", alias = "github-exclude-repo", value_name = "OWNER/REPO")]
+    pub exclude_repos: Vec<String>,
+
     /// Repositories for all organizations (Enterprise only)
     #[arg(
         long,

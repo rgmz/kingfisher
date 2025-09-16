@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.50.0]
+- Added `--github-exclude` and `--gitlab-exclude` options to skip specific repositories when scanning or listing GitHub and GitLab sources, including support for gitignore-style glob patterns
+
 ## [1.49.0]
 - Enabled MongoDB URI validation
 - AWS + GCP validators now respect HTTPS_PROXY and share a consistent user agent across AWS, GCP, and HTTP validation

@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use indicatif::{ProgressBar, ProgressStyle};
 use octorust::{
     auth::Credentials,
@@ -14,6 +15,7 @@ use octorust::{
     Client,
 };
 use serde_json::Value;
+use tracing::warn;
 use url::Url;
 
 use crate::{findings_store, git_url::GitUrl};
@@ -25,6 +27,7 @@ pub struct RepoSpecifiers {
     pub organization: Vec<String>,
     pub all_organizations: bool,
     pub repo_filter: RepoType,
+    pub exclude_repos: Vec<String>,
 }
 impl RepoSpecifiers {
     pub fn is_empty(&self) -> bool {
@@ -54,6 +57,133 @@ impl From<RepoType> for ReposListOrgType {
             RepoType::Fork => ReposListOrgType::Forks,
         }
     }
+}
+
+fn normalize_repo_identifier(owner: &str, repo: &str) -> Option<String> {
+    let owner = owner.trim().trim_matches('/');
+    let repo = repo.trim().trim_matches('/');
+    let repo = repo.strip_suffix(".git").unwrap_or(repo);
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+    Some(format!("{}/{}", owner.to_lowercase(), repo.to_lowercase()))
+}
+
+fn parse_repo_name_from_path(path: &str) -> Option<String> {
+    let trimmed = path.trim().trim_matches('/');
+    if trimmed.is_empty() {
+        return None;
+    }
+    let mut parts = trimmed.split('/');
+    let owner = parts.next()?;
+    let repo = parts.next()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    normalize_repo_identifier(owner, repo)
+}
+
+fn parse_repo_name_from_url(repo_url: &str) -> Option<String> {
+    let url = Url::parse(repo_url).ok()?;
+    parse_repo_name_from_path(url.path())
+}
+
+fn parse_excluded_repo(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Some(name) = parse_repo_name_from_url(trimmed) {
+        return Some(name);
+    }
+
+    if let Some(idx) = trimmed.rfind(':') {
+        if let Some(name) = parse_repo_name_from_path(&trimmed[idx + 1..]) {
+            return Some(name);
+        }
+    }
+
+    parse_repo_name_from_path(trimmed)
+}
+
+struct ExcludeMatcher {
+    exact: HashSet<String>,
+    globs: Option<GlobSet>,
+}
+
+impl ExcludeMatcher {
+    fn is_empty(&self) -> bool {
+        self.exact.is_empty() && self.globs.is_none()
+    }
+
+    fn matches(&self, name: &str) -> bool {
+        if self.exact.contains(name) {
+            return true;
+        }
+        if let Some(globs) = &self.globs {
+            return globs.is_match(name);
+        }
+        false
+    }
+}
+
+fn looks_like_glob(pattern: &str) -> bool {
+    pattern.contains('*') || pattern.contains('?') || pattern.contains('[')
+}
+
+fn build_exclude_matcher(exclude_repos: &[String]) -> ExcludeMatcher {
+    let mut exact = HashSet::new();
+    let mut glob_builder = GlobSetBuilder::new();
+    let mut has_glob = false;
+
+    for raw in exclude_repos {
+        match parse_excluded_repo(raw) {
+            Some(name) => {
+                if looks_like_glob(&name) {
+                    match Glob::new(&name) {
+                        Ok(glob) => {
+                            glob_builder.add(glob);
+                            has_glob = true;
+                        }
+                        Err(err) => {
+                            warn!("Ignoring invalid GitHub exclusion pattern '{raw}': {err}");
+                            exact.insert(name);
+                        }
+                    }
+                } else {
+                    exact.insert(name);
+                }
+            }
+            None => {
+                warn!("Ignoring invalid GitHub exclusion '{raw}' (expected owner/repo)");
+            }
+        }
+    }
+
+    let globs = if has_glob {
+        match glob_builder.build() {
+            Ok(set) => Some(set),
+            Err(err) => {
+                warn!("Failed to build GitHub exclusion patterns: {err}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    ExcludeMatcher { exact, globs }
+}
+
+fn should_exclude_repo(clone_url: &str, excludes: &ExcludeMatcher) -> bool {
+    if excludes.is_empty() {
+        return false;
+    }
+    if let Some(name) = parse_repo_name_from_url(clone_url) {
+        return excludes.matches(&name);
+    }
+    false
 }
 fn create_github_client(github_url: &url::Url, ignore_certs: bool) -> Result<Arc<Client>> {
     // Try personal access token
@@ -92,6 +222,7 @@ pub async fn enumerate_repo_urls(
 ) -> Result<Vec<String>> {
     let client = create_github_client(&github_url, ignore_certs)?;
     let mut repo_urls = Vec::new();
+    let exclude_set = build_exclude_matcher(&repo_specifiers.exclude_repos);
     let user_repo_type: ReposListUserType = repo_specifiers.repo_filter.clone().into();
     let org_repo_type: ReposListOrgType = repo_specifiers.repo_filter.clone().into();
     for username in &repo_specifiers.user {
@@ -104,7 +235,14 @@ pub async fn enumerate_repo_urls(
                 Order::Desc,
             )
             .await?;
-        repo_urls.extend(repos.body.into_iter().filter_map(|repo| Some(repo.clone_url)));
+        repo_urls.extend(repos.body.into_iter().filter_map(|repo| {
+            let clone_url = repo.clone_url;
+            if should_exclude_repo(&clone_url, &exclude_set) {
+                None
+            } else {
+                Some(clone_url)
+            }
+        }));
         if let Some(progress) = progress.as_mut() {
             progress.inc(1);
         }
@@ -127,7 +265,14 @@ pub async fn enumerate_repo_urls(
                 Order::Desc,
             )
             .await?;
-        repo_urls.extend(repos.body.into_iter().filter_map(|repo| Some(repo.clone_url)));
+        repo_urls.extend(repos.body.into_iter().filter_map(|repo| {
+            let clone_url = repo.clone_url;
+            if should_exclude_repo(&clone_url, &exclude_set) {
+                None
+            } else {
+                Some(clone_url)
+            }
+        }));
         if let Some(progress) = progress.as_mut() {
             progress.inc(1);
         }
@@ -143,6 +288,7 @@ pub async fn list_repositories(
     users: &[String],
     orgs: &[String],
     all_orgs: bool,
+    exclude_repos: &[String],
     repo_filter: RepoType,
 ) -> Result<()> {
     let repo_specifiers = RepoSpecifiers {
@@ -150,6 +296,7 @@ pub async fn list_repositories(
         organization: orgs.to_vec(),
         all_organizations: all_orgs,
         repo_filter,
+        exclude_repos: exclude_repos.to_vec(),
     };
     // Create a progress bar just for displaying status
     // let mut progress = ProgressBar::new_spinner("Fetching repositories...",
@@ -357,4 +504,52 @@ pub async fn fetch_repo_items(
     }
 
     Ok(dirs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_excluded_repo_variants() {
+        assert_eq!(parse_excluded_repo("Owner/Repo").as_deref(), Some("owner/repo"));
+        assert_eq!(parse_excluded_repo("owner/repo.git").as_deref(), Some("owner/repo"));
+        assert_eq!(
+            parse_excluded_repo("https://github.com/Owner/Repo.git").as_deref(),
+            Some("owner/repo")
+        );
+        assert_eq!(
+            parse_excluded_repo("git@github.com:Owner/Repo.git").as_deref(),
+            Some("owner/repo")
+        );
+        assert_eq!(
+            parse_excluded_repo("ssh://git@github.example.com/Owner/Repo.git").as_deref(),
+            Some("owner/repo")
+        );
+        assert_eq!(
+            parse_excluded_repo("  https://github.com/Owner/Repo  ").as_deref(),
+            Some("owner/repo")
+        );
+        assert_eq!(parse_excluded_repo("not-a-repo"), None);
+    }
+
+    #[test]
+    fn should_exclude_repo_matches_normalized_names() {
+        let excludes = build_exclude_matcher(&vec!["Owner/Repo".to_string()]);
+        assert!(should_exclude_repo("https://github.com/owner/repo.git", &excludes));
+        assert!(!should_exclude_repo("https://github.com/owner/other.git", &excludes));
+    }
+
+    #[test]
+    fn should_exclude_repo_matches_ssh_urls() {
+        let excludes = build_exclude_matcher(&vec!["owner/repo".to_string()]);
+        assert!(should_exclude_repo("ssh://git@github.example.com/owner/repo.git", &excludes));
+    }
+
+    #[test]
+    fn should_exclude_repo_matches_globs() {
+        let excludes = build_exclude_matcher(&vec!["owner/*-archive".to_string()]);
+        assert!(should_exclude_repo("https://github.com/owner/project-archive.git", &excludes));
+        assert!(!should_exclude_repo("https://github.com/owner/project.git", &excludes));
+    }
 }

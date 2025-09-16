@@ -62,10 +62,12 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
   - [Scanning Docker Images](#scanning-docker-images)
   - [Scanning GitHub](#scanning-github)
     - [Scan GitHub organisation (requires `KF_GITHUB_TOKEN`)](#scan-github-organisation-requires-kf_github_token)
+    - [Skip specific GitHub repositories during enumeration](#skip-specific-github-repositories-during-enumeration)
     - [Scan remote GitHub repository](#scan-remote-github-repository)
   - [Scanning GitLab](#scanning-gitlab)
     - [Scan GitLab group (requires `KF_GITLAB_TOKEN`)](#scan-gitlab-group-requires-kf_gitlab_token)
     - [Scan GitLab user](#scan-gitlab-user)
+    - [Skip specific GitLab projects during enumeration](#skip-specific-gitlab-projects-during-enumeration)
     - [Scan remote GitLab repository by URL](#scan-remote-gitlab-repository-by-url)
     - [List GitLab repositories](#list-gitlab-repositories)
   - [Scanning Jira](#scanning-jira)
@@ -427,6 +429,19 @@ kingfisher scan --docker-image private.registry.example.com/my-image:tag
 kingfisher scan --github-organization my-org
 ```
 
+### Skip specific GitHub repositories during enumeration
+
+Repeat `--github-exclude` for every repository you want to ignore when scanning
+users or organizations. You can provide exact repositories like
+`OWNER/REPO` or gitignore-style glob patterns such as `owner/*-archive`
+(matching is case-insensitive).
+
+```bash
+kingfisher scan --github-organization my-org \
+  --github-exclude my-org/huge-repo \
+  --github-exclude my-org/*-archive
+```
+
 ### Scan remote GitHub repository
 
 `--git-url` clones the repository and scans its files and history. To also inspect
@@ -464,6 +479,19 @@ kingfisher scan --gitlab-group my-group --gitlab-include-subgroups
 kingfisher scan --gitlab-user johndoe
 ```
 
+### Skip specific GitLab projects during enumeration
+
+Repeat `--gitlab-exclude` for every project path you want to ignore when scanning
+users or groups. Specify project paths as `group/project` (case-insensitive) or
+use gitignore-style glob patterns like `group/**/archive-*` to drop families of
+projects across nested subgroups.
+
+```bash
+kingfisher scan --gitlab-group my-group \
+  --gitlab-exclude my-group/huge-project \
+  --gitlab-exclude my-group/**/archive-*
+```
+
 ### Scan remote GitLab repository by URL
 
 `--git-url` by itself clones the project repository. To include server-side
@@ -488,6 +516,8 @@ KF_GITLAB_TOKEN="glpat-…" kingfisher scan --git-url https://gitlab.com/group/p
 kingfisher gitlab repos list --group my-group
 # include repositories from all nested subgroups
 kingfisher gitlab repos list --group my-group --include-subgroups
+# skip specific projects when listing or scanning (supports glob patterns)
+kingfisher gitlab repos list --group my-group --gitlab-exclude my-group/**/legacy-*
 ```
 
 ## Scanning Jira
@@ -666,6 +696,8 @@ kingfisher rules check --rules-path ./my_rules.yml
 # List GitHub repos
 kingfisher github repos list --user my-user
 kingfisher github repos list --organization my-org
+# Skip specific repositories when listing or scanning (supports glob patterns)
+kingfisher github repos list --organization my-org --github-exclude my-org/*-archive
 
 ```
 
