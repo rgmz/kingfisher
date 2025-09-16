@@ -58,6 +58,7 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Display rule performance statistics](#display-rule-performance-statistics)
     - [Scan while ignoring likely test files](#scan-while-ignoring-likely-test-files)
     - [Exclude specific paths](#exclude-specific-paths)
+    - [Scan changes in CI pipelines](#scan-changes-in-ci-pipelines)
   - [Scan an S3 bucket](#scan-an-s3-bucket)
   - [Scanning Docker Images](#scanning-docker-images)
   - [Scanning GitHub](#scanning-github)
@@ -329,6 +330,36 @@ kingfisher scan ./my-project \
 kingfisher scan ./my-project \
   --exclude '*.py' \
   --exclude '[Tt]ests'
+```
+
+### Scan changes in CI pipelines
+
+Limit scanning to the delta between your default branch and a pull request branch by combining `--since-commit` with `--branch` (defaults to `HEAD`). This only scans files that differ between the two references, which keeps CI runs fast while still blocking new secrets.
+
+```bash
+kingfisher scan . \
+  --since-commit origin/main \
+  --branch "$CI_BRANCH"
+```
+
+When the branch under test is already checked out, `--branch HEAD` or omitting `--branch` entirely is sufficient. Kingfisher exits with `200` when any findings are discovered and `205` when validated secrets are present, allowing CI jobs to fail automatically if new credentials slip in.
+
+The same diff-focused workflow works when cloning repositories on the fly with `--git-url`. Kingfisher automatically tries remote-tracking names like `origin/main` and `origin/feature-1`, so you can target the branches involved in a pull request without performing a local checkout first.
+
+```bash
+kingfisher scan \
+  --git-url https://github.com/org/repo.git \
+  --since-commit main \
+  --branch development
+```
+
+In CI systems that expose the base and head commits explicitly, you can pass those SHAs directly while still using `--git-url`:
+
+```bash
+kingfisher scan \
+  --git-url git@github.com:org/repo.git \
+  --since-commit "$BASE_COMMIT" \
+  --branch "$PR_HEAD_COMMIT"
 ```
 
 If you want to know which files are being skipped, enable verbose debugging (-v) when scanning, which will report any files being skipped by the baseline file (or via --exclude):

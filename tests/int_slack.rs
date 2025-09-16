@@ -75,6 +75,8 @@ impl TestContext {
                 commit_metadata: true,
                 repo_artifacts: false,
                 scan_nested_repos: true,
+                since_commit: None,
+                branch: None,
             },
             content_filtering_args: ContentFilteringArgs {
                 max_file_size_mb: 25.0,
@@ -175,6 +177,8 @@ async fn test_scan_slack_messages() -> Result<()> {
             commit_metadata: true,
             repo_artifacts: false,
             scan_nested_repos: true,
+            since_commit: None,
+            branch: None,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,

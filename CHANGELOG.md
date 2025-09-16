@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.51.0]
+- Added diff-only Git scanning via `--since-commit` and `--branch`, including remote-aware ref resolution so CI jobs can pair `--git-url` clones with pull request branches
+
 ## [1.50.0]
 - Added `--github-exclude` and `--gitlab-exclude` options to skip specific repositories when scanning or listing GitHub and GitLab sources, including support for gitignore-style glob patterns
 

@@ -320,6 +320,8 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             commit_metadata: true,
             repo_artifacts: false,
             scan_nested_repos: true,
+            since_commit: None,
+            branch: None,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
