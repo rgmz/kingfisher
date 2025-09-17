@@ -27,7 +27,7 @@ static GLOBAL: System = System;
 // static GLOBAL: System = System;
 
 use std::{
-    io::Read,
+    io::{IsTerminal, Read},
     sync::{Arc, Mutex},
 };
 
@@ -122,7 +122,7 @@ fn setup_logging(global_args: &GlobalArgs) {
     let fmt_layer = fmt::layer()
         .with_writer(std::io::stderr) // Write logs to stderr
         .with_target(true) // Enable target filtering
-        .with_ansi(false) // Disable colors
+        .with_ansi(std::io::stderr().is_terminal()) // Emit ANSI colours when stderr is a TTY
         .without_time(); // Remove timestamps
                          // Build and initialize the registry
     registry()

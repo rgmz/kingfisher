@@ -1,6 +1,8 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [Unreleased]
+- Enabled ANSI formatting in the tracing formatter whenever stderr is attached to a terminal so colorized updater messages render correctly instead of showing escape sequences. 
 
 ## [1.51.0]
 - Added diff-only Git scanning via `--since-commit` and `--branch`, including remote-aware ref resolution so CI jobs can pair `--git-url` clones with pull request branches
