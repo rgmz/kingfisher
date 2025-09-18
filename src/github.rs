@@ -18,7 +18,7 @@ use serde_json::Value;
 use tracing::warn;
 use url::Url;
 
-use crate::{findings_store, git_url::GitUrl};
+use crate::{findings_store, git_url::GitUrl, validation::GLOBAL_USER_AGENT};
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -356,7 +356,7 @@ pub async fn fetch_repo_items(
         let url = format!(
             "https://api.github.com/repos/{owner}/{repo}/issues?state=all&per_page=100&page={page}"
         );
-        let mut req = client.get(&url).header("User-Agent", "kingfisher");
+        let mut req = client.get(&url).header("User-Agent", GLOBAL_USER_AGENT.as_str());
         if let Ok(token) = env::var("KF_GITHUB_TOKEN") {
             if !token.is_empty() {
                 req = req.bearer_auth(token);
@@ -396,7 +396,7 @@ pub async fn fetch_repo_items(
     page = 1;
     loop {
         let url = format!("https://api.github.com/users/{owner}/gists?per_page=100&page={page}");
-        let mut req = client.get(&url).header("User-Agent", "kingfisher");
+        let mut req = client.get(&url).header("User-Agent", GLOBAL_USER_AGENT.as_str());
         if let Ok(token) = env::var("KF_GITHUB_TOKEN") {
             if !token.is_empty() {
                 req = req.bearer_auth(&token);
@@ -415,7 +415,7 @@ pub async fn fetch_repo_items(
                 if seen.insert(id.to_string()) {
                     let mut req_g = client
                         .get(&format!("https://api.github.com/gists/{id}"))
-                        .header("User-Agent", "kingfisher");
+                        .header("User-Agent", GLOBAL_USER_AGENT.as_str());
                     if let Ok(token) = env::var("KF_GITHUB_TOKEN") {
                         if !token.is_empty() {
                             req_g = req_g.bearer_auth(&token);
@@ -449,7 +449,7 @@ pub async fn fetch_repo_items(
                 let url = format!("https://api.github.com/gists?per_page=100&page={page}");
                 let resp = client
                     .get(&url)
-                    .header("User-Agent", "kingfisher")
+                    .header("User-Agent", GLOBAL_USER_AGENT.as_str())
                     .bearer_auth(&token)
                     .send()
                     .await?;
@@ -468,7 +468,7 @@ pub async fn fetch_repo_items(
                             if seen.insert(id.to_string()) {
                                 let detail: Value = client
                                     .get(&format!("https://api.github.com/gists/{id}"))
-                                    .header("User-Agent", "kingfisher")
+                                    .header("User-Agent", GLOBAL_USER_AGENT.as_str())
                                     .bearer_auth(&token)
                                     .send()
                                     .await?

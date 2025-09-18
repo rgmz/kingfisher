@@ -41,6 +41,15 @@ impl CommandLineArgs {
             args.global_args.progress = Mode::Never;
         }
 
+        if let Some(suffix) = args.global_args.user_agent_suffix.as_mut() {
+            let trimmed = suffix.trim();
+            if trimmed.is_empty() {
+                args.global_args.user_agent_suffix = None;
+            } else if trimmed.len() != suffix.len() {
+                *suffix = trimmed.to_string();
+            }
+        }
+
         args
     }
 }
@@ -112,6 +121,10 @@ pub struct GlobalArgs {
     #[arg(global = true, long = "no-update-check", default_value_t = false)]
     pub no_update_check: bool,
 
+    /// Append a custom suffix to the default Kingfisher user-agent string
+    #[arg(global = true, long = "user-agent-suffix", value_name = "SUFFIX")]
+    pub user_agent_suffix: Option<String>,
+
     #[command(flatten)]
     pub advanced: AdvancedArgs,
 
@@ -131,6 +144,7 @@ impl Default for GlobalArgs {
             ignore_certs: false,
             self_update: false,
             no_update_check: false,
+            user_agent_suffix: None,
             advanced: AdvancedArgs { rlimit_nofile: 16384 },
             color: Mode::Auto,
             progress: Mode::Auto,

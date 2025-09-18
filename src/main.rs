@@ -56,6 +56,7 @@ use kingfisher::{
     rules_database::RulesDatabase,
     scanner::{load_and_record_rules, run_scan},
     update::check_for_update,
+    validation::set_user_agent_suffix,
 };
 use serde_json::json;
 use tempfile::TempDir;
@@ -74,6 +75,8 @@ fn main() -> anyhow::Result<()> {
     color_backtrace::install();
     // Parse command-line arguments
     let args = CommandLineArgs::parse_args();
+
+    set_user_agent_suffix(args.global_args.user_agent_suffix.clone());
 
     // Determine the number of jobs, defaulting to the number of CPUs
     let num_jobs = match args.command {

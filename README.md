@@ -87,6 +87,7 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
   - [To scan using **only** your own `my_rules.yaml` you could run:](#to-scan-using-only-your-own-my_rulesyaml-you-could-run)
   - [To add your rules alongside the built‑ins:](#to-add-your-rules-alongside-the-builtins)
   - [Other Examples](#other-examples)
+  - [Customize the HTTP User-Agent](#customize-the-http-user-agent)
   - [Notable Scan Options](#notable-scan-options)
   - [Understanding `--confidence`](#understanding---confidence)
     - [Ignore known false positives](#ignore-known-false-positives)
@@ -731,6 +732,23 @@ kingfisher github repos list --organization my-org
 kingfisher github repos list --organization my-org --github-exclude my-org/*-archive
 
 ```
+
+## Customize the HTTP User-Agent
+
+Kingfisher identifies its HTTP requests with a user-agent that includes the binary name and version followed by a browser-style
+string. Some environments require extra context, such as a contact address, a change-ticket number, or a temporary test label.
+Use the global `--user-agent-suffix` flag to append this information between the Kingfisher identifier and the browser portion:
+
+```bash
+# Attach a contact email to all outbound validation requests
+kingfisher --user-agent-suffix "contact=security@example.com" scan path/
+
+# Label a one-off experiment
+kingfisher --user-agent-suffix "Sept 2025 testing" github repos list --user my-user
+```
+
+When omitted, Kingfisher defaults to `kingfisher/<version> Mozilla/5.0 ...`. The suffix is trimmed; passing an empty string
+leaves the default unchanged.
 
 ## Notable Scan Options
 

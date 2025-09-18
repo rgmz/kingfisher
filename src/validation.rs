@@ -37,16 +37,38 @@ mod utils;
 const VALIDATION_CACHE_SECONDS: u64 = 1200; // 20 minutes
 const MAX_VALIDATION_BODY_LEN: usize = 2048;
 
-pub static GLOBAL_USER_AGENT: Lazy<String> = Lazy::new(|| {
-    format!(
-        "{}/{} {}",
-        env!("CARGO_PKG_NAME"),
-        env!("CARGO_PKG_VERSION"),
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+static USER_AGENT_SUFFIX: OnceCell<String> = OnceCell::new();
+
+const BROWSER_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
          AppleWebKit/537.36 (KHTML, like Gecko) \
-         Chrome/140.0.0.0 Safari/537.36"
-    )
-});
+         Chrome/140.0.0.0 Safari/537.36";
+
+fn build_user_agent() -> String {
+    let base = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    if let Some(suffix) = USER_AGENT_SUFFIX.get() {
+        format!("{base} {suffix} {BROWSER_USER_AGENT}")
+    } else {
+        format!("{base} {BROWSER_USER_AGENT}")
+    }
+}
+
+pub static GLOBAL_USER_AGENT: Lazy<String> = Lazy::new(build_user_agent);
+
+/// Configure a user-agent suffix that is appended after the Kingfisher package name/version.
+///
+/// The suffix is inserted before the browser portion of the user-agent. Empty or whitespace-only
+/// values are ignored. This should be called once near program start prior to accessing
+/// [`GLOBAL_USER_AGENT`].
+pub fn set_user_agent_suffix<S: Into<String>>(suffix: Option<S>) {
+    if let Some(suffix) = suffix {
+        let trimmed = suffix.into().trim().to_string();
+        if trimmed.is_empty() {
+            return;
+        }
+
+        let _ = USER_AGENT_SUFFIX.set(trimmed);
+    }
+}
 
 // Use SkipMap-based cache instead of a mutex-wrapped FxHashMap.
 type Cache = Arc<SkipMap<String, CachedResponse>>;

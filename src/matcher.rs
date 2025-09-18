@@ -771,14 +771,10 @@ impl SerializableCaptures {
 // -------------------------------------------------------------------------------------------------
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct Match {
-    /// The blob this match comes from
-    // pub blob_id: BlobId,
-
     /// The location of the entire matching content
     pub location: Location,
 
     /// The capture groups
-    // pub groups: Groups,
     pub groups: SerializableCaptures, // Store serialized captures
 
     /// unique identifier of file / blob where this match was found
