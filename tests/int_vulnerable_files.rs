@@ -16,7 +16,7 @@ use kingfisher::{
             rules::RuleSpecifierArgs,
             scan::{ConfidenceLevel, ScanArgs},
         },
-        global::{AdvancedArgs, Mode},
+        global::Mode,
         GlobalArgs,
     },
     findings_store::FindingsStore,
@@ -209,7 +209,7 @@ impl TestContext {
             self_update: false,
             progress: Mode::Never,
             ignore_certs: false,
-            advanced: AdvancedArgs { rlimit_nofile: 16384 },
+            user_agent_suffix: None,
         };
 
         let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));

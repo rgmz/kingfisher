@@ -88,15 +88,6 @@ pub static RAM_GB: Lazy<Option<f64>> = Lazy::new(|| {
     }
 });
 
-/// Advanced global options unlikely to be used in normal scenarios.
-#[derive(Args, Debug, Clone)]
-#[command(next_help_heading = "Advanced Global Options")]
-pub struct AdvancedArgs {
-    /// Set the rlimit for the number of open files
-    #[arg(long, default_value_t = 16384, value_name = "LIMIT")]
-    pub rlimit_nofile: u64,
-}
-
 /// Top-level global CLI arguments
 #[derive(Args, Debug, Clone)]
 #[command(next_help_heading = "Global Options")]
@@ -125,9 +116,6 @@ pub struct GlobalArgs {
     #[arg(global = true, long = "user-agent-suffix", value_name = "SUFFIX")]
     pub user_agent_suffix: Option<String>,
 
-    #[command(flatten)]
-    pub advanced: AdvancedArgs,
-
     // Internal fields (not CLI arguments)
     #[clap(skip)]
     pub color: Mode,
@@ -145,7 +133,6 @@ impl Default for GlobalArgs {
             self_update: false,
             no_update_check: false,
             user_agent_suffix: None,
-            advanced: AdvancedArgs { rlimit_nofile: 16384 },
             color: Mode::Auto,
             progress: Mode::Auto,
         }

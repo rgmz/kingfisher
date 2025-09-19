@@ -14,7 +14,7 @@ use kingfisher::{
             rules::RuleSpecifierArgs,
             scan::{ConfidenceLevel, ScanArgs},
         },
-        global::{AdvancedArgs, Mode},
+        global::Mode,
         GlobalArgs,
     },
     findings_store::FindingsStore,
@@ -120,7 +120,7 @@ fn run_skiplist(skip_regex: Vec<String>, skip_skipword: Vec<String>) -> Result<u
         no_update_check: true,
         self_update: false,
         ignore_certs: false,
-        advanced: AdvancedArgs { rlimit_nofile: 8192 },
+        user_agent_suffix: None,
     };
 
     let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;

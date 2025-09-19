@@ -18,7 +18,7 @@ use kingfisher::{
             rules::RuleSpecifierArgs,
             scan::{ConfidenceLevel, ScanArgs},
         },
-        global::{AdvancedArgs, Mode},
+        global::Mode,
         GlobalArgs,
     },
     findings_store::FindingsStore,
@@ -197,7 +197,7 @@ async fn test_validation_cache_and_depvars() -> Result<()> {
         no_update_check: false,
         self_update: false,
         ignore_certs: false,
-        advanced: AdvancedArgs { rlimit_nofile: 8192 },
+        user_agent_suffix: None,
     };
 
     run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db).await?;

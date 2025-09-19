@@ -18,7 +18,7 @@ use kingfisher::{
             rules::RuleSpecifierArgs,
             scan::{ConfidenceLevel, ScanArgs},
         },
-        global::{AdvancedArgs, Mode},
+        global::Mode,
         GlobalArgs,
     },
     findings_store::FindingsStore,
@@ -136,7 +136,7 @@ rules:
         no_update_check: false,
         self_update: false,
         ignore_certs: false,
-        advanced: AdvancedArgs { rlimit_nofile: 8192 },
+        user_agent_suffix: None,
     };
 
     // ── load rules once ─────────────────────────────────────────────

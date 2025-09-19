@@ -1,8 +1,10 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-## [Unreleased]
+## [v1.52.0]
 - Enabled ANSI formatting in the tracing formatter whenever stderr is attached to a terminal so colorized updater messages render correctly instead of showing escape sequences. 
+- Added a new CLI flag, `--user-agent-suffix` to allow developers to append additional information to the user-agent
+- Removed the unused --rlimit-nofile flag
 
 ## [1.51.0]
 - Added diff-only Git scanning via `--since-commit` and `--branch`, including remote-aware ref resolution so CI jobs can pair `--git-url` clones with pull request branches

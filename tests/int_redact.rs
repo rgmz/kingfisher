@@ -15,7 +15,7 @@ use kingfisher::{
             rules::RuleSpecifierArgs,
             scan::{ConfidenceLevel, ScanArgs},
         },
-        global::{AdvancedArgs, GlobalArgs, Mode},
+        global::{GlobalArgs, Mode},
     },
     findings_store::FindingsStore,
     rule_loader::RuleLoader,
@@ -103,7 +103,7 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
         self_update: false,
         progress: Mode::Never,
         ignore_certs: false,
-        advanced: AdvancedArgs { rlimit_nofile: 16384 },
+        user_agent_suffix: None,
     };
 
     let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;

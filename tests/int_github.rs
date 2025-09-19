@@ -15,7 +15,7 @@ use kingfisher::{
             rules::RuleSpecifierArgs,
             scan::{ConfidenceLevel, ScanArgs},
         },
-        global::{AdvancedArgs, Mode},
+        global::Mode,
         GlobalArgs,
     },
     findings_store::FindingsStore,
@@ -123,7 +123,7 @@ fn test_github_remote_scan() -> Result<()> {
         no_update_check: false,
         self_update: false,
         ignore_certs: false,
-        advanced: AdvancedArgs { rlimit_nofile: 16384 },
+        user_agent_suffix: None,
     };
     // Create in-memory datastore
     let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
