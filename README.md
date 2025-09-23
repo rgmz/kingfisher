@@ -975,7 +975,7 @@ Since that initial fork, it has diverged heavily from Nosey Parker:
 - Collapsed the workflow into a single scan-and-report phase with direct JSON/BSON/SARIF outputs  
 - Added Tree-Sitter parsing on top of Hyperscan for deeper language-aware detection  
 - Removed datastore-driven reporting/annotations in favor of live validation, baselines, allowlists, and compressed-file extraction  
-- Expanded support for new targets (GitLab, Jira, Confluence, Slack, S3, Docker, etc.)  
+- Expanded support for new targets (GitLab, BitBucket, Gitea, Jira, Confluence, Slack, S3, Docker, etc.)  
 - Delivered cross-platform builds, including native Windows  
 
 
