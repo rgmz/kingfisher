@@ -11,17 +11,23 @@ Kingfisher is a blazingly fast secret‑scanning and live validation tool built 
 Originally forked from Praetorian’s Nosey Parker, Kingfisher **adds** live cloud-API validation; many more targets (GitLab, BitBucket, Gitea, S3, Docker, Jira, Confluence, Slack); compressed-file extraction and scanning; baseline and allowlist controls; language-aware detection (~20 languages); and a native Windows binary. See [Origins and Divergence](#origins-and-divergence) for details.
 
 ## Key Features
+- **Multiple Scan Targets**: <p align="left">
+  <img alt="Files"      src="https://img.shields.io/badge/Files%20and%20Dirs-000?logo=files&logoColor=white" />
+  <img alt="Local Git"  src="https://img.shields.io/badge/Local%20Git%20Repos-000?logo=git&logoColor=white" />
+  <img alt="GitHub"     src="https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white" />
+  <img alt="GitLab"     src="https://img.shields.io/badge/GitLab-FC6D26?logo=gitlab&logoColor=white" />
+  <img alt="Bitbucket"  src="https://img.shields.io/badge/Bitbucket-0052CC?logo=bitbucket&logoColor=white" />
+  <img alt="Gitea"      src="https://img.shields.io/badge/Gitea-609926?logo=gitea&logoColor=white" />
+  <img alt="Docker"     src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" />
+  <img alt="Jira"       src="https://img.shields.io/badge/Jira-0052CC?logo=jirasoftware&logoColor=white" />
+  <img alt="Confluence" src="https://img.shields.io/badge/Confluence-172B4D?logo=confluence&logoColor=white" />
+  <img alt="Slack"      src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white" />
+  <img alt="AWS S3"     src="https://img.shields.io/badge/AWS%20S3-232F3E?logo=amazonaws&logoColor=white" />
+</p>
+
 - **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
 - **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
   - **Broad AI SaaS coverage**: finds and validates tokens for OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), Ollama, Langchain, Perplexity, Weights & Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, Together.ai, Zhipu, and many more
-- **Multiple targets**:
-  - **Git history**: local repos or GitHub/GitLab/Gitea/Bitbucket orgs, users, and workspaces
-  - **Repository artifacts**: with `--repo-artifacts`, scan GitHub/GitLab/Bitbucket repository artifacts such as issues, pull/merge requests, wikis, snippets, and owner gists in addition to code (Gitea wikis are also cloned when available)
-  - **Docker images**: public or private via `--docker-image`
-  - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`
-  - **Confluence pages**: CQL‑driven scans with `--confluence-url` and `--cql`
-  - **Slack messages**: query‑based scans with `--slack-query`
-  - **AWS S3**: bucket scans via `--s3-bucket`/`--s3-prefix` with credentials from `KF_AWS_KEY`/`KF_AWS_SECRET`, `--role-arn`, `--aws-local-profile`, or anonymous
 - **Compressed Files**: Supports extracting and scanning compressed files for secrets
 - Decode Base64 blobs and scan their contents for secrets while skipping short strings for performance. This has a small performance impact and can be disabled with `--no-base64`
 - **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))
