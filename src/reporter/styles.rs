@@ -1,5 +1,3 @@
-use std::io::IsTerminal;
-
 pub use console::{Style, StyledObject, Term};
 
 #[allow(dead_code)]
