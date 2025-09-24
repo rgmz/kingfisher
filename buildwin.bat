@@ -20,6 +20,7 @@ if "%VCINSTALLDIR%"=="" (
     echo VCINSTALLDIR not set - attempting auto-detection…
     for %%P in (
         "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC"
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\VC"
         "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC"
         "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
         "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC"
