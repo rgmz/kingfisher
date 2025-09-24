@@ -7,8 +7,8 @@ use sysinfo::{MemoryRefreshKind, RefreshKind, System};
 use tracing::Level;
 
 use crate::cli::commands::{
-    bitbucket::BitbucketArgs, github::GitHubArgs, gitlab::GitLabArgs, rules::RulesArgs,
-    scan::ScanArgs,
+    bitbucket::BitbucketArgs, gitea::GiteaArgs, github::GitHubArgs, gitlab::GitLabArgs,
+    rules::RulesArgs, scan::ScanArgs,
 };
 
 #[deny(missing_docs)]
@@ -68,6 +68,10 @@ pub enum Command {
     /// Interact with the GitLab API
     #[command(name = "gitlab")]
     GitLab(GitLabArgs),
+
+    /// Interact with the Gitea API
+    #[command(name = "gitea")]
+    Gitea(GiteaArgs),
 
     /// Interact with the Bitbucket API
     #[command(name = "bitbucket")]

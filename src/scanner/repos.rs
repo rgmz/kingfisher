@@ -20,7 +20,7 @@ use crate::{
     confluence, findings_store,
     git_binary::{CloneMode, Git},
     git_url::GitUrl,
-    github, gitlab, jira,
+    gitea, github, gitlab, jira,
     matcher::{Match, Matcher, MatcherStats},
     origin::{Origin, OriginSet},
     rules_database::RulesDatabase,
@@ -235,6 +235,68 @@ pub async fn enumerate_gitlab_repos(
 
         progress.finish_with_message(format!(
             "Found {} repositories from GitLab",
+            HumanCount(num_found)
+        ));
+    }
+    repo_urls.sort();
+    repo_urls.dedup();
+    Ok(repo_urls)
+}
+
+pub async fn enumerate_gitea_repos(
+    args: &scan::ScanArgs,
+    global_args: &global::GlobalArgs,
+) -> Result<Vec<GitUrl>> {
+    let repo_specifiers = gitea::RepoSpecifiers {
+        user: args.input_specifier_args.gitea_user.clone(),
+        organization: args.input_specifier_args.gitea_organization.clone(),
+        all_organizations: args.input_specifier_args.all_gitea_organizations,
+        repo_filter: args.input_specifier_args.gitea_repo_type.into(),
+        exclude_repos: args.input_specifier_args.gitea_exclude.clone(),
+    };
+
+    let mut repo_urls = args.input_specifier_args.git_url.clone();
+    if !repo_specifiers.is_empty() {
+        let mut progress = if global_args.use_progress() {
+            let style =
+                ProgressStyle::with_template("{spinner} {msg} {human_len} [{elapsed_precise}]")
+                    .expect("progress bar style template should compile");
+            let pb = ProgressBar::new_spinner()
+                .with_style(style)
+                .with_message("Enumerating Gitea repositories...");
+            pb.enable_steady_tick(Duration::from_millis(500));
+            pb
+        } else {
+            ProgressBar::hidden()
+        };
+
+        let mut num_found: u64 = 0;
+        let api_url = args.input_specifier_args.gitea_api_url.clone();
+        let repo_strings = gitea::enumerate_repo_urls(
+            &repo_specifiers,
+            api_url,
+            global_args.ignore_certs,
+            Some(&mut progress),
+        )
+        .await
+        .context("Failed to enumerate Gitea repositories")?;
+
+        for repo_string in repo_strings {
+            match GitUrl::from_str(&repo_string) {
+                Ok(repo_url) => {
+                    repo_urls.push(repo_url);
+                    num_found += 1;
+                }
+                Err(e) => {
+                    progress.suspend(|| {
+                        error!("Failed to parse repo URL from {repo_string}: {e}");
+                    });
+                }
+            }
+        }
+
+        progress.finish_with_message(format!(
+            "Found {} repositories from Gitea",
             HumanCount(num_found)
         ));
     }

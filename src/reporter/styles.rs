@@ -1,5 +1,3 @@
-use std::io::IsTerminal;
-
 pub use console::{Style, StyledObject, Term};
 
 #[allow(dead_code)]
@@ -11,16 +9,14 @@ pub struct Styles {
     pub style_active_creds: Style,
     pub style_match: Style,
     pub style_metadata: Style,
-    is_term: bool,
 }
 impl Styles {
     pub fn new(use_color: bool) -> Self {
-        let stdout_is_tty = std::io::stdout().is_terminal();
-        let is_term = Term::stdout().is_term();
+        // Trust the `use_color` decision from the caller.
+        let styles_enabled = use_color;
 
-        // Enable color only when explicitly requested and stdout is a terminal.
-        let styles_enabled = use_color && stdout_is_tty && is_term;
         let style_finding_heading = Style::new().bright().white().force_styling(styles_enabled);
+
         let style_finding_active_heading =
             Style::new().bold().bright().cyan().force_styling(styles_enabled);
         let style_rule = Style::new().bright().bold().blue().force_styling(styles_enabled);
@@ -36,14 +32,6 @@ impl Styles {
             style_match,
             style_metadata,
             style_active_creds,
-            is_term,
         }
     }
-    // pub fn apply<T: AsRef<str>>(&self, text: T, style: &Style) -> String {
-    //     if self.is_term {
-    //         style.apply_to(text.as_ref()).to_string()
-    //     } else {
-    //         text.as_ref().to_string()
-    //     }
-    // }
 }

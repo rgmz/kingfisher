@@ -40,6 +40,7 @@ mod tests {
     use crate::{
         blob::BlobId,
         cli::commands::bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
+        cli::commands::gitea::GiteaRepoType,
         cli::commands::github::GitHubRepoType,
         cli::commands::inputs::ContentFilteringArgs,
         cli::commands::inputs::InputSpecifierArgs,
@@ -90,6 +91,15 @@ mod tests {
                 gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
                 gitlab_repo_type: GitLabRepoType::All,
                 gitlab_include_subgroups: false,
+
+                // Gitea
+                gitea_user: Vec::new(),
+                gitea_organization: Vec::new(),
+                gitea_exclude: Vec::new(),
+                all_gitea_organizations: false,
+                gitea_api_url: Url::parse("https://gitea.com/api/v1/").unwrap(),
+                gitea_repo_type: GiteaRepoType::Source,
+
                 // Bitbucket
                 bitbucket_user: Vec::new(),
                 bitbucket_workspace: Vec::new(),

@@ -431,28 +431,17 @@ impl DetailsReporter {
         let file_path = rm
             .origin
             .iter()
-            .find_map(|origin| match origin {
-                Origin::File(e) => {
-                    if let Some(url) = self.repo_artifact_url(&e.path) {
-                        Some(url)
-                    } else if let Some(url) = self.jira_issue_url(&e.path, args) {
-                        Some(url)
-                    } else if let Some(url) = self.confluence_page_url(&e.path) {
-                        Some(url)
-                    } else if let Some(url) = self.slack_message_url(&e.path) {
-                        Some(url)
-                    } else if let Some(mapped) = self.s3_display_path(&e.path) {
-                        Some(mapped)
-                    } else if let Some(mapped) = self.docker_display_path(&e.path) {
-                        Some(mapped)
-                    } else {
-                        Some(e.path.display().to_string())
-                    }
-                }
-                Origin::Extended(e) => e.path().map(|p| p.display().to_string()),
-                _ => None,
+            .find_map(|origin| self.origin_display_path(origin, args))
+            .or_else(|| {
+                rm.origin.iter().find_map(|origin| {
+                    origin
+                        .blob_path()
+                        .map(|p| p.display().to_string())
+                        .and_then(Self::non_empty_string)
+                })
             })
-            .unwrap_or_default();
+            .or_else(|| self.git_object_fallback_path(rm))
+            .unwrap_or_else(|| format!("blob:{}", rm.blob_metadata.id.hex()));
 
         FindingReporterRecord {
             rule: RuleMetadata {
@@ -477,6 +466,58 @@ impl DetailsReporter {
                 encoding: if rm.m.is_base64 { Some("base64".to_string()) } else { None },
                 git_metadata: git_metadata_val,
             },
+        }
+    }
+
+    fn origin_display_path(
+        &self,
+        origin: &Origin,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Option<String> {
+        match origin {
+            Origin::File(e) => self
+                .repo_artifact_url(&e.path)
+                .and_then(Self::non_empty_string)
+                .or_else(|| self.jira_issue_url(&e.path, args).and_then(Self::non_empty_string))
+                .or_else(|| self.confluence_page_url(&e.path).and_then(Self::non_empty_string))
+                .or_else(|| self.slack_message_url(&e.path).and_then(Self::non_empty_string))
+                .or_else(|| self.s3_display_path(&e.path).and_then(Self::non_empty_string))
+                .or_else(|| self.docker_display_path(&e.path).and_then(Self::non_empty_string))
+                .or_else(|| Self::non_empty_string(e.path.display().to_string())),
+            Origin::GitRepo(e) => {
+                e.first_commit.as_ref().and_then(|c| Self::non_empty_string(c.blob_path.clone()))
+            }
+            Origin::Extended(e) => {
+                e.path().map(|p| p.display().to_string()).and_then(Self::non_empty_string)
+            }
+        }
+    }
+
+    fn git_object_fallback_path(&self, rm: &ReportMatch) -> Option<String> {
+        let blob_hex = rm.blob_metadata.id.hex();
+        rm.origin.iter().find_map(|origin| {
+            if let Origin::GitRepo(repo_origin) = origin {
+                let (prefix, suffix) = blob_hex.split_at(2);
+                let repo_path = repo_origin.repo_path.as_ref();
+                let git_dir_objects = repo_path.join(".git").join("objects");
+                let objects_dir = if git_dir_objects.is_dir() {
+                    git_dir_objects
+                } else {
+                    repo_path.join("objects")
+                };
+                let fallback_path = objects_dir.join(prefix).join(suffix);
+                Self::non_empty_string(fallback_path.display().to_string())
+            } else {
+                None
+            }
+        })
+    }
+
+    fn non_empty_string(value: String) -> Option<String> {
+        if value.trim().is_empty() {
+            None
+        } else {
+            Some(value)
         }
     }
 
@@ -615,6 +656,194 @@ pub struct FindingRecordData {
     pub encoding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub git_metadata: Option<serde_json::Value>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        blob::{BlobId, BlobMetadata},
+        cli::commands::inputs::{ContentFilteringArgs, InputSpecifierArgs},
+        cli::commands::output::OutputArgs,
+        cli::commands::scan::{ConfidenceLevel, ScanArgs},
+        cli::commands::{
+            bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
+            gitea::GiteaRepoType,
+            github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
+            gitlab::GitLabRepoType,
+            rules::RuleSpecifierArgs,
+        },
+        git_commit_metadata::CommitMetadata,
+        location::{Location, OffsetSpan, SourcePoint, SourceSpan},
+        matcher::{SerializableCapture, SerializableCaptures},
+        origin::OriginSet,
+        rules::rule::{Confidence, Rule, RuleSyntax},
+    };
+    use gix::{date::Time, ObjectId};
+    use smallvec::SmallVec;
+    use std::path::PathBuf;
+    use tempfile::tempdir;
+
+    #[test]
+    fn build_finding_record_uses_git_blob_path() {
+        let temp = tempdir().unwrap();
+        let datastore =
+            Arc::new(Mutex::new(findings_store::FindingsStore::new(temp.path().to_path_buf())));
+        let reporter = DetailsReporter { datastore, styles: Styles::new(false), only_valid: false };
+
+        let repo_path = Arc::new(PathBuf::from("/tmp/repo"));
+        let commit_metadata = Arc::new(CommitMetadata {
+            commit_id: ObjectId::from_hex(b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
+            committer_name: "Alice".into(),
+            committer_email: "alice@example.com".into(),
+            committer_timestamp: Time::new(0, 0),
+        });
+        let blob_path = "path/in/history.txt".to_string();
+        let origin = OriginSet::new(
+            Origin::from_git_repo_with_first_commit(repo_path, commit_metadata, blob_path.clone()),
+            vec![],
+        );
+
+        let rule = Arc::new(Rule::new(RuleSyntax {
+            name: "Test Rule".into(),
+            id: "test.rule".into(),
+            pattern: ".*".into(),
+            min_entropy: 0.0,
+            confidence: Confidence::Medium,
+            visible: true,
+            examples: vec![],
+            negative_examples: vec![],
+            references: vec![],
+            validation: None,
+            depends_on_rule: vec![],
+        }));
+
+        let blob_id = BlobId::new(b"blob-data");
+        let report_match = ReportMatch {
+            origin,
+            blob_metadata: BlobMetadata {
+                id: blob_id,
+                num_bytes: 42,
+                mime_essence: None,
+                language: Some("Unknown".into()),
+            },
+            m: Match {
+                location: Location {
+                    offset_span: OffsetSpan { start: 0, end: 10 },
+                    source_span: SourceSpan {
+                        start: SourcePoint { line: 19, column: 0 },
+                        end: SourcePoint { line: 19, column: 10 },
+                    },
+                },
+                groups: SerializableCaptures {
+                    captures: SmallVec::<[SerializableCapture; 2]>::new(),
+                },
+                blob_id,
+                finding_fingerprint: 123,
+                rule: Arc::clone(&rule),
+                validation_response_body: "Bad credentials".into(),
+                validation_response_status: 401,
+                validation_success: false,
+                calculated_entropy: 5.29,
+                visible: true,
+                is_base64: false,
+            },
+            comment: None,
+            match_confidence: Confidence::Medium,
+            visible: true,
+            validation_response_body: "Bad credentials".into(),
+            validation_response_status: 401,
+            validation_success: false,
+        };
+
+        let scan_args = ScanArgs {
+            num_jobs: 1,
+            rules: RuleSpecifierArgs::default(),
+            input_specifier_args: InputSpecifierArgs {
+                path_inputs: Vec::new(),
+                git_url: Vec::new(),
+                github_user: Vec::new(),
+                github_organization: Vec::new(),
+                github_exclude: Vec::new(),
+                all_github_organizations: false,
+                github_api_url: Url::parse("https://api.github.com/").unwrap(),
+                github_repo_type: GitHubRepoType::Source,
+                gitlab_user: Vec::new(),
+                gitlab_group: Vec::new(),
+                gitlab_exclude: Vec::new(),
+                all_gitlab_groups: false,
+                gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
+                gitlab_repo_type: GitLabRepoType::All,
+                gitlab_include_subgroups: false,
+                gitea_user: Vec::new(),
+                gitea_organization: Vec::new(),
+                gitea_exclude: Vec::new(),
+                all_gitea_organizations: false,
+                gitea_api_url: Url::parse("https://gitea.com/api/v1/").unwrap(),
+                gitea_repo_type: GiteaRepoType::Source,
+                bitbucket_user: Vec::new(),
+                bitbucket_workspace: Vec::new(),
+                bitbucket_project: Vec::new(),
+                bitbucket_exclude: Vec::new(),
+                all_bitbucket_workspaces: false,
+                bitbucket_api_url: Url::parse("https://api.bitbucket.org/2.0/").unwrap(),
+                bitbucket_repo_type: BitbucketRepoType::Source,
+                bitbucket_auth: BitbucketAuthArgs::default(),
+                jira_url: None,
+                jql: None,
+                confluence_url: None,
+                cql: None,
+                slack_query: None,
+                slack_api_url: Url::parse("https://slack.com/api/").unwrap(),
+                max_results: 100,
+                s3_bucket: None,
+                s3_prefix: None,
+                role_arn: None,
+                aws_local_profile: None,
+                docker_image: Vec::new(),
+                git_clone: GitCloneMode::Bare,
+                git_history: GitHistoryMode::Full,
+                commit_metadata: true,
+                repo_artifacts: false,
+                scan_nested_repos: true,
+                since_commit: None,
+                branch: None,
+            },
+            content_filtering_args: ContentFilteringArgs {
+                max_file_size_mb: 256.0,
+                exclude: Vec::new(),
+                no_extract_archives: false,
+                extraction_depth: 2,
+                no_binary: false,
+            },
+            confidence: ConfidenceLevel::Medium,
+            no_validate: false,
+            only_valid: false,
+            min_entropy: None,
+            rule_stats: false,
+            no_dedup: false,
+            redact: false,
+            no_base64: false,
+            git_repo_timeout: 1_800,
+            output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
+            baseline_file: None,
+            manage_baseline: false,
+            skip_regex: Vec::new(),
+            skip_word: Vec::new(),
+        };
+
+        let record = reporter.build_finding_record(&report_match, &scan_args);
+        assert_eq!(record.finding.path, blob_path);
+        let git_file_path = record
+            .finding
+            .git_metadata
+            .as_ref()
+            .and_then(|git| git.get("file"))
+            .and_then(|file| file.get("path"))
+            .and_then(|path| path.as_str())
+            .unwrap();
+        assert_eq!(git_file_path, "path/in/history.txt");
+    }
 }
 
 impl From<finding_data::FindingDataEntry> for ReportMatch {

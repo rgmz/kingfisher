@@ -6,6 +6,7 @@ use url::Url;
 use crate::{
     cli::commands::{
         bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
+        gitea::GiteaRepoType,
         github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
         gitlab::GitLabRepoType,
     },
@@ -24,12 +25,15 @@ pub struct InputSpecifierArgs {
             "github_organization",
             "gitlab_user",
             "gitlab_group",
+            "gitea_user",
+            "gitea_organization",
             "bitbucket_user",
             "bitbucket_workspace",
             "bitbucket_project",
             "git_url",
             "all_github_organizations",
             "all_gitlab_groups",
+            "all_gitea_organizations",
             "all_bitbucket_workspaces",
             "jira_url",
             "confluence_url",
@@ -111,6 +115,35 @@ pub struct InputSpecifierArgs {
     /// Include projects from GitLab subgroups when scanning groups
     #[arg(long, alias = "include-subgroups")]
     pub gitlab_include_subgroups: bool,
+
+    // Gitea Options
+    /// Scan repositories belonging to the specified Gitea user
+    #[arg(long)]
+    pub gitea_user: Vec<String>,
+
+    /// Scan repositories belonging to the specified Gitea organization
+    #[arg(long, alias = "gitea-org")]
+    pub gitea_organization: Vec<String>,
+
+    /// Skip repositories when enumerating Gitea users or organizations (format: owner/repo)
+    #[arg(long = "gitea-exclude", alias = "gitea-exclude-repo", value_name = "OWNER/REPO")]
+    pub gitea_exclude: Vec<String>,
+
+    /// Scan repositories from all accessible Gitea organizations (requires KF_GITEA_TOKEN)
+    #[arg(long, alias = "all-gitea-orgs")]
+    pub all_gitea_organizations: bool,
+
+    /// Use the specified URL for Gitea API access (e.g. for self-hosted instances)
+    #[arg(
+        long,
+        alias="gitea-api-url",
+        default_value = "https://gitea.com/api/v1/",
+        value_hint = ValueHint::Url
+    )]
+    pub gitea_api_url: Url,
+
+    #[arg(long, default_value_t = GiteaRepoType::Source)]
+    pub gitea_repo_type: GiteaRepoType,
 
     // Bitbucket Options
     /// Scan repositories belonging to the specified Bitbucket users

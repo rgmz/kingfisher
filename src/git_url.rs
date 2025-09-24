@@ -64,7 +64,7 @@ impl TryFrom<Url> for GitUrl {
     type Error = &'static str;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
-        if url.scheme() != "https"
+        if (url.scheme() != "https" && url.scheme() != "http")
             || url.host().is_none()
             || !url.username().is_empty()
             || url.password().is_some()
@@ -102,11 +102,6 @@ mod test {
     #[test]
     fn bad_scheme_03() {
         assert!(GitUrl::from_str("ssh://example.com/repo.git").is_err());
-    }
-
-    #[test]
-    fn bad_scheme_04() {
-        assert!(GitUrl::from_str("http://example.com/repo.git").is_err());
     }
 
     #[test]

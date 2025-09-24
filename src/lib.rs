@@ -17,6 +17,7 @@ pub mod git_commit_metadata;
 pub mod git_metadata_graph;
 mod git_repo_enumerator;
 pub mod git_url;
+pub mod gitea;
 pub mod github;
 pub mod gitlab;
 pub mod jira;

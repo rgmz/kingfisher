@@ -8,22 +8,30 @@
 Kingfisher is a blazingly fast secret‑scanning and live validation tool built in Rust. It combines Intel’s hardware‑accelerated Hyperscan regex engine with language‑aware parsing via Tree‑Sitter, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
 </p>
 
-Originally forked from Praetorian’s Nosey Parker, Kingfisher adds live cloud-API validation; many more targets (GitLab, S3, Docker, Jira, Confluence, Slack); compressed-file extraction and scanning; baseline and allowlist controls; language-aware detection (~20 languages); and a native Windows binary. See [Origins and Divergence](#origins-and-divergence) for details.
+Originally forked from Praetorian’s Nosey Parker, Kingfisher **adds** live cloud-API validation; many more targets (GitLab, BitBucket, Gitea, S3, Docker, Jira, Confluence, Slack); compressed-file extraction and scanning; baseline and allowlist controls; language-aware detection (~20 languages); and a native Windows binary. See [Origins and Divergence](#origins-and-divergence) for details.
 
 ## Key Features
+- **Multiple Scan Targets**:
+  <p align="center">
+    <img alt="Files & Dirs" src="https://img.shields.io/badge/Files%20and%20Dirs-000?logoColor=white" />
+    <img alt="Local Git"    src="https://img.shields.io/badge/Local%20Git%20Repos-000?logo=git&logoColor=white" />
+    <img alt="GitHub"       src="https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white" />
+    <img alt="GitLab"       src="https://img.shields.io/badge/GitLab-FC6D26?logo=gitlab&logoColor=white" />
+    <img alt="Bitbucket"    src="https://img.shields.io/badge/Bitbucket-0052CC?logo=bitbucket&logoColor=white" />
+    <img alt="Gitea"        src="https://img.shields.io/badge/Gitea-609926?logo=gitea&logoColor=white" />
+    <br/>
+    <img alt="Docker"       src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" />
+    <img alt="Jira"         src="https://img.shields.io/badge/Jira-0052CC?logo=jirasoftware&logoColor=white" />
+    <img alt="Confluence"   src="https://img.shields.io/badge/Confluence-172B4D?logo=confluence&logoColor=white" />
+    <img alt="Slack"        src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white" />
+    <img alt="AWS S3"       src="https://img.shields.io/badge/AWS%20S3-232F3E?logo=amazonaws&logoColor=white" />
+  </p>
+
+
 - **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
 - **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
-  - **Broad AI SaaS coverage**: finds and validates tokens for OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), Ollama, Langchain, Perplexity, Weights & Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, Together.ai, Zhipu, and many more
-- **Multiple targets**:
-  - **Git history**: local repos or GitHub/GitLab/Bitbucket orgs, users, and workspaces
-  - **Repository artifacts**: with `--repo-artifacts`, scan GitHub/GitLab/Bitbucket repository artifacts such as issues, pull/merge requests, wikis, snippets, and owner gists in addition to code
-  - **Docker images**: public or private via `--docker-image`
-  - **Jira issues**: JQL‑driven scans with `--jira-url` and `--jql`
-  - **Confluence pages**: CQL‑driven scans with `--confluence-url` and `--cql`
-  - **Slack messages**: query‑based scans with `--slack-query`
-  - **AWS S3**: bucket scans via `--s3-bucket`/`--s3-prefix` with credentials from `KF_AWS_KEY`/`KF_AWS_SECRET`, `--role-arn`, `--aws-local-profile`, or anonymous
+- **Broad AI SaaS coverage**: finds and validates tokens for OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), Ollama, Langchain, Perplexity, Weights & Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, Together.ai, Zhipu, and many more
 - **Compressed Files**: Supports extracting and scanning compressed files for secrets
-- Decode Base64 blobs and scan their contents for secrets while skipping short strings for performance. This has a small performance impact and can be disabled with `--no-base64`
 - **Baseline management**: generate and track baselines to suppress known secrets ([docs/BASELINE.md](/docs/BASELINE.md))
 
 **Learn more:** [Introducing Kingfisher: Real‑Time Secret Detection and Validation](https://www.mongodb.com/blog/post/product-release-announcements/introducing-kingfisher-real-time-secret-detection-validation)
@@ -71,6 +79,12 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Skip specific GitLab projects during enumeration](#skip-specific-gitlab-projects-during-enumeration)
     - [Scan remote GitLab repository by URL](#scan-remote-gitlab-repository-by-url)
     - [List GitLab repositories](#list-gitlab-repositories)
+  - [Scanning Gitea](#scanning-gitea)
+    - [Scan Gitea organization (requires `KF_GITEA_TOKEN`)](#scan-gitea-organization-requires-kf_gitea_token)
+    - [Scan Gitea user](#scan-gitea-user)
+    - [Skip specific Gitea repositories during enumeration](#skip-specific-gitea-repositories-during-enumeration)
+    - [Scan remote Gitea repository by URL](#scan-remote-gitea-repository-by-url)
+    - [List Gitea repositories](#list-gitea-repositories)
   - [Scanning Bitbucket](#scanning-bitbucket)
     - [Scan Bitbucket workspace](#scan-bitbucket-workspace)
     - [Scan Bitbucket user](#scan-bitbucket-user)
@@ -560,6 +574,59 @@ kingfisher gitlab repos list --group my-group --include-subgroups
 kingfisher gitlab repos list --group my-group --gitlab-exclude my-group/**/legacy-*
 ```
 
+## Scanning Gitea
+
+### Scan Gitea organization (requires `KF_GITEA_TOKEN`)
+
+```bash
+kingfisher scan --gitea-organization my-org
+# self-hosted example
+KF_GITEA_TOKEN="gtoken" kingfisher scan --gitea-organization platform --gitea-api-url https://gitea.internal.example/api/v1/
+```
+
+### Scan Gitea user
+
+```bash
+kingfisher scan --gitea-user johndoe
+```
+
+### Skip specific Gitea repositories during enumeration
+
+Repeat `--gitea-exclude` for each repository you want to ignore when scanning users
+or organizations. Accepts `owner/repo` identifiers or gitignore-style glob patterns
+like `team/**/archive-*`.
+
+```bash
+kingfisher scan --gitea-organization my-org \
+  --gitea-exclude my-org/legacy-repo \
+  --gitea-exclude my-org/**/archive-*
+```
+
+### Scan remote Gitea repository by URL
+
+`--git-url` clones the repository and scans its history. Adding `--repo-artifacts`
+also clones the repository wiki if one exists. Private repositories and wikis
+require `KF_GITEA_TOKEN` (and `KF_GITEA_USERNAME` when cloning via HTTPS).
+
+```bash
+# Scan the repository only
+kingfisher scan --git-url https://gitea.com/org/repo.git
+
+# Include the repository wiki (if present)
+KF_GITEA_TOKEN="gtoken" KF_GITEA_USERNAME="org" \
+  kingfisher scan --git-url https://gitea.com/org/repo.git --repo-artifacts
+```
+
+### List Gitea repositories
+
+```bash
+kingfisher gitea repos list --gitea-organization my-org
+# enumerate every organization visible to the authenticated user
+KF_GITEA_TOKEN="gtoken" kingfisher gitea repos list --all-gitea-organizations
+# self-hosted example
+KF_GITEA_TOKEN="gtoken" kingfisher gitea repos list --user johndoe --gitea-api-url https://gitea.internal.example/api/v1/
+```
+
 ## Scanning Bitbucket
 
 ### Scan Bitbucket workspace
@@ -700,6 +767,8 @@ KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
 | ----------------- | ---------------------------- |
 | `KF_GITHUB_TOKEN` | GitHub Personal Access Token |
 | `KF_GITLAB_TOKEN` | GitLab Personal Access Token |
+| `KF_GITEA_TOKEN` | Gitea Personal Access Token |
+| `KF_GITEA_USERNAME` | Username for private Gitea clones (used with `KF_GITEA_TOKEN`) |
 | `KF_BITBUCKET_USERNAME` | Bitbucket username for basic authentication |
 | `KF_BITBUCKET_APP_PASSWORD` / `KF_BITBUCKET_TOKEN` | Bitbucket app password or server token |
 | `KF_BITBUCKET_OAUTH_TOKEN` | Bitbucket OAuth or PAT token |
@@ -838,6 +907,7 @@ leaves the default unchanged.
 ## Notable Scan Options
 
 - `--no-dedup`: Report every occurrence of a finding (disable the default de-duplicate behavior)
+- `--no-base64`: By default, Kingfisher finds and decodes base64 blobs and scans them for secrets. This adds a slight performance overhead; use this flag to disable
 - `--confidence <LEVEL>`: (low|medium|high)
 - `--min-entropy <VAL>`: Override default threshold
 - `--no-binary`: Skip binary files
@@ -849,7 +919,6 @@ leaves the default unchanged.
 - `--manage-baseline`: Create or update the baseline file with current findings
 - `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
 - `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
-
 ## Understanding `--confidence`
 
 The `--confidence` flag sets a minimum confidence threshold, not an exact match.
@@ -906,7 +975,7 @@ Since that initial fork, it has diverged heavily from Nosey Parker:
 - Collapsed the workflow into a single scan-and-report phase with direct JSON/BSON/SARIF outputs  
 - Added Tree-Sitter parsing on top of Hyperscan for deeper language-aware detection  
 - Removed datastore-driven reporting/annotations in favor of live validation, baselines, allowlists, and compressed-file extraction  
-- Expanded support for new targets (GitLab, Jira, Confluence, Slack, S3, Docker, etc.)  
+- Expanded support for new targets (GitLab, BitBucket, Gitea, Jira, Confluence, Slack, S3, Docker, etc.)  
 - Delivered cross-platform builds, including native Windows  
 
 

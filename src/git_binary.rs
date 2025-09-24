@@ -23,6 +23,14 @@ const BITBUCKET_CREDENTIAL_HELPER: &str = r#"credential.helper=!_bbcreds() {
     fi
 }; _bbcreds"#;
 
+const GITEA_CREDENTIAL_HELPER: &str = r#"credential.helper=!_gteacreds() {
+    if [ -n "$KF_GITEA_TOKEN" ]; then
+        user="${KF_GITEA_USERNAME:-gitea}";
+        echo username="$user";
+        echo password="$KF_GITEA_TOKEN";
+    fi
+}; _gteacreds"#;
+
 /// Represents errors that can occur when interacting with the `git` CLI.
 #[derive(Debug, thiserror::Error)]
 pub enum GitError {
@@ -40,7 +48,7 @@ pub enum GitError {
 
 /// A helper struct for running `git` commands.
 ///
-/// It supports optional GitHub, GitLab, and Bitbucket credentials passed via
+/// It supports optional GitHub, GitLab, Gitea, and Bitbucket credentials passed via
 /// environment variables and optionally ignores TLS certificate validation if
 /// requested.
 pub struct Git {
@@ -59,6 +67,8 @@ impl Git {
             matches!(std::env::var("KF_GITHUB_TOKEN"), Ok(token) if !token.is_empty());
         let has_gitlab_token =
             matches!(std::env::var("KF_GITLAB_TOKEN"), Ok(token) if !token.is_empty());
+        let has_gitea_token =
+            matches!(std::env::var("KF_GITEA_TOKEN"), Ok(token) if !token.is_empty());
         let has_bitbucket_username =
             matches!(std::env::var("KF_BITBUCKET_USERNAME"), Ok(value) if !value.is_empty());
         let has_bitbucket_password =
@@ -71,7 +81,7 @@ impl Git {
             has_bitbucket_oauth_token || (has_bitbucket_username && has_bitbucket_password);
 
         // If credentials are provided via environment variables, clear existing helpers first.
-        if has_github_token || has_gitlab_token || has_bitbucket_credentials {
+        if has_github_token || has_gitlab_token || has_gitea_token || has_bitbucket_credentials {
             credentials.push("-c".into());
             credentials.push(r#"credential.helper="#.into());
         }
@@ -90,6 +100,12 @@ impl Git {
             credentials.push(
                 r#"credential.helper=!_glcreds() { echo username="oauth2"; echo password="$KF_GITLAB_TOKEN"; }; _glcreds"#.into(),
             );
+        }
+
+        // Inject Gitea token helper
+        if has_gitea_token {
+            credentials.push("-c".into());
+            credentials.push(GITEA_CREDENTIAL_HELPER.into());
         }
 
         // Inject Bitbucket credential helper for OAuth tokens or basic auth.

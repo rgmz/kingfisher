@@ -52,7 +52,7 @@ use kingfisher::{
     },
     findings_store,
     findings_store::FindingsStore,
-    github,
+    gitea, github,
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::{load_and_record_rules, run_scan},
@@ -72,6 +72,7 @@ use url::Url;
 
 use crate::cli::commands::{
     bitbucket::{BitbucketAuthArgs, BitbucketCommand, BitbucketRepoType, BitbucketReposCommand},
+    gitea::{GiteaCommand, GiteaRepoType, GiteaReposCommand},
     gitlab::{GitLabCommand, GitLabRepoType, GitLabReposCommand},
 };
 
@@ -89,6 +90,7 @@ fn main() -> anyhow::Result<()> {
         Command::GitHub(_) => num_cpus::get(), // Default for GitHub commands
         Command::GitLab(_) => num_cpus::get(), // Default for GitLab commands
         Command::Bitbucket(_) => num_cpus::get(), // Default for Bitbucket commands
+        Command::Gitea(_) => num_cpus::get(), // Default for Gitea commands
         Command::Rules(_) => num_cpus::get(), // Default for Rules commands
     };
 
@@ -265,6 +267,23 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         }
                     },
                 },
+                Command::Gitea(gitea_args) => match gitea_args.command {
+                    GiteaCommand::Repos(repos_command) => match repos_command {
+                        GiteaReposCommand::List(list_args) => {
+                            gitea::list_repositories(
+                                gitea_args.gitea_api_url,
+                                global_args.ignore_certs,
+                                global_args.use_progress(),
+                                &list_args.repo_specifiers.user,
+                                &list_args.repo_specifiers.organization,
+                                list_args.repo_specifiers.all_organizations,
+                                &list_args.repo_specifiers.exclude_repos,
+                                list_args.repo_specifiers.repo_type.into(),
+                            )
+                            .await?;
+                        }
+                    },
+                },
                 Command::Bitbucket(bitbucket_args) => match bitbucket_args.command {
                     BitbucketCommand::Repos(repos_command) => match repos_command {
                         BitbucketReposCommand::List(list_args) => {
@@ -328,6 +347,13 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             gitlab_api_url: Url::parse("https://gitlab.com/").unwrap(),
             gitlab_repo_type: GitLabRepoType::All,
             gitlab_include_subgroups: false,
+
+            gitea_user: Vec::new(),
+            gitea_organization: Vec::new(),
+            gitea_exclude: Vec::new(),
+            all_gitea_organizations: false,
+            gitea_api_url: Url::parse("https://gitea.com/api/v1/").unwrap(),
+            gitea_repo_type: GiteaRepoType::Source,
 
             bitbucket_user: Vec::new(),
             bitbucket_workspace: Vec::new(),

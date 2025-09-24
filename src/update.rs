@@ -102,7 +102,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     // ───────────── Case 1: running == latest ─────────────
     if release.version == running_v {
         let plain = format!("Kingfisher {running_v} is up to date");
-        info!("{}", styled_heading(&styles, plain.as_str()));
+        info!("{}", plain.as_str());
         return Some(plain);
     }
 

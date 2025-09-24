@@ -9,6 +9,7 @@ use kingfisher::{
     cli::{
         commands::{
             bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
+            gitea::GiteaRepoType,
             github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
             gitlab::GitLabRepoType,
             inputs::{ContentFilteringArgs, InputSpecifierArgs},
@@ -68,6 +69,13 @@ fn test_gitlab_remote_scan() -> Result<()> {
             gitlab_api_url: Url::parse("https://gitlab.com/")?,
             gitlab_repo_type: GitLabRepoType::Owner,
             gitlab_include_subgroups: false,
+
+            gitea_user: Vec::new(),
+            gitea_organization: Vec::new(),
+            gitea_exclude: Vec::new(),
+            all_gitea_organizations: false,
+            gitea_api_url: Url::parse("https://gitea.com/api/v1/")?,
+            gitea_repo_type: GiteaRepoType::Source,
 
             bitbucket_user: Vec::new(),
             bitbucket_workspace: Vec::new(),
@@ -191,6 +199,13 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
             gitlab_api_url: Url::parse("https://gitlab.com/")?,
             gitlab_repo_type: GitLabRepoType::Owner,
             gitlab_include_subgroups: false,
+
+            gitea_user: Vec::new(),
+            gitea_organization: Vec::new(),
+            gitea_exclude: Vec::new(),
+            all_gitea_organizations: false,
+            gitea_api_url: Url::parse("https://gitea.com/api/v1/")?,
+            gitea_repo_type: GiteaRepoType::Source,
 
             bitbucket_user: Vec::new(),
             bitbucket_workspace: Vec::new(),

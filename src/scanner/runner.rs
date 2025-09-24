@@ -11,7 +11,7 @@ use crate::{
     cli::{commands::scan, global},
     findings_store,
     findings_store::{FindingsStore, FindingsStoreMessage},
-    github, gitlab,
+    gitea, github, gitlab,
     liquid_filters::register_all,
     matcher::MatcherStats,
     reporter::styles::Styles,
@@ -23,8 +23,8 @@ use crate::{
         clone_or_update_git_repos, enumerate_bitbucket_repos, enumerate_filesystem_inputs,
         enumerate_github_repos,
         repos::{
-            enumerate_gitlab_repos, fetch_confluence_pages, fetch_git_host_artifacts,
-            fetch_jira_issues, fetch_s3_objects, fetch_slack_messages,
+            enumerate_gitea_repos, enumerate_gitlab_repos, fetch_confluence_pages,
+            fetch_git_host_artifacts, fetch_jira_issues, fetch_s3_objects, fetch_slack_messages,
         },
         run_secret_validation, save_docker_images,
         summary::print_scan_summary,
@@ -73,10 +73,12 @@ pub async fn run_async_scan(
 
     let mut repo_urls = enumerate_github_repos(args, global_args).await?;
     let gitlab_repo_urls = enumerate_gitlab_repos(args, global_args).await?;
+    let gitea_repo_urls = enumerate_gitea_repos(args, global_args).await?;
     let bitbucket_repo_urls = enumerate_bitbucket_repos(args, global_args).await?;
 
     // Combine repository URLs
     repo_urls.extend(gitlab_repo_urls);
+    repo_urls.extend(gitea_repo_urls);
     repo_urls.extend(bitbucket_repo_urls);
     repo_urls.sort();
     repo_urls.dedup();
@@ -89,6 +91,9 @@ pub async fn run_async_scan(
                 wiki_urls.push(w);
             }
             if let Some(w) = gitlab::wiki_url(url) {
+                wiki_urls.push(w);
+            }
+            if let Some(w) = gitea::wiki_url(url) {
                 wiki_urls.push(w);
             }
             if let Some(w) = bitbucket::wiki_url(url) {
