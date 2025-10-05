@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v1.55.0]
+- Added first-class Azure Repos support, including CLI commands, enumeration, and documentation updates
 - Improved performance of tree-sitter parsing
 - Updated Windows build script to ensure static binary is produced
 

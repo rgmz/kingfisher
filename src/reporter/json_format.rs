@@ -39,6 +39,7 @@ mod tests {
     use crate::util::intern;
     use crate::{
         blob::BlobId,
+        cli::commands::azure::AzureRepoType,
         cli::commands::bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
         cli::commands::gitea::GiteaRepoType,
         cli::commands::github::GitHubRepoType,
@@ -109,6 +110,13 @@ mod tests {
                 bitbucket_api_url: Url::parse("https://api.bitbucket.org/2.0/").unwrap(),
                 bitbucket_repo_type: BitbucketRepoType::Source,
                 bitbucket_auth: BitbucketAuthArgs::default(),
+                // Azure DevOps
+                azure_organization: Vec::new(),
+                azure_project: Vec::new(),
+                azure_exclude: Vec::new(),
+                all_azure_projects: false,
+                azure_base_url: Url::parse("https://dev.azure.com/").unwrap(),
+                azure_repo_type: AzureRepoType::Source,
                 // Jira options
                 jira_url: None,
                 jql: None,

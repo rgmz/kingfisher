@@ -33,7 +33,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use kingfisher::{
-    bitbucket,
+    azure, bitbucket,
     cli::{
         self,
         commands::{
@@ -71,6 +71,7 @@ use tracing_subscriber::{
 use url::Url;
 
 use crate::cli::commands::{
+    azure::{AzureCommand, AzureRepoType, AzureReposCommand},
     bitbucket::{BitbucketAuthArgs, BitbucketCommand, BitbucketRepoType, BitbucketReposCommand},
     gitea::{GiteaCommand, GiteaRepoType, GiteaReposCommand},
     gitlab::{GitLabCommand, GitLabRepoType, GitLabReposCommand},
@@ -91,6 +92,7 @@ fn main() -> anyhow::Result<()> {
         Command::GitLab(_) => num_cpus::get(), // Default for GitLab commands
         Command::Bitbucket(_) => num_cpus::get(), // Default for Bitbucket commands
         Command::Gitea(_) => num_cpus::get(), // Default for Gitea commands
+        Command::Azure(_) => num_cpus::get(), // Default for Azure commands
         Command::Rules(_) => num_cpus::get(), // Default for Rules commands
     };
 
@@ -267,6 +269,23 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         }
                     },
                 },
+                Command::Azure(azure_args) => match azure_args.command {
+                    AzureCommand::Repos(repos_command) => match repos_command {
+                        AzureReposCommand::List(list_args) => {
+                            azure::list_repositories(
+                                azure_args.azure_base_url.clone(),
+                                global_args.ignore_certs,
+                                global_args.use_progress(),
+                                &list_args.repo_specifiers.organization,
+                                &list_args.repo_specifiers.project,
+                                list_args.repo_specifiers.all_projects,
+                                &list_args.repo_specifiers.exclude_repos,
+                                list_args.repo_specifiers.repo_type.into(),
+                            )
+                            .await?;
+                        }
+                    },
+                },
                 Command::Gitea(gitea_args) => match gitea_args.command {
                     GiteaCommand::Repos(repos_command) => match repos_command {
                         GiteaReposCommand::List(list_args) => {
@@ -363,6 +382,13 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             bitbucket_api_url: Url::parse("https://api.bitbucket.org/2.0/").unwrap(),
             bitbucket_repo_type: BitbucketRepoType::Source,
             bitbucket_auth: BitbucketAuthArgs::default(),
+
+            azure_organization: Vec::new(),
+            azure_project: Vec::new(),
+            azure_exclude: Vec::new(),
+            all_azure_projects: false,
+            azure_base_url: Url::parse("https://dev.azure.com/").unwrap(),
+            azure_repo_type: AzureRepoType::Source,
 
             jira_url: None,
             jql: None,

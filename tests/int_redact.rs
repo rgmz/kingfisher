@@ -8,6 +8,7 @@ use anyhow::Result;
 use kingfisher::{
     cli::{
         commands::{
+            azure::AzureRepoType,
             bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
             gitea::GiteaRepoType,
             github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
@@ -68,6 +69,12 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
             bitbucket_api_url: Url::parse("https://api.bitbucket.org/2.0/").unwrap(),
             bitbucket_repo_type: BitbucketRepoType::Source,
             bitbucket_auth: BitbucketAuthArgs::default(),
+            azure_organization: Vec::new(),
+            azure_project: Vec::new(),
+            azure_exclude: Vec::new(),
+            all_azure_projects: false,
+            azure_base_url: Url::parse("https://dev.azure.com/").unwrap(),
+            azure_repo_type: AzureRepoType::Source,
             jira_url: None,
             jql: None,
             confluence_url: None,

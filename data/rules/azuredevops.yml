@@ -1,13 +1,27 @@
 rules:
-  - name: Azure DevOps Personal Access Token
+  - name: Azure DevOps Organization
     id: kingfisher.azure.devops.1
     pattern: |
       (?xi)
       \b
-      azure
-      (?:.|[\n\r]){0,32}?
+      dev\.azure\.com/
       (
-        [a-z0-9]{75}AZDO[a-z0-9]{5}
+        [a-z0-9][a-z0-9-]{0,61}[a-z0-9]
+      )
+    confidence: medium
+    min_entropy: 2.5
+    visible: false
+    examples:
+      - https://dev.azure.com/contoso
+      - dev.azure.com/somebody123
+
+  - name: Azure DevOps Personal Access Token
+    id: kingfisher.azure.devops.2
+    pattern: |
+      (?xi)
+      \b
+      (
+        [a-z0-9]{75,76}AZDO[a-z0-9]{4,5}
       )
       \b
     min_entropy: 3
@@ -17,14 +31,18 @@ rules:
     references:
       - https://learn.microsoft.com/en-us/rest/api/azure/devops/profile/profiles/get?view=azure-devops-rest-7.1&tabs=HTTP
       - https://learn.microsoft.com/en-us/azure/devops/release-notes/2024/general/sprint-241-update
+    depends_on_rule:
+      - rule_id: kingfisher.azure.devops.1
+        variable: AZURE_DEVOPS_ORG
     validation:
       type: Http
       content:
         request:
           headers:
             Authorization: 'Basic {{ ":" | append: TOKEN | b64enc }}'
+            Accept: application/json
           method: GET
-          url: https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1-preview.1
+          url: "https://dev.azure.com/{{ AZURE_DEVOPS_ORG | split: '/' | last }}/_apis/projects?api-version=7.1-preview.1"
           response_matcher:
             - report_response: true
             - type: StatusMatch

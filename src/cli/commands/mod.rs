@@ -1,3 +1,4 @@
+pub mod azure;
 pub mod bitbucket;
 pub mod gitea;
 pub mod github;

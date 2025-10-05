@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use kingfisher::{
     cli::{
         commands::{
+            azure::AzureRepoType,
             bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
             gitea::GiteaRepoType,
             github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
@@ -85,6 +86,13 @@ fn test_gitlab_remote_scan() -> Result<()> {
             bitbucket_api_url: Url::parse("https://api.bitbucket.org/2.0/")?,
             bitbucket_repo_type: BitbucketRepoType::Source,
             bitbucket_auth: BitbucketAuthArgs::default(),
+
+            azure_organization: Vec::new(),
+            azure_project: Vec::new(),
+            azure_exclude: Vec::new(),
+            all_azure_projects: false,
+            azure_base_url: Url::parse("https://dev.azure.com/")?,
+            azure_repo_type: AzureRepoType::Source,
 
             jira_url: None,
             jql: None,
@@ -215,6 +223,13 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
             bitbucket_api_url: Url::parse("https://api.bitbucket.org/2.0/")?,
             bitbucket_repo_type: BitbucketRepoType::Source,
             bitbucket_auth: BitbucketAuthArgs::default(),
+
+            azure_organization: Vec::new(),
+            azure_project: Vec::new(),
+            azure_exclude: Vec::new(),
+            all_azure_projects: false,
+            azure_base_url: Url::parse("https://dev.azure.com/")?,
+            azure_repo_type: AzureRepoType::Source,
 
             jira_url: None,
             jql: None,

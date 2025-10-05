@@ -7,8 +7,8 @@ use sysinfo::{MemoryRefreshKind, RefreshKind, System};
 use tracing::Level;
 
 use crate::cli::commands::{
-    bitbucket::BitbucketArgs, gitea::GiteaArgs, github::GitHubArgs, gitlab::GitLabArgs,
-    rules::RulesArgs, scan::ScanArgs,
+    azure::AzureArgs, bitbucket::BitbucketArgs, gitea::GiteaArgs, github::GitHubArgs,
+    gitlab::GitLabArgs, rules::RulesArgs, scan::ScanArgs,
 };
 
 #[deny(missing_docs)]
@@ -76,6 +76,10 @@ pub enum Command {
     /// Interact with the Bitbucket API
     #[command(name = "bitbucket")]
     Bitbucket(BitbucketArgs),
+
+    /// Interact with the Azure DevOps API
+    #[command(name = "azure")]
+    Azure(AzureArgs),
 
     /// Manage rules
     #[command(alias = "rule")]

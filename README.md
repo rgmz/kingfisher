@@ -574,6 +574,47 @@ kingfisher gitlab repos list --group my-group --include-subgroups
 kingfisher gitlab repos list --group my-group --gitlab-exclude my-group/**/legacy-*
 ```
 
+## Scanning Azure Repos
+
+### Scan Azure DevOps organization or collection (requires `KF_AZURE_TOKEN` or `KF_AZURE_PAT`)
+
+```bash
+kingfisher scan --azure-organization my-org
+
+# Azure DevOps Server example
+KF_AZURE_PAT="pat" kingfisher scan --azure-organization DefaultCollection --azure-base-url https://ado.internal.example/tfs/
+```
+
+### Scan specific Azure DevOps projects
+
+Projects are specified as `ORGANIZATION/PROJECT`. Repeat the flag for multiple projects.
+
+```bash
+kingfisher scan --azure-project my-org/payments --azure-project my-org/core-platform
+```
+
+### Skip specific Azure repositories during enumeration
+
+Repeat `--azure-exclude` to ignore repositories when scanning organizations or projects.
+Use identifiers like `ORGANIZATION/PROJECT/REPOSITORY` or gitignore-style patterns such as
+`my-org/*/archive-*`.
+
+```bash
+kingfisher scan --azure-organization my-org \
+  --azure-exclude my-org/payments/legacy-service \
+  --azure-exclude my-org/**/archive-*
+```
+
+### List Azure repositories
+
+```bash
+kingfisher azure repos list --organization my-org
+# list repositories for specific projects
+kingfisher azure repos list --project my-org/app --project my-org/api
+# skip specific repositories while listing (supports glob patterns)
+kingfisher azure repos list --organization my-org --azure-exclude my-org/**/experimental-*
+```
+
 ## Scanning Gitea
 
 ### Scan Gitea organization (requires `KF_GITEA_TOKEN`)
@@ -769,6 +810,8 @@ KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
 | `KF_GITLAB_TOKEN` | GitLab Personal Access Token |
 | `KF_GITEA_TOKEN` | Gitea Personal Access Token |
 | `KF_GITEA_USERNAME` | Username for private Gitea clones (used with `KF_GITEA_TOKEN`) |
+| `KF_AZURE_TOKEN` / `KF_AZURE_PAT` | Azure DevOps Personal Access Token |
+| `KF_AZURE_USERNAME` | Username to use with Azure DevOps PATs (defaults to `pat` when unset) |
 | `KF_BITBUCKET_USERNAME` | Bitbucket username for basic authentication |
 | `KF_BITBUCKET_APP_PASSWORD` / `KF_BITBUCKET_TOKEN` | Bitbucket app password or server token |
 | `KF_BITBUCKET_OAUTH_TOKEN` | Bitbucket OAuth or PAT token |

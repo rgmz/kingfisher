@@ -75,7 +75,6 @@ fn detects_base64_in_code_with_tree_sitter() -> anyhow::Result<()> {
             "scan",
             dir.path().to_str().unwrap(),
             "--no-binary",
-            "--no-base64",
             "--confidence=low",
             "--format",
             "json",

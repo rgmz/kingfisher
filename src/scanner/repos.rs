@@ -11,7 +11,7 @@ use url::Url;
 
 use crate::blob::BlobIdMap;
 use crate::{
-    bitbucket,
+    azure, bitbucket,
     blob::BlobMetadata,
     cli::{
         commands::{github::GitCloneMode, github::GitHistoryMode, scan},
@@ -370,6 +370,69 @@ pub async fn enumerate_bitbucket_repos(
     Ok(repo_urls)
 }
 
+pub async fn enumerate_azure_repos(
+    args: &scan::ScanArgs,
+    global_args: &global::GlobalArgs,
+) -> Result<Vec<GitUrl>> {
+    let repo_specifiers = azure::RepoSpecifiers {
+        organization: args.input_specifier_args.azure_organization.clone(),
+        project: args.input_specifier_args.azure_project.clone(),
+        all_projects: args.input_specifier_args.all_azure_projects,
+        repo_filter: args.input_specifier_args.azure_repo_type.into(),
+        exclude_repos: args.input_specifier_args.azure_exclude.clone(),
+    };
+
+    let mut repo_urls = args.input_specifier_args.git_url.clone();
+    if !repo_specifiers.is_empty() {
+        let mut progress = if global_args.use_progress() {
+            let style =
+                ProgressStyle::with_template("{spinner} {msg} {human_len} [{elapsed_precise}]")
+                    .expect("progress bar style template should compile");
+            let pb = ProgressBar::new_spinner()
+                .with_style(style)
+                .with_message("Enumerating Azure Repos repositories...");
+            pb.enable_steady_tick(Duration::from_millis(500));
+            pb
+        } else {
+            ProgressBar::hidden()
+        };
+
+        let mut num_found: u64 = 0;
+        let base_url = args.input_specifier_args.azure_base_url.clone();
+        let repo_strings = azure::enumerate_repo_urls(
+            &repo_specifiers,
+            base_url,
+            global_args.ignore_certs,
+            Some(&mut progress),
+        )
+        .await
+        .context("Failed to enumerate Azure repositories")?;
+
+        for repo_string in repo_strings {
+            match GitUrl::from_str(&repo_string) {
+                Ok(repo_url) => {
+                    repo_urls.push(repo_url);
+                    num_found += 1;
+                }
+                Err(e) => {
+                    progress.suspend(|| {
+                        error!("Failed to parse repo URL from {repo_string}: {e}");
+                    });
+                }
+            }
+        }
+
+        progress.finish_with_message(format!(
+            "Found {} repositories from Azure Repos",
+            HumanCount(num_found)
+        ));
+    }
+
+    repo_urls.sort();
+    repo_urls.dedup();
+    Ok(repo_urls)
+}
+
 pub async fn fetch_jira_issues(
     args: &scan::ScanArgs,
     global_args: &global::GlobalArgs,
@@ -513,6 +576,16 @@ pub async fn fetch_git_host_artifacts(
                     repo_url,
                     bitbucket_api_url,
                     bitbucket_auth,
+                    global_args.ignore_certs,
+                    &output_root,
+                    datastore,
+                )
+                .await?,
+            );
+        } else if host.contains("dev.azure") || host.contains("visualstudio.com") {
+            dirs.extend(
+                azure::fetch_repo_items(
+                    repo_url,
                     global_args.ignore_certs,
                     &output_root,
                     datastore,

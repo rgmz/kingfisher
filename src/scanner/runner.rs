@@ -7,7 +7,7 @@ use tokio::time::{Duration, Instant};
 use tracing::{debug, error, error_span, info, trace};
 
 use crate::{
-    bitbucket,
+    azure, bitbucket,
     cli::{commands::scan, global},
     findings_store,
     findings_store::{FindingsStore, FindingsStoreMessage},
@@ -20,8 +20,8 @@ use crate::{
     rules_database::RulesDatabase,
     safe_list,
     scanner::{
-        clone_or_update_git_repos, enumerate_bitbucket_repos, enumerate_filesystem_inputs,
-        enumerate_github_repos,
+        clone_or_update_git_repos, enumerate_azure_repos, enumerate_bitbucket_repos,
+        enumerate_filesystem_inputs, enumerate_github_repos,
         repos::{
             enumerate_gitea_repos, enumerate_gitlab_repos, fetch_confluence_pages,
             fetch_git_host_artifacts, fetch_jira_issues, fetch_s3_objects, fetch_slack_messages,
@@ -75,11 +75,13 @@ pub async fn run_async_scan(
     let gitlab_repo_urls = enumerate_gitlab_repos(args, global_args).await?;
     let gitea_repo_urls = enumerate_gitea_repos(args, global_args).await?;
     let bitbucket_repo_urls = enumerate_bitbucket_repos(args, global_args).await?;
+    let azure_repo_urls = enumerate_azure_repos(args, global_args).await?;
 
     // Combine repository URLs
     repo_urls.extend(gitlab_repo_urls);
     repo_urls.extend(gitea_repo_urls);
     repo_urls.extend(bitbucket_repo_urls);
+    repo_urls.extend(azure_repo_urls);
     repo_urls.sort();
     repo_urls.dedup();
 
@@ -97,6 +99,9 @@ pub async fn run_async_scan(
                 wiki_urls.push(w);
             }
             if let Some(w) = bitbucket::wiki_url(url) {
+                wiki_urls.push(w);
+            }
+            if let Some(w) = azure::wiki_url(url) {
                 wiki_urls.push(w);
             }
         }

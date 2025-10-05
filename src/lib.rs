@@ -1,3 +1,4 @@
+pub mod azure;
 pub mod baseline;
 pub mod binary;
 pub mod bitbucket;

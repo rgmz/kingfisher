@@ -5,6 +5,7 @@ use url::Url;
 
 use crate::{
     cli::commands::{
+        azure::AzureRepoType,
         bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
         gitea::GiteaRepoType,
         github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
@@ -30,11 +31,14 @@ pub struct InputSpecifierArgs {
             "bitbucket_user",
             "bitbucket_workspace",
             "bitbucket_project",
+            "azure_organization",
+            "azure_project",
             "git_url",
             "all_github_organizations",
             "all_gitlab_groups",
             "all_gitea_organizations",
             "all_bitbucket_workspaces",
+            "all_azure_projects",
             "jira_url",
             "confluence_url",
             "docker_image",
@@ -175,6 +179,38 @@ pub struct InputSpecifierArgs {
 
     #[command(flatten)]
     pub bitbucket_auth: BitbucketAuthArgs,
+
+    // Azure DevOps Options
+    /// Scan repositories belonging to the specified Azure DevOps organizations or collections
+    #[arg(long = "azure-organization")]
+    pub azure_organization: Vec<String>,
+
+    /// Scan repositories belonging to the specified Azure DevOps projects (format: ORGANIZATION/PROJECT)
+    #[arg(long = "azure-project", value_name = "ORGANIZATION/PROJECT")]
+    pub azure_project: Vec<String>,
+
+    /// Skip repositories when enumerating Azure Repos sources (format: ORGANIZATION/PROJECT/REPOSITORY)
+    #[arg(
+        long = "azure-exclude",
+        alias = "azure-exclude-repo",
+        value_name = "ORGANIZATION/PROJECT/REPOSITORY"
+    )]
+    pub azure_exclude: Vec<String>,
+
+    /// Include repositories from every project within the specified Azure organizations
+    #[arg(long = "all-azure-projects")]
+    pub all_azure_projects: bool,
+
+    /// Use the specified base URL for Azure DevOps (e.g. Azure DevOps Server)
+    #[arg(
+        long = "azure-base-url",
+        default_value = "https://dev.azure.com/",
+        value_hint = ValueHint::Url
+    )]
+    pub azure_base_url: Url,
+
+    #[arg(long = "azure-repo-type", default_value_t = AzureRepoType::Source)]
+    pub azure_repo_type: AzureRepoType,
 
     /// Jira base URL (e.g. https://jira.example.com)
     #[arg(long, value_hint = ValueHint::Url, requires = "jql")]
