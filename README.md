@@ -66,30 +66,30 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Scan while ignoring likely test files](#scan-while-ignoring-likely-test-files)
     - [Exclude specific paths](#exclude-specific-paths)
     - [Scan changes in CI pipelines](#scan-changes-in-ci-pipelines)
-  - [Scan an S3 bucket](#scan-an-s3-bucket)
-  - [Scanning Docker Images](#scanning-docker-images)
-  - [Scanning GitHub](#scanning-github)
-    - [Scan GitHub organisation (requires `KF_GITHUB_TOKEN`)](#scan-github-organisation-requires-kf_github_token)
+  - [ Scanning an AWS S3 Bucket](#-scanning-an-aws-s3-bucket)
+  - [ Scanning Docker Images](#-scanning-docker-images)
+  - [ Scanning GitHub](#-scanning-github)
+    - [Scan GitHub organization (requires `KF_GITHUB_TOKEN`)](#scan-github-organization-requires-kf_github_token)
     - [Skip specific GitHub repositories during enumeration](#skip-specific-github-repositories-during-enumeration)
     - [Scan remote GitHub repository](#scan-remote-github-repository)
-  - [Scanning GitLab](#scanning-gitlab)
+  - [ Scanning GitLab](#-scanning-gitlab)
     - [Scan GitLab group (requires `KF_GITLAB_TOKEN`)](#scan-gitlab-group-requires-kf_gitlab_token)
     - [Scan GitLab user](#scan-gitlab-user)
     - [Skip specific GitLab projects during enumeration](#skip-specific-gitlab-projects-during-enumeration)
     - [Scan remote GitLab repository by URL](#scan-remote-gitlab-repository-by-url)
     - [List GitLab repositories](#list-gitlab-repositories)
-  - [Scanning Azure Repos](#scanning-azure-repos)
+  - [ Scanning Azure Repos](#-scanning-azure-repos)
     - [Scan Azure DevOps organization or collection (requires `KF_AZURE_TOKEN` or `KF_AZURE_PAT`)](#scan-azure-devops-organization-or-collection-requires-kf_azure_token-or-kf_azure_pat)
     - [Scan specific Azure DevOps projects](#scan-specific-azure-devops-projects)
     - [Skip specific Azure repositories during enumeration](#skip-specific-azure-repositories-during-enumeration)
     - [List Azure repositories](#list-azure-repositories)
-  - [Scanning Gitea](#scanning-gitea)
+  - [ Scanning Gitea](#-scanning-gitea)
     - [Scan Gitea organization (requires `KF_GITEA_TOKEN`)](#scan-gitea-organization-requires-kf_gitea_token)
     - [Scan Gitea user](#scan-gitea-user)
     - [Skip specific Gitea repositories during enumeration](#skip-specific-gitea-repositories-during-enumeration)
     - [Scan remote Gitea repository by URL](#scan-remote-gitea-repository-by-url)
     - [List Gitea repositories](#list-gitea-repositories)
-  - [Scanning Bitbucket](#scanning-bitbucket)
+  - [ Scanning Bitbucket](#-scanning-bitbucket)
     - [Scan Bitbucket workspace](#scan-bitbucket-workspace)
     - [Scan Bitbucket user](#scan-bitbucket-user)
     - [Skip specific Bitbucket repositories during enumeration](#skip-specific-bitbucket-repositories-during-enumeration)
@@ -97,12 +97,12 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [List Bitbucket repositories](#list-bitbucket-repositories)
     - [Authenticate to Bitbucket](#authenticate-to-bitbucket)
     - [Self-hosted Bitbucket Server](#self-hosted-bitbucket-server)
-  - [Scanning Jira](#scanning-jira)
+  - [ Scanning Jira](#-scanning-jira)
     - [Scan Jira issues matching a JQL query](#scan-jira-issues-matching-a-jql-query)
     - [Scan the last 1,000 Jira issues:](#scan-the-last-1000-jira-issues)
-  - [Scanning Confluence](#scanning-confluence)
+  - [ Scanning Confluence](#-scanning-confluence)
     - [Scan Confluence pages matching a CQL query](#scan-confluence-pages-matching-a-cql-query)
-  - [Scanning Slack](#scanning-slack)
+  - [ Scanning Slack](#-scanning-slack)
     - [Scan Slack messages matching a search query](#scan-slack-messages-matching-a-search-query)
   - [Environment Variables for Tokens](#environment-variables-for-tokens)
   - [Exit Codes](#exit-codes)
@@ -398,7 +398,8 @@ kingfisher scan ./my-project \
   --exclude tests \
   -v
 ```
-## Scan an S3 bucket
+
+## <img alt="GitHub" src="./docs/assets/icons/aws-s3.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning an AWS S3 Bucket
 You can scan S3 objects directly:
 
 ```bash
@@ -449,7 +450,8 @@ docker run --rm \
   ghcr.io/mongodb/kingfisher:latest \
     scan --s3-bucket bucket-name
 ```
-## Scanning Docker Images
+
+## <img alt="Docker" src="./docs/assets/icons/docker.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Docker Images
 
 Kingfisher will first try to use any locally available image, then fall back to pulling via OCI.  
 
@@ -479,9 +481,9 @@ kingfisher scan --docker-image some-private-registry.dkr.ecr.us-east-1.amazonaws
 kingfisher scan --docker-image private.registry.example.com/my-image:tag
 ```
 
-## Scanning GitHub
+## <img alt="GitHub" src="./docs/assets/icons/github.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning GitHub
 
-### Scan GitHub organisation (requires `KF_GITHUB_TOKEN`)
+### Scan GitHub organization (requires `KF_GITHUB_TOKEN`)
 
 ```bash
 kingfisher scan --github-organization my-org
@@ -521,7 +523,7 @@ KF_GITHUB_TOKEN="ghp_…" kingfisher scan --git-url https://github.com/org/priva
 
 ---
 
-## Scanning GitLab
+## <img alt="GitLab" src="./docs/assets/icons/gitlab.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning GitLab
 
 ### Scan GitLab group (requires `KF_GITLAB_TOKEN`)
 
@@ -577,8 +579,7 @@ kingfisher gitlab repos list --group my-group --include-subgroups
 # skip specific projects when listing or scanning (supports glob patterns)
 kingfisher gitlab repos list --group my-group --gitlab-exclude my-group/**/legacy-*
 ```
-
-## Scanning Azure Repos
+## <img alt="Azure Repos" src="./docs/assets/icons/azure-devops.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Azure Repos
 
 ### Scan Azure DevOps organization or collection (requires `KF_AZURE_TOKEN` or `KF_AZURE_PAT`)
 
@@ -619,8 +620,7 @@ kingfisher azure repos list --project my-org/app --project my-org/api
 # skip specific repositories while listing (supports glob patterns)
 kingfisher azure repos list --organization my-org --azure-exclude my-org/**/experimental-*
 ```
-
-## Scanning Gitea
+## <img alt="Gitea" src="./docs/assets/icons/gitea.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Gitea
 
 ### Scan Gitea organization (requires `KF_GITEA_TOKEN`)
 
@@ -672,9 +672,7 @@ KF_GITEA_TOKEN="gtoken" kingfisher gitea repos list --all-gitea-organizations
 # self-hosted example
 KF_GITEA_TOKEN="gtoken" kingfisher gitea repos list --user johndoe --gitea-api-url https://gitea.internal.example/api/v1/
 ```
-
-## Scanning Bitbucket
-
+## <img alt="Bitbucket" src="./docs/assets/icons/bitbucket.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Bitbucket
 ### Scan Bitbucket workspace
 
 ```bash
@@ -746,8 +744,7 @@ Use `--bitbucket-api-url` to point Kingfisher at your server's REST endpoint, fo
 `https://bitbucket.example.com/rest/api/1.0/`. Provide credentials with
 `--bitbucket-username` and `--bitbucket-token`, and pass `--ignore-certs` when
 connecting to HTTP or otherwise insecure instances.
-
-## Scanning Jira
+## <img alt="Jira" src="./docs/assets/icons/jira.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Jira
 
 ### Scan Jira issues matching a JQL query
 
@@ -766,8 +763,7 @@ KF_JIRA_TOKEN="token" kingfisher scan \
   --max-results 1000
 ```
 
-## Scanning Confluence
-
+## <img alt="Confluence" src="./docs/assets/icons/confluence.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Confluence
 ### Scan Confluence pages matching a CQL query
 
 ```bash
@@ -792,8 +788,7 @@ Generate a personal access token and set it in the `KF_CONFLUENCE_TOKEN` environ
 
 To use basic authentication instead, also set `KF_CONFLUENCE_USER` to your Confluence email address; Kingfisher will then send the username and `KF_CONFLUENCE_TOKEN` as a Basic auth header. If the server responds with a redirect to a login page, the credentials are invalid or lack the required permissions.
 
-## Scanning Slack
-
+## <img alt="Slack" src="./docs/assets/icons/slack.svg" width="20" height="20" style="vertical-align:text-bottom;"> Scanning Slack
 ### Scan Slack messages matching a search query
 
 ```bash
