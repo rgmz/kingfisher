@@ -5,29 +5,23 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Kingfisher is a blazingly fast secret‑scanning and live validation tool built in Rust. It combines Intel’s hardware‑accelerated Hyperscan regex engine with language‑aware parsing via Tree‑Sitter, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
+Kingfisher is a blazingly fast secret‑scanning and live validation tool built in Rust. It combines Intel’s hardware‑accelerated Hyperscan regex engine with language‑aware source code parsing, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
 </p>
 
 Originally forked from Praetorian’s Nosey Parker, Kingfisher **adds** live cloud-API validation; many more targets (GitLab, BitBucket, Gitea, S3, Docker, Jira, Confluence, Slack); compressed-file extraction and scanning; baseline and allowlist controls; language-aware detection (~20 languages); and a native Windows binary. See [Origins and Divergence](#origins-and-divergence) for details.
-
 ## Key Features
-- **Multiple Scan Targets**:
-  <p align="center">
-    <img alt="Files & Dirs" src="https://img.shields.io/badge/Files%20and%20Dirs-000?logoColor=white" />
-    <img alt="Local Git"    src="https://img.shields.io/badge/Local%20Git%20Repos-000?logo=git&logoColor=white" />
-    <img alt="GitHub"       src="https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white" />
-    <img alt="GitLab"       src="https://img.shields.io/badge/GitLab-FC6D26?logo=gitlab&logoColor=white" />
-    <img alt="Bitbucket"    src="https://img.shields.io/badge/Bitbucket-0052CC?logo=bitbucket&logoColor=white" />
-    <img alt="Gitea"        src="https://img.shields.io/badge/Gitea-609926?logo=gitea&logoColor=white" />
-    <br/>
-    <img alt="Docker"       src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" />
-    <img alt="Jira"         src="https://img.shields.io/badge/Jira-0052CC?logo=jirasoftware&logoColor=white" />
-    <img alt="Confluence"   src="https://img.shields.io/badge/Confluence-172B4D?logo=confluence&logoColor=white" />
-    <img alt="Slack"        src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white" />
-    <img alt="AWS S3"       src="https://img.shields.io/badge/AWS%20S3-232F3E?logo=amazonaws&logoColor=white" />
-  </p>
 
+### Multiple Scan Targets
 
+| Files / Dirs | Local Git | GitHub | GitLab | Azure DevOps | Bitbucket | Gitea |
+|:-------------:|:----------:|:------:|:------:|:-------------:|:----------:|:------:|
+| <img src="./docs/assets/icons/files.svg" height="40" alt="Files / Dirs"/><br/><sub>Files & Dirs</sub> | <img src="./docs/assets/icons/local-git.svg" height="40" alt="Local Git"/><br/><sub>Local Git</sub> | <img src="./docs/assets/icons/github.svg" height="40" alt="GitHub"/><br/><sub>GitHub</sub> | <img src="./docs/assets/icons/gitlab.svg" height="40" alt="GitLab"/><br/><sub>GitLab</sub> | <img src="./docs/assets/icons/azure-devops.svg" height="40" alt="Azure DevOps"/><br/><sub>Azure DevOps</sub> | <img src="./docs/assets/icons/bitbucket.svg" height="40" alt="Bitbucket"/><br/><sub>Bitbucket</sub> | <img src="./docs/assets/icons/gitea.svg" height="40" alt="Gitea"/><br/><sub>Gitea</sub> |
+
+| Docker | Jira | Confluence | Slack | AWS S3 |
+|:------:|:----:|:-----------:|:-----:|:------:|
+| <img src="./docs/assets/icons/docker.svg" height="40" alt="Docker"/><br/><sub>Docker</sub> | <img src="./docs/assets/icons/jira.svg" height="40" alt="Jira"/><br/><sub>Jira</sub> | <img src="./docs/assets/icons/confluence.svg" height="40" alt="Confluence"/><br/><sub>Confluence</sub> | <img src="./docs/assets/icons/slack.svg" height="40" alt="Slack"/><br/><sub>Slack</sub> | <img src="./docs/assets/icons/aws-s3.svg" height="40" alt="AWS S3"/><br/><sub>AWS&nbsp;S3</sub> |
+
+### Performance, Accuracy, and Hundreds of Rules
 - **Performance**: multithreaded, Hyperscan‑powered scanning built for huge codebases  
 - **Extensible rules**: hundreds of built-in detectors plus YAML-defined custom rules ([docs/RULES.md](/docs/RULES.md))  
 - **Broad AI SaaS coverage**: finds and validates tokens for OpenAI, Anthropic, Google Gemini, Cohere, Mistral, Stability AI, Replicate, xAI (Grok), Ollama, Langchain, Perplexity, Weights & Biases, Cerebras, Friendli, Fireworks.ai, NVIDIA NIM, Together.ai, Zhipu, and many more
@@ -46,6 +40,8 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
 
 - [Kingfisher](#kingfisher)
   - [Key Features](#key-features)
+    - [Multiple Scan Targets](#multiple-scan-targets)
+    - [Performance, Accuracy, and Hundreds of Rules](#performance-accuracy-and-hundreds-of-rules)
 - [Benchmark Results](#benchmark-results)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
@@ -79,6 +75,11 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Skip specific GitLab projects during enumeration](#skip-specific-gitlab-projects-during-enumeration)
     - [Scan remote GitLab repository by URL](#scan-remote-gitlab-repository-by-url)
     - [List GitLab repositories](#list-gitlab-repositories)
+  - [Scanning Azure Repos](#scanning-azure-repos)
+    - [Scan Azure DevOps organization or collection (requires `KF_AZURE_TOKEN` or `KF_AZURE_PAT`)](#scan-azure-devops-organization-or-collection-requires-kf_azure_token-or-kf_azure_pat)
+    - [Scan specific Azure DevOps projects](#scan-specific-azure-devops-projects)
+    - [Skip specific Azure repositories during enumeration](#skip-specific-azure-repositories-during-enumeration)
+    - [List Azure repositories](#list-azure-repositories)
   - [Scanning Gitea](#scanning-gitea)
     - [Scan Gitea organization (requires `KF_GITEA_TOKEN`)](#scan-gitea-organization-requires-kf_gitea_token)
     - [Scan Gitea user](#scan-gitea-user)
@@ -1015,13 +1016,15 @@ kingfisher scan --help
 Kingfisher began as a fork of Praetorian’s Nosey Parker, as our experiment with adding live validation support and embedding that validation directly inside each rule.  
 
 Since that initial fork, it has diverged heavily from Nosey Parker:
-- Replaced the SQLite datastore with an in-memory store + Bloom filter
-- Collapsed the workflow into a single scan-and-report phase with direct JSON/BSON/SARIF outputs  
-- Added Tree-Sitter parsing on top of Hyperscan for deeper language-aware detection  
-- Removed datastore-driven reporting/annotations in favor of live validation, baselines, allowlists, and compressed-file extraction  
+- Added support for live validation of discovered secrets  
+- Added hundreds of new rules  
+- Added support for analyzing compressed files  
+- Added support for building "baselines" to allow for only reporting on newly discovered secrets  
+- Added Tree-Sitter based source code parsing on top of Hyperscan for deeper language-aware detection  
 - Expanded support for new targets (GitLab, BitBucket, Gitea, Jira, Confluence, Slack, S3, Docker, etc.)  
+- Replaced the SQLite datastore with an in-memory store + Bloom filter  
+- Collapsed the workflow into a single scan-and-report phase with direct JSON/BSON/SARIF outputs  
 - Delivered cross-platform builds, including native Windows  
-
 
 # Roadmap
 
