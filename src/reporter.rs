@@ -126,31 +126,6 @@ fn build_git_urls(
     (repository_url, commit_url, file_url)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::build_git_urls;
-
-    #[test]
-    fn azure_commit_links_use_query_paths() {
-        let (repo_url, commit_url, file_url) = build_git_urls(
-            "https://dev.azure.com/org/project/_git/repo",
-            "0123456789abcdef",
-            "dir/file.txt",
-            7,
-        );
-
-        assert_eq!(repo_url, "https://dev.azure.com/org/project/_git/repo");
-        assert_eq!(
-            commit_url,
-            "https://dev.azure.com/org/project/_git/repo/commit/0123456789abcdef"
-        );
-        assert_eq!(
-            file_url,
-            "https://dev.azure.com/org/project/_git/repo/commit/0123456789abcdef?path=/dir/file.txt&line=7"
-        );
-    }
-}
-
 pub fn run(
     global_args: &GlobalArgs,
     ds: Arc<Mutex<findings_store::FindingsStore>>,
@@ -901,6 +876,28 @@ mod tests {
             .and_then(|path| path.as_str())
             .unwrap();
         assert_eq!(git_file_path, "path/in/history.txt");
+    }
+
+    use super::build_git_urls;
+
+    #[test]
+    fn azure_commit_links_use_query_paths() {
+        let (repo_url, commit_url, file_url) = build_git_urls(
+            "https://dev.azure.com/org/project/_git/repo",
+            "0123456789abcdef",
+            "dir/file.txt",
+            7,
+        );
+
+        assert_eq!(repo_url, "https://dev.azure.com/org/project/_git/repo");
+        assert_eq!(
+            commit_url,
+            "https://dev.azure.com/org/project/_git/repo/commit/0123456789abcdef"
+        );
+        assert_eq!(
+            file_url,
+            "https://dev.azure.com/org/project/_git/repo/commit/0123456789abcdef?path=/dir/file.txt&line=7"
+        );
     }
 }
 

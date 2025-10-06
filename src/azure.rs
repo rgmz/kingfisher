@@ -109,7 +109,7 @@ fn normalize_repo_identifier(parts: &[String]) -> Option<String> {
 }
 
 fn parse_repo_identifier_from_path(path: &str) -> Option<String> {
-    let mut segments: Vec<String> = path
+    let segments: Vec<String> = path
         .trim_matches('/')
         .split('/')
         .filter(|s| !s.is_empty())
