@@ -335,7 +335,7 @@ impl<'a> Matcher<'a> {
 
         let blob_len = blob.len();
 
-        let should_run_tree_sitter = blob_len
+        let should_run_tree_sitter = blob_len > 0
             && blob_len <= TREE_SITTER_MAX_LIMIT
             && blob_len >= TREE_SITTER_MIN_LIMIT
             && has_raw_matches
