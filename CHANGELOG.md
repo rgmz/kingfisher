@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.56.0]
+- Fixed tree-sitter scanning bug where passing --no-base64 caused errors to be printed when the file type couldn’t be determined
+
 ## [v1.55.0]
 - Added first-class Azure Repos support, including CLI commands, enumeration, and documentation updates
 - Improved performance of tree-sitter parsing

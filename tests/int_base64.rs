@@ -61,6 +61,32 @@ fn skips_base64_when_disabled() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Ensure disabling Base64 decoding does not trigger tree-sitter errors on empty files
+#[test]
+fn no_base64_skips_empty_files() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let file_path = dir.path().join("empty.py");
+    fs::write(&file_path, "")?;
+
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            dir.path().to_str().unwrap(),
+            "--no-binary",
+            "--no-base64",
+            "--confidence=low",
+            "--format",
+            "json",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("Source code is empty").not());
+
+    dir.close()?;
+    Ok(())
+}
+
 // Ensure tree-sitter based decoding works even when the standalone base64 scanner is disabled
 #[test]
 fn detects_base64_in_code_with_tree_sitter() -> anyhow::Result<()> {

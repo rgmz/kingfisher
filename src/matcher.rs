@@ -39,7 +39,8 @@ use crate::{
 const MAX_CHUNK_SIZE: usize = 1 << 30; // 1 GiB per scan segment
 const CHUNK_OVERLAP: usize = 64 * 1024; // 64 KiB overlap to catch boundary matches
 const BASE64_SCAN_LIMIT: usize = 64 * 1024 * 1024; // skip expensive Base64 pass on huge blobs
-const TREE_SITTER_SCAN_LIMIT: usize = 64 * 1024; // only run tree-sitter on blobs ≤64 KiB
+const TREE_SITTER_MAX_LIMIT: usize = 64 * 1024; // only run tree-sitter on blobs <= 64 KiB
+const TREE_SITTER_MIN_LIMIT: usize = 1 * 1024; // only run tree-sitter on blobs >= 1 KiB
 
 // -------------------------------------------------------------------------------------------------
 // RawMatch
@@ -324,15 +325,21 @@ impl<'a> Matcher<'a> {
         let has_raw_matches = !self.user_data.raw_matches_scratch.is_empty();
         let has_base64_items = !b64_items.is_empty();
 
-        if !has_raw_matches && !has_base64_items && !(no_base64 && lang_hint.is_some()) {
+        if !has_raw_matches && !has_base64_items {
             return Ok(ScanResult::New(Vec::new()));
         }
 
         let rules_db = self.rules_db;
         let mut seen_matches = FxHashSet::default();
         let mut previous_matches: FxHashMap<usize, Vec<OffsetSpan>> = FxHashMap::default();
-        let should_run_tree_sitter = blob.len() <= TREE_SITTER_SCAN_LIMIT
-            && (has_raw_matches || (no_base64 && lang_hint.is_some()));
+        
+        let should_run_tree_sitter = blob.len() > 0
+            && blob.len() <= TREE_SITTER_MAX_LIMIT
+            && blob.len() >= TREE_SITTER_MIN_LIMIT
+            && has_raw_matches
+            && lang_hint.is_some()
+            && !no_base64; //tree-sitter parsing is turned off when base64 scanning is disabled
+
         let tree_sitter_result = if should_run_tree_sitter {
             lang_hint.and_then(|lang_str| {
                 get_language_and_queries(lang_str).and_then(|(language, queries)| {
