@@ -333,9 +333,11 @@ impl<'a> Matcher<'a> {
         let mut seen_matches = FxHashSet::default();
         let mut previous_matches: FxHashMap<usize, Vec<OffsetSpan>> = FxHashMap::default();
 
-        let should_run_tree_sitter = blob.len() > 0
-            && blob.len() <= TREE_SITTER_MAX_LIMIT
-            && blob.len() >= TREE_SITTER_MIN_LIMIT
+        let blob_len = blob.len();
+
+        let should_run_tree_sitter = blob_len
+            && blob_len <= TREE_SITTER_MAX_LIMIT
+            && blob_len >= TREE_SITTER_MIN_LIMIT
             && has_raw_matches
             && lang_hint.is_some()
             && !no_base64; //tree-sitter parsing is turned off when base64 scanning is disabled
