@@ -3,19 +3,30 @@ use crate::location::OffsetSpan;
 /// Configuration for inline ignore directives.
 #[derive(Clone, Debug, Default)]
 pub struct InlineIgnoreConfig {
-    tokens: Vec<&'static str>,
+    tokens: Vec<Vec<u8>>,
 }
 
 impl InlineIgnoreConfig {
     /// Create a new configuration.
     ///
-    /// * `include_external_syntax` - when true, also recognise the comment
-    ///   directives used by other scanners such as Gitleaks and Trufflehog.
-    pub fn new(include_external_syntax: bool) -> Self {
-        let mut tokens = vec!["kingfisher:ignore", "kingfisher:allow"];
-        if include_external_syntax {
-            tokens.extend(["gitleaks:allow", "trufflehog:ignore"]);
+    /// * `additional_tokens` - inline ignore directives supplied by the user.
+    pub fn new(additional_tokens: &[String]) -> Self {
+        let mut tokens = vec![b"kingfisher:ignore".to_vec(), b"kingfisher:allow".to_vec()];
+
+        for token in additional_tokens {
+            let trimmed = token.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            let lowered = trimmed.to_ascii_lowercase().into_bytes();
+            if tokens.iter().any(|existing| existing == &lowered) {
+                continue;
+            }
+
+            tokens.push(lowered);
         }
+
         Self { tokens }
     }
 
@@ -128,6 +139,14 @@ fn should_skip_for_directive_search(line: &[u8]) -> bool {
         return true;
     }
 
+    if looks_like_pem_boundary(trimmed) {
+        return true;
+    }
+
+    if looks_like_encoded_secret_body(trimmed) {
+        return true;
+    }
+
     false
 }
 
@@ -144,6 +163,68 @@ fn ends_with_multiline_delimiter(trimmed: &[u8]) -> bool {
     let count = trimmed.iter().rev().take_while(|&&ch| ch == last).count();
 
     count >= 3
+}
+
+fn looks_like_pem_boundary(trimmed: &[u8]) -> bool {
+    trimmed.starts_with(b"-----BEGIN ") || trimmed.starts_with(b"-----END ")
+}
+
+fn looks_like_encoded_secret_body(trimmed: &[u8]) -> bool {
+    const MIN_LEN: usize = 16;
+
+    if trimmed.len() < MIN_LEN {
+        return false;
+    }
+
+    let is_base64ish = trimmed.iter().all(|&b| {
+        matches!(
+            b,
+            b'A'..=b'Z'
+                | b'a'..=b'z'
+                | b'0'..=b'9'
+                | b'+'
+                | b'/'
+                | b'='
+                | b'-'
+                | b'_'
+        )
+    });
+    if is_base64ish {
+        return true;
+    }
+
+    let is_hexish = trimmed.iter().all(|&b| matches!(b, b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F'));
+    if is_hexish {
+        return true;
+    }
+
+    let is_base32ish = trimmed.iter().all(|&b| matches!(b, b'A'..=b'Z' | b'2'..=b'7' | b'='));
+    if is_base32ish {
+        return true;
+    }
+
+    // Allow directives to be placed after payloads that mix a high percentage of
+    // alpha-numeric characters commonly seen in encoded data (e.g. cryptographic
+    // material that includes punctuation like ':' or '.') without risking
+    // accidentally skipping regular source lines.
+    let allowed = |b: u8| {
+        matches!(
+            b,
+            b'A'..=b'Z'
+                | b'a'..=b'z'
+                | b'0'..=b'9'
+                | b'+'
+                | b'/'
+                | b'='
+                | b'-'
+                | b'_'
+                | b':'
+                | b'.'
+        )
+    };
+
+    let allowed_count = trimmed.iter().copied().filter(|&b| allowed(b)).count();
+    allowed_count * 10 >= trimmed.len() * 9
 }
 
 fn trim_ascii_whitespace(line: &[u8]) -> &[u8] {
@@ -175,7 +256,7 @@ fn line_bounds(bytes: &[u8], index: usize) -> (usize, usize) {
     (start, end)
 }
 
-fn line_has_directive(line: &[u8], tokens: &[&'static str]) -> bool {
+fn line_has_directive(line: &[u8], tokens: &[Vec<u8>]) -> bool {
     if line.is_empty() {
         return false;
     }
@@ -183,7 +264,7 @@ fn line_has_directive(line: &[u8], tokens: &[&'static str]) -> bool {
     let mut lowercase = line.to_vec();
     lowercase.iter_mut().for_each(|b| *b = b.to_ascii_lowercase());
 
-    tokens.iter().any(|token| memchr::memmem::find(&lowercase, token.as_bytes()).is_some())
+    tokens.iter().any(|token| memchr::memmem::find(&lowercase, token.as_slice()).is_some())
 }
 
 #[cfg(test)]
@@ -204,16 +285,16 @@ mod tests {
 
     #[test]
     fn detects_directives_in_lines() {
-        let tokens = ["kingfisher:ignore", "kingfisher:allow"];
+        let tokens = vec![b"kingfisher:ignore".to_vec(), b"kingfisher:allow".to_vec()];
         assert!(line_has_directive(b"secret # kingfisher:ignore", &tokens));
         assert!(line_has_directive(b"kingfisher:allow before value", &tokens));
-        assert!(line_has_directive(b"value // TruffleHog:Ignore", &["trufflehog:ignore"]));
+        assert!(line_has_directive(b"value // Gitleaks:Allow", &[b"gitleaks:allow".to_vec()]));
         assert!(!line_has_directive(b"secret", &tokens));
     }
 
     #[test]
     fn respects_multiline_block_comment_prefix() {
-        let tokens = ["kingfisher:ignore"];
+        let tokens = vec![b"kingfisher:ignore".to_vec()];
         assert!(line_has_directive(b" * kingfisher:ignore", &tokens));
     }
 
@@ -226,7 +307,60 @@ mod tests {
             .position(|window| window == matched)
             .expect("match bytes present");
         let span = OffsetSpan::from_range(start..start + matched.len());
-        let config = InlineIgnoreConfig::new(false);
+        let config = InlineIgnoreConfig::new(&[]);
+        assert!(config.should_ignore(blob, &span));
+    }
+
+    #[test]
+    fn ignores_multiline_with_directive_on_closing_line() {
+        let blob = b"api_key = \"\"\"\nline1\nline2\n\"\"\"  // kingfisher:ignore\n";
+        let matched = b"line1\nline2\n";
+        let start = blob
+            .windows(matched.len())
+            .position(|window| window == matched)
+            .expect("match bytes present");
+        let span = OffsetSpan::from_range(start..start + matched.len());
+        let config = InlineIgnoreConfig::new(&[]);
+        assert!(config.should_ignore(blob, &span));
+    }
+
+    #[test]
+    fn ignores_pem_with_directive_before_block() {
+        let blob = b"// kingfisher:ignore\napi_key = \"\"\"\n-----BEGIN RSA PRIVATE KEY-----\nMIICWwIBAAKBgQC7\n-----END RSA PRIVATE KEY-----\n\"\"\"\n";
+        let matched = b"MIICWwIBAAKBgQC7\n";
+        let start = blob
+            .windows(matched.len())
+            .position(|window| window == matched)
+            .expect("match bytes present");
+        let span = OffsetSpan::from_range(start..start + matched.len());
+        let config = InlineIgnoreConfig::new(&[]);
+        assert!(config.should_ignore(blob, &span));
+    }
+
+    #[test]
+    fn ignores_multiline_hex_payload_with_directive() {
+        let blob = b"# kingfisher:ignore\nsecret = \"\"\"\n00112233445566778899aabbccddeeff\nffeeddccbbaa99887766554433221100\n\"\"\"\n";
+        let matched = b"00112233445566778899aabbccddeeff\nffeeddccbbaa99887766554433221100\n";
+        let start = blob
+            .windows(matched.len())
+            .position(|window| window == matched)
+            .expect("match bytes present");
+        let span = OffsetSpan::from_range(start..start + matched.len());
+        let config = InlineIgnoreConfig::new(&[]);
+        assert!(config.should_ignore(blob, &span));
+    }
+
+    #[test]
+    fn ignores_multiline_base32_payload_with_directive_after_block() {
+        let blob =
+            b"secret = \"\"\"\nMFRGGZDFMZTWQ2LK\nONSWG4TFOQ======\n\"\"\"\n// kingfisher:ignore\n";
+        let matched = b"MFRGGZDFMZTWQ2LK\nONSWG4TFOQ======\n";
+        let start = blob
+            .windows(matched.len())
+            .position(|window| window == matched)
+            .expect("match bytes present");
+        let span = OffsetSpan::from_range(start..start + matched.len());
+        let config = InlineIgnoreConfig::new(&[]);
         assert!(config.should_ignore(blob, &span));
     }
 
@@ -239,7 +373,7 @@ mod tests {
             .position(|window| window == matched)
             .expect("match bytes present");
         let span = OffsetSpan::from_range(start..start + matched.len());
-        let config = InlineIgnoreConfig::new(false);
+        let config = InlineIgnoreConfig::new(&[]);
         assert!(config.should_ignore(blob, &span));
     }
 
@@ -252,7 +386,7 @@ mod tests {
             .position(|window| window == matched)
             .expect("match bytes present");
         let span = OffsetSpan::from_range(start..start + matched.len());
-        let config = InlineIgnoreConfig::new(false);
+        let config = InlineIgnoreConfig::new(&[]);
         assert!(config.should_ignore(blob, &span));
     }
 
@@ -268,6 +402,10 @@ mod tests {
         assert!(should_skip_for_directive_search(b"   \"\"\"   "));
         assert!(should_skip_for_directive_search(b"let secret = \"\"\""));
         assert!(!should_skip_for_directive_search(b"value"));
+        assert!(should_skip_for_directive_search(b"-----BEGIN RSA PRIVATE KEY-----"));
+        assert!(should_skip_for_directive_search(b"MIICWwIBAAKBgQC7"));
+        assert!(should_skip_for_directive_search(b"0011223344556677"));
+        assert!(should_skip_for_directive_search(b"MFRGGZDFMZTWQ2LK"));
     }
 
     #[test]

@@ -112,7 +112,7 @@ fn run_skiplist(skip_regex: Vec<String>, skip_skipword: Vec<String>) -> Result<u
             since_commit: None,
             branch: None,
         },
-        compat_ignore_comments: false,
+        extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 5.0,
             exclude: Vec::new(),

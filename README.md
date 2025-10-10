@@ -963,7 +963,7 @@ leaves the default unchanged.
 - `--manage-baseline`: Create or update the baseline file with current findings
 - `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
 - `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
-- `--compat-ignore-comments`: Honor inline directives from other scanners (treat `gitleaks:allow` and `trufflehog:ignore` like native suppressions)
+- `--ignore-comment <DIRECTIVE>`: Honor additional inline directives from other scanners (repeatable; e.g. `--ignore-comment "gitleaks:allow"`)
 - `--no-ignore`: Disable inline directives entirely so every match is reported
 ## Understanding `--confidence`
 
@@ -979,7 +979,7 @@ Use `--skip-regex` and `--skip-word` to suppress findings you know are benign. B
 
 ### Inline ignore directives
 
-Add `kingfisher:ignore` (or `kingfisher:allow`) anywhere on the same line as a finding to silence it. Multi-line strings may also be ignored by placing the directive on the closing delimiter line, on the next logical line after the string, **or** on a comment immediately before the value:
+Add `kingfisher:ignore` (or `kingfisher:allow`) anywhere on the same line as a finding to silence it. Multi-line strings and PEM-style blocks may also be ignored by placing the directive on the closing delimiter line (for example, `"""  # kingfisher:ignore`), on the next logical line after the string, **or** on a comment immediately before the value:
 
 ```python
 # kingfisher:ignore
@@ -990,7 +990,7 @@ line 2
 # kingfisher:ignore
 ```
 
-Kingfisher searches the surrounding lines for these tokens without requiring language-specific comment markers, so directives work even in templated files or unusual syntaxes. To reuse existing inline directives from other scanners, pass `--compat-ignore-comments` to also accept `gitleaks:allow` and `trufflehog:ignore`. Use `--no-ignore` when you want to disable inline suppressions entirely.
+Kingfisher searches the surrounding lines for these tokens without requiring language-specific comment markers. To reuse existing inline directives from other scanners, add them with repeatable `--ignore-comment` flags (for example `--ignore-comment "gitleaks:allow" --ignore-comment "NOSONAR"`). Use `--no-ignore` when you want to disable inline suppressions entirely.
 
 With `--skip-regex`, these should be Rust compatible regular expressions, which you can test out at [regex101](https://regex101.com)
 

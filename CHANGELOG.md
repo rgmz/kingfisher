@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [v1.57.0]
 - Added inline ignore directive detection to treat suppression tokens anywhere on surrounding lines, including multi-line handling
 - Added a `--no-ignore` CLI flag to disable inline directives when you need every potential secret reported
-- Added: `--compat-ignore-comments` to reuse existing inline directives from other scanners: NOSONAR, kics-scan ignore,  gitleaks:allow and trufflehog:ignore
+- Added: repeatable `--ignore-comment <TOKEN>` flag to reuse inline directives from other scanners (for example `NOSONAR`,
+  `kics-scan ignore`, `gitleaks:allow`, etc)
 
 ## [v1.56.0]
 - Fixed tree-sitter scanning bug where passing --no-base64 caused errors to be printed when the file type couldn’t be determined

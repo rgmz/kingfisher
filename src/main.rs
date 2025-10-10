@@ -416,7 +416,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             since_commit: None,
             branch: None,
         },
-        compat_ignore_comments: false,
+        extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
             no_extract_archives: true,

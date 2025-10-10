@@ -116,7 +116,7 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         no_base64: false,
-        compat_ignore_comments: false,
+        extra_ignore_comments: Vec::new(),
         no_inline_ignore: false,
     };
 

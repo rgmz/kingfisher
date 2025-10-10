@@ -102,7 +102,7 @@ impl TestContext {
                 since_commit: None,
                 branch: None,
             },
-            compat_ignore_comments: false,
+            extra_ignore_comments: Vec::new(),
             content_filtering_args: ContentFilteringArgs {
                 max_file_size_mb: 25.0,
                 extraction_depth: 2,
@@ -248,7 +248,7 @@ async fn test_scan_slack_messages() -> Result<()> {
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         no_base64: false,
-        compat_ignore_comments: false,
+        extra_ignore_comments: Vec::new(),
         no_inline_ignore: false,
     };
 

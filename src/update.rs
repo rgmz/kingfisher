@@ -40,7 +40,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     let use_color = std::io::stderr().is_terminal() && !global_args.quiet;
     let styles = Styles::new(use_color);
 
-    info!("{}", "Checking for updates…");
+    // info!("{}", "Checking for updates…");
 
     let mut builder = Update::configure();
     builder
@@ -113,22 +113,22 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
         if curr > latest {
             let plain =
                 format!("Running Kingfisher {curr} which is newer than latest released {latest}");
-            info!("{}", styled_heading(&styles, plain.as_str()));
+            info!("{}", plain);
             return Some(plain);
         }
         // else fall through to Case 3 (latest > running)
     }
 
     // ───────────── Case 3: latest > running ─────────────
-    let plain = format!("New Kingfisher release {} available", release.version);
-    info!("{}", styled_heading(&styles, plain.as_str()));
+    let plain = format!("NEW KINGFISHER RELEASE {} AVAILABLE", release.version);
+    info!("{}", plain);
 
     // Attempt self‑update when allowed and feasible.
     if global_args.self_update {
         match updater.update() {
             Ok(status) => {
-                let message = format!("Updated to version {}", status.version());
-                info!("{}", styled_heading(&styles, message.as_str()));
+                let message = format!("UPDATED TO VERSION {}", status.version());
+                info!("{}", message);
             }
             Err(e) => match e {
                 UpdError::Io(ref io_err) => match io_err.kind() {

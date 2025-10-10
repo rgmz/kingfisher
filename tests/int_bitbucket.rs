@@ -132,7 +132,7 @@ fn test_bitbucket_remote_scan() -> Result<()> {
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         no_base64: false,
-        compat_ignore_comments: false,
+        extra_ignore_comments: Vec::new(),
         no_inline_ignore: false,
     };
 

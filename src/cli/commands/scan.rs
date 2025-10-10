@@ -119,9 +119,9 @@ pub struct ScanArgs {
     #[arg(long = "skip-word", value_name = "WORD")]
     pub skip_word: Vec<String>,
 
-    /// Also recognise `gitleaks:allow` and `trufflehog:ignore` inline directives
-    #[arg(long = "compat-ignore-comments", default_value_t = false)]
-    pub compat_ignore_comments: bool,
+    /// Additional inline ignore directives to recognise (repeatable)
+    #[arg(long = "ignore-comment", value_name = "DIRECTIVE")]
+    pub extra_ignore_comments: Vec<String>,
 
     /// Disable inline ignore directives entirely
     #[arg(long = "no-ignore", default_value_t = false)]
