@@ -1,25 +1,25 @@
 // This module checks GitHub for a newer Kingfisher release and (optionally)
-// self‑updates.  Our release assets use short, user‑friendly names such as
+// self-updates.  Our release assets use short, user-friendly names such as
 // `kingfisher-linux-arm64.tgz`, `kingfisher-darwin-x64.tgz`, etc.  Those names
 // do **not** match the full Rust target triple that the `self_update` crate
-// expects (e.g. `aarch64-unknown-linux-musl`).  We therefore map the compile‑
+// expects (e.g. `aarch64-unknown-linux-musl`).  We therefore map the compile-
 // time target to the corresponding asset suffix via `builder.target()`.
 //
 // Version handling logic covers three scenarios:
 //   1. Running version == latest release →                   "up to date".
 //   2. Running version  > latest release → print a notice that the binary is **newer** than
 //      anything on GitHub (e.g. a dev build).
-//   3. Latest release  > running version → offer to self‑update.
+//   3. Latest release  > running version → offer to self-update.
 //
 // All informational messages are printed with the
 // `style_finding_active_heading` style so that they stand out alongside normal
 // scan output.
 
-use std::io::{ErrorKind, IsTerminal};
+use std::io::{ErrorKind, Write};
 
 use self_update::{backends::github::Update, cargo_crate_version, errors::Error as UpdError};
 use semver::Version;
-use tracing::{error, info, warn};
+use tracing::error;
 
 use crate::{cli::global::GlobalArgs, reporter::styles::Styles};
 
@@ -27,10 +27,10 @@ fn styled_heading(styles: &Styles, text: &str) -> String {
     styles.style_finding_active_heading.apply_to(text).to_string()
 }
 
-/// Check GitHub for a newer Kingfisher release and optionally self‑update.
+/// Check GitHub for a newer Kingfisher release and optionally self-update.
 ///
 /// * `base_url` lets tests point at a mock server.
-/// * Self‑update is skipped when the user disabled it **or** the binary is a Homebrew install.
+/// * Self-update is skipped when the user disabled it **or** the binary is a Homebrew install.
 pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Option<String> {
     if global_args.no_update_check {
         return None;
@@ -49,7 +49,7 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
         .repo_name("kingfisher")
         .bin_name("kingfisher")
         .show_download_progress(false)
-        .no_confirm(true) // Don't prompt for confirmation when self‑updating
+        .no_confirm(true) // Don't prompt for confirmation when self-updating
         .current_version(cargo_crate_version!());
 
     // Allow tests to point at a mock HTTP server.
@@ -82,19 +82,27 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     #[cfg(target_os = "windows")]
     builder.identifier("zip");
 
-    // Linux releases also ship as .deb and .rpm packages; select the .tgz asset for self‑updates
+    // Linux releases also ship as .deb and .rpm packages; select the .tgz asset for self-updates
     #[cfg(not(target_os = "windows"))]
     builder.identifier("tgz");
 
     // Build the updater.
     let Ok(updater) = builder.build() else {
-        warn!("Failed to configure update checker");
+        let _ = writeln!(
+            std::io::stderr(),
+            "{}",
+            styled_heading(&styles, "Failed to configure update checker")
+        );
         return None;
     };
 
     // Query GitHub.
     let Ok(release) = updater.get_latest_release() else {
-        warn!("Failed to check for updates");
+        let _ = writeln!(
+            std::io::stderr(),
+            "{}",
+            styled_heading(&styles, "Failed to check for updates")
+        );
         return None;
     };
 
@@ -103,38 +111,39 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
     // ───────────── Case 1: running == latest ─────────────
     if release.version == running_v {
         let plain = format!("Kingfisher {running_v} is up to date");
-        info!("{}", plain);
+        let _ = writeln!(std::io::stderr(), "{plain}");
         return Some(plain);
     }
 
     // Try semantic version comparison.  If parsing fails, fall back to the
-    // self‑update code‑path (which will treat the strings lexicographically).
+    // self-update code-path (which will treat the strings lexicographically).
     if let (Ok(curr), Ok(latest)) = (Version::parse(running_v), Version::parse(&release.version)) {
         // ───────── Case 2: running > latest (dev build) ─────────
         if curr > latest {
             let plain =
                 format!("Running Kingfisher {curr} which is newer than latest released {latest}");
-            info!("{}", styled_heading(&styles, plain.as_str()));
+            let _ = writeln!(std::io::stderr(), "{}", styled_heading(&styles, &plain));
             return Some(plain);
         }
-        // else fall through to Case 3 (latest > running)
+        // else fall through to Case 3 (latest > running)
     }
 
     // ───────────── Case 3: latest > running ─────────────
     let plain = format!("New Kingfisher release {} available", release.version);
-    info!("{}", styled_heading(&styles, plain.as_str()));
+    let _ = writeln!(std::io::stderr(), "{}", styled_heading(&styles, &plain));
 
-    // Attempt self‑update when allowed and feasible.
+    // Attempt self-update when allowed and feasible.
     if global_args.self_update {
         match updater.update() {
             Ok(status) => {
                 let message = format!("Updated to version {}", status.version());
-                info!("{}", styled_heading(&styles, message.as_str()));
+                let _ = writeln!(std::io::stderr(), "{}", styled_heading(&styles, &message));
             }
             Err(e) => match e {
                 UpdError::Io(ref io_err) => match io_err.kind() {
                     ErrorKind::PermissionDenied => {
-                        warn!(
+                        let _ = writeln!(
+                            std::io::stderr(),
                             "{}",
                             styled_heading(
                                 &styles,
@@ -145,7 +154,8 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
                         );
                     }
                     ErrorKind::NotFound => {
-                        warn!(
+                        let _ = writeln!(
+                            std::io::stderr(),
                             "{}",
                             styled_heading(
                                 &styles,
