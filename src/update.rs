@@ -36,11 +36,12 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
         return None;
     }
 
-    // Decide once whether we want coloured output.
-    let use_color = std::io::stderr().is_terminal() && !global_args.quiet;
+    // Respect the user's color preferences when printing update
+    // by delegating to the same helper used by the main reporter logic. This keeps
+    // the update checker in sync with the rest of the application and avoids
+    // emitting raw ANSI escape codes when colour output has been disabled.
+    let use_color = !global_args.quiet && global_args.use_color(std::io::stderr());
     let styles = Styles::new(use_color);
-
-    info!("{}", "Checking for updates…");
 
     let mut builder = Update::configure();
     builder

@@ -118,6 +118,14 @@ pub struct ScanArgs {
     /// Skipwords to allow-list secret matches (case-insensitive, repeatable)
     #[arg(long = "skip-word", value_name = "WORD")]
     pub skip_word: Vec<String>,
+
+    /// Additional inline ignore directives to recognise (repeatable)
+    #[arg(long = "ignore-comment", value_name = "DIRECTIVE")]
+    pub extra_ignore_comments: Vec<String>,
+
+    /// Disable inline ignore directives entirely
+    #[arg(long = "no-ignore", default_value_t = false)]
+    pub no_inline_ignore: bool,
 }
 
 /// Confidence levels for findings

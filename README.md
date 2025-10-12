@@ -117,6 +117,7 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
   - [Notable Scan Options](#notable-scan-options)
   - [Understanding `--confidence`](#understanding---confidence)
     - [Ignore known false positives](#ignore-known-false-positives)
+    - [Inline ignore directives](#inline-ignore-directives)
   - [Finding Fingerprint](#finding-fingerprint)
   - [Rule Performance Profiling](#rule-performance-profiling)
   - [CLI Options](#cli-options)
@@ -962,6 +963,8 @@ leaves the default unchanged.
 - `--manage-baseline`: Create or update the baseline file with current findings
 - `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
 - `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
+- `--ignore-comment <DIRECTIVE>`: Honor additional inline directives from other scanners (repeatable; e.g. `--ignore-comment "gitleaks:allow"`)
+- `--no-ignore`: Disable inline directives entirely so every match is reported
 ## Understanding `--confidence`
 
 The `--confidence` flag sets a minimum confidence threshold, not an exact match.
@@ -972,7 +975,7 @@ The `--confidence` flag sets a minimum confidence threshold, not an exact match.
 
 ### Ignore known false positives
 
-Use `--skip-regex` and `--skip-word` to suppress findings you know are benign. Both flags may be provided multiple times and are tested against the secret value **and** the full match context. 
+Use `--skip-regex` and `--skip-word` to suppress findings you know are benign. Both flags may be provided multiple times and are tested against the secret value **and** the full match context.
 
 With `--skip-regex`, these should be Rust compatible regular expressions, which you can test out at [regex101](https://regex101.com)
 
@@ -992,6 +995,22 @@ kingfisher scan \
 ```
 
 If a `--skip-regex` regular expression fails to compile, the scan aborts with an error so that typos are caught early.
+
+### Inline ignore directives
+
+Add `kingfisher:ignore` anywhere on the same line as a finding to silence it. Multi-line strings and PEM-style blocks may also be ignored by placing the directive on the closing delimiter line (for example, `"""  # kingfisher:ignore`), on the next logical line after the string, **or** on a comment immediately before the value:
+
+```python
+# kingfisher:ignore
+API_KEY = """
+line 1
+line 2
+"""
+# kingfisher:ignore
+```
+
+Kingfisher searches the surrounding lines for these tokens without requiring language-specific comment markers. To reuse existing inline directives from other scanners, add them with repeatable `--ignore-comment` flags (for example `--ignore-comment "gitleaks:allow" --ignore-comment "NOSONAR"`). Use `--no-ignore` when you want to disable inline suppressions entirely.
+
 
 ## Finding Fingerprint
 

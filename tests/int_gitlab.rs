@@ -116,6 +116,7 @@ fn test_gitlab_remote_scan() -> Result<()> {
             since_commit: None,
             branch: None,
         },
+        extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
             no_extract_archives: false,
@@ -137,6 +138,7 @@ fn test_gitlab_remote_scan() -> Result<()> {
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         no_base64: false,
+        no_inline_ignore: false,
     };
 
     let global_args = GlobalArgs {
@@ -272,6 +274,8 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         no_base64: false,
+        extra_ignore_comments: Vec::new(),
+        no_inline_ignore: false,
     };
 
     let global_args = GlobalArgs {

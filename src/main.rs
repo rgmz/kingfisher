@@ -416,6 +416,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             since_commit: None,
             branch: None,
         },
+        extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,
             no_extract_archives: true,
@@ -437,6 +438,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         skip_word: Vec::new(),
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_base64: false,
+        no_inline_ignore: false,
     }
 }
 /// Run the rules check command

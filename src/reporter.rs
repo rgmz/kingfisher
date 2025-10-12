@@ -842,6 +842,7 @@ mod tests {
                 since_commit: None,
                 branch: None,
             },
+            extra_ignore_comments: Vec::new(),
             content_filtering_args: ContentFilteringArgs {
                 max_file_size_mb: 256.0,
                 exclude: Vec::new(),
@@ -863,6 +864,7 @@ mod tests {
             manage_baseline: false,
             skip_regex: Vec::new(),
             skip_word: Vec::new(),
+            no_inline_ignore: false,
         };
 
         let record = reporter.build_finding_record(&report_match, &scan_args);

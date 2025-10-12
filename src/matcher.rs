@@ -23,6 +23,7 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::{
     blob::{Blob, BlobId, BlobIdMap},
     entropy::calculate_shannon_entropy,
+    inline_ignore::InlineIgnoreConfig,
     location::{Location, LocationMapping, OffsetSpan, SourcePoint, SourceSpan},
     origin::OriginSet,
     parser,
@@ -199,6 +200,9 @@ pub struct Matcher<'a> {
 
     /// Rule profiler for measuring performance of individual rules
     profiler: Option<Arc<ConcurrentRuleProfiler>>,
+
+    /// Configuration that controls inline ignore directives
+    inline_ignore_config: InlineIgnoreConfig,
 }
 /// This `Drop` implementation updates the `global_stats` with the local stats
 impl<'a> Drop for Matcher<'a> {
@@ -226,6 +230,8 @@ impl<'a> Matcher<'a> {
         global_stats: Option<&'a Mutex<MatcherStats>>,
         enable_profiling: bool,
         shared_profiler: Option<Arc<ConcurrentRuleProfiler>>,
+        extra_ignore_directives: &[String],
+        disable_inline_ignores: bool,
     ) -> Result<Self> {
         // Changed: removed `with_capacity(16384)` so we don't pre-allocate a large Vec
         let raw_matches_scratch = Vec::new();
@@ -247,6 +253,11 @@ impl<'a> Matcher<'a> {
             seen_blobs,
             user_data,
             profiler,
+            inline_ignore_config: if disable_inline_ignores {
+                InlineIgnoreConfig::disabled()
+            } else {
+                InlineIgnoreConfig::new(extra_ignore_directives)
+            },
         })
     }
 
@@ -403,6 +414,7 @@ impl<'a> Matcher<'a> {
                 redact,
                 &filename,
                 self.profiler.as_ref(),
+                &self.inline_ignore_config,
             );
         }
         // If tree-sitter produced base64-decoded matches, try them against all rules
@@ -427,6 +439,7 @@ impl<'a> Matcher<'a> {
                             redact,
                             &filename,
                             self.profiler.as_ref(),
+                            &self.inline_ignore_config,
                         );
                     }
                 }
@@ -457,6 +470,7 @@ impl<'a> Matcher<'a> {
                         redact,
                         &filename,
                         self.profiler.as_ref(),
+                        &self.inline_ignore_config,
                     );
                 }
                 if depth + 1 < MAX_B64_DEPTH {
@@ -560,6 +574,7 @@ fn filter_match<'b>(
     redact: bool,
     filename: &str,
     profiler: Option<&Arc<ConcurrentRuleProfiler>>,
+    inline_ignore_config: &InlineIgnoreConfig,
 ) {
     let mut timer =
         profiler.map(|p| RuleTimer::new(p, rule.id(), rule.name(), &rule.syntax.pattern, filename));
@@ -590,6 +605,10 @@ fn filter_match<'b>(
         let matching_input_offset_span = OffsetSpan::from_range(
             (start + matching_input.start())..(start + matching_input.end()),
         );
+        if inline_ignore_config.should_ignore(blob_bytes, &matching_input_offset_span) {
+            debug!("Skipping match due to inline ignore directive");
+            continue;
+        }
         let match_key = compute_match_key(
             matching_input.as_bytes(),
             rule.id().as_bytes(),
@@ -961,7 +980,7 @@ pub fn compute_finding_fingerprint(
 // -------------------------------------------------------------------------------------------------
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, path::PathBuf};
 
     use pretty_assertions::assert_eq;
     // ---------------------------------------------------------------------
@@ -970,7 +989,11 @@ mod test {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::rules::rule::{DependsOnRule, HttpRequest, HttpValidation, RuleSyntax, Validation};
+    use crate::{
+        blob::{Blob, BlobIdMap},
+        origin::{Origin, OriginSet},
+        rules::rule::{DependsOnRule, HttpRequest, HttpValidation, RuleSyntax, Validation},
+    };
 
     proptest! {
         #[test]
@@ -1009,7 +1032,17 @@ mod test {
             let rules_db  = RulesDatabase::from_rules(vec![rule]).unwrap();
             let seen      = BlobIdMap::new();
             let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
-            let mut m     = Matcher::new(&rules_db, scanner_pool, &seen, None, false, None).unwrap();
+            let mut m     = Matcher::new(
+                &rules_db,
+                scanner_pool,
+                &seen,
+                None,
+                false,
+                None,
+                &[],
+                false,
+            )
+            .unwrap();
 
             // ── run the scan ──────────────────────────────────────────────
             m.scan_bytes_raw(&noise, "buf").unwrap();
@@ -1080,6 +1113,8 @@ mod test {
             None,
             enable_rule_profiling,
             None, // Pass the shared profiler
+            &[],
+            false,
         )?;
         matcher.scan_bytes_raw(input.as_bytes(), "fname")?;
         assert_eq!(
@@ -1167,7 +1202,7 @@ mod test {
         let rules_db = RulesDatabase::from_rules(vec![rule])?;
         let seen = BlobIdMap::new();
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
-        let mut m = Matcher::new(&rules_db, scanner_pool, &seen, None, false, None)?;
+        let mut m = Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
 
         let buf = b"dup dup"; // two literal hits, same rule
 
@@ -1182,6 +1217,122 @@ mod test {
         // we should still only have two unique raw matches recorded
         assert_eq!(first_len, 2);
         assert_eq!(second_len, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn inline_comment_skips_match() -> Result<()> {
+        let rule = Rule::new(RuleSyntax {
+            id: "inline.ignore".into(),
+            name: "inline".into(),
+            pattern: "secret_token".into(),
+            confidence: crate::rules::rule::Confidence::Low,
+            min_entropy: 0.0,
+            visible: true,
+            examples: vec![],
+            negative_examples: vec![],
+            references: vec![],
+            validation: None::<Validation>,
+            depends_on_rule: vec![],
+        });
+        let rules_db = RulesDatabase::from_rules(vec![rule])?;
+        let seen = BlobIdMap::new();
+        let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
+        let mut matcher =
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+
+        let blob = Blob::from_bytes(b"let key = \"secret_token\" # kingfisher:ignore".to_vec());
+        let origin = OriginSet::from(Origin::from_file(PathBuf::from("inline.txt")));
+
+        match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
+            ScanResult::New(matches) => assert!(matches.is_empty()),
+            _ => panic!("unexpected scan result"),
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn inline_comment_after_multiline_secret_skips_match() -> Result<()> {
+        let rule = Rule::new(RuleSyntax {
+            id: "inline.multiline".into(),
+            name: "inline multiline".into(),
+            pattern: "line1\\s+line2".into(),
+            confidence: crate::rules::rule::Confidence::Low,
+            min_entropy: 0.0,
+            visible: true,
+            examples: vec![],
+            negative_examples: vec![],
+            references: vec![],
+            validation: None::<Validation>,
+            depends_on_rule: vec![],
+        });
+        let rules_db = RulesDatabase::from_rules(vec![rule])?;
+        let seen = BlobIdMap::new();
+        let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
+        let mut matcher =
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+
+        let blob = Blob::from_bytes(
+            br#"let data = """
+line1
+line2
+"""
+# kingfisher:ignore
+"#
+            .to_vec(),
+        );
+        let origin = OriginSet::from(Origin::from_file(PathBuf::from("multiline.txt")));
+
+        match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
+            ScanResult::New(matches) => assert!(matches.is_empty()),
+            _ => panic!("unexpected scan result"),
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn compat_flag_controls_external_directives() -> Result<()> {
+        let rule = Rule::new(RuleSyntax {
+            id: "inline.compat".into(),
+            name: "inline compat".into(),
+            pattern: "supersecret123".into(),
+            confidence: crate::rules::rule::Confidence::Low,
+            min_entropy: 0.0,
+            visible: true,
+            examples: vec![],
+            negative_examples: vec![],
+            references: vec![],
+            validation: None::<Validation>,
+            depends_on_rule: vec![],
+        });
+        let rules_db = RulesDatabase::from_rules(vec![rule])?;
+
+        let blob = Blob::from_bytes(b"token = \"supersecret123\" # gitleaks:allow".to_vec());
+        let origin = OriginSet::from(Origin::from_file(PathBuf::from("compat.txt")));
+
+        let seen = BlobIdMap::new();
+        let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
+        let mut matcher =
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+        let matches_without_compat =
+            match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
+                ScanResult::New(matches) => matches.len(),
+                _ => panic!("unexpected scan result"),
+            };
+        assert_eq!(matches_without_compat, 1, "directive should be ignored without compat flag");
+
+        let seen = BlobIdMap::new();
+        let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
+        let extra = vec![String::from("gitleaks:allow")];
+        let mut matcher =
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &extra, false)?;
+        match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
+            ScanResult::New(matches) => assert!(matches.is_empty()),
+            _ => panic!("unexpected scan result"),
+        }
+
         Ok(())
     }
 }

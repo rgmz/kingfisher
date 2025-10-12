@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.57.0]
+- Added inline ignore directive detection to treat suppression tokens anywhere on surrounding lines, including multi-line handling
+- Added a `--no-ignore` CLI flag to disable inline directives when you need every potential secret reported
+- Added: repeatable `--ignore-comment <TOKEN>` flag to reuse inline directives from other scanners (for example `NOSONAR`, `kics-scan ignore`, `gitleaks:allow`, etc)
+- Respect user color settings in update messages by using the same color helper as the main reporter, ensuring consistent output and no ANSI codes on update check, when color is disabled
+
 ## [v1.56.0]
 - Fixed tree-sitter scanning bug where passing --no-base64 caused errors to be printed when the file type couldn’t be determined
 

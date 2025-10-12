@@ -138,6 +138,8 @@ impl TestContext {
             skip_regex: Vec::new(),
             skip_word: Vec::new(),
             no_base64: false,
+            extra_ignore_comments: Vec::new(),
+            no_inline_ignore: false,
         };
 
         let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules)
@@ -227,6 +229,7 @@ impl TestContext {
                 since_commit: None,
                 branch: None,
             },
+            extra_ignore_comments: Vec::new(),
             content_filtering_args: ContentFilteringArgs {
                 max_file_size_mb: 25.0,
                 extraction_depth: 2,
@@ -248,6 +251,7 @@ impl TestContext {
             skip_regex: Vec::new(),
             skip_word: Vec::new(),
             no_base64: false,
+            no_inline_ignore: false,
         };
 
         let global_args = GlobalArgs {

@@ -152,6 +152,8 @@ rules:
         skip_regex: Vec::new(),
         skip_word: Vec::new(),
         no_base64: false,
+        extra_ignore_comments: Vec::new(),
+        no_inline_ignore: false,
     };
 
     let global_args = GlobalArgs {

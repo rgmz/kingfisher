@@ -21,6 +21,7 @@ pub mod git_url;
 pub mod gitea;
 pub mod github;
 pub mod gitlab;
+pub mod inline_ignore;
 pub mod jira;
 pub mod liquid_filters;
 pub mod location;
