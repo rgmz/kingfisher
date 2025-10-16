@@ -1142,7 +1142,7 @@ AWS SECRET ACCESS KEY => [KINGFISHER.AWS.2]
  |__Response....: (skip list entry) AWS validation not attempted for account 171436882533.
  |Language......: Unknown
  |Line Num......: 21
- |Path..........: /Users/mickg/dev/ghcanary/new-canaries.log
+ |Path..........: /tmp/test_canary_accounts.log
 ```
 
 **Why this matters**
