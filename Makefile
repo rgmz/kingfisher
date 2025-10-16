@@ -256,7 +256,7 @@ linux-x64: check-docker create-dockerignore
 		    patch perl ragel && \
 	        git openssl-dev curl && \
 		\
-		cargo test --workspace --all-targets --release ; \
+		cargo test --workspace --all-targets ; \
 		\
 		rustup target add x86_64-unknown-linux-musl && \
 		\
@@ -287,7 +287,7 @@ linux-arm64: check-docker create-dockerignore
 		\
 		rustup target add aarch64-unknown-linux-musl && \
 		\
-		cargo test --workspace --all-targets --release ; \
+		cargo test --workspace --all-targets ; \
 		\
 		export PKG_CONFIG_ALLOW_CROSS=1 ; \
 		export RUSTFLAGS="-C target-feature=+crt-static" ; \
