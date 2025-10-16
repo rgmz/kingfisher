@@ -1130,7 +1130,7 @@ kingfisher scan /path/to/repo \
 ```
 
 **What you’ll see**  
-Findings tied to a skip-listed account report Validation: Not Attempted and note that the entry came from the skip list:
+Findings tied to a skip-listed account report `Validation: Not Attempted` and note in the `Response:` that the entry came from the skip list:
 
 ```bash
 AWS SECRET ACCESS KEY => [KINGFISHER.AWS.2]
