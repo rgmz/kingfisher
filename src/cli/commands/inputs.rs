@@ -327,8 +327,8 @@ pub struct InputSpecifierArgs {
     #[arg(long = "since-commit", value_name = "GIT-REF", help_heading = "Git Options")]
     pub since_commit: Option<String>,
 
-    /// Branch or ref containing changes to scan (defaults to HEAD)
-    #[arg(long, value_name = "GIT-REF", requires = "since_commit", help_heading = "Git Options")]
+    /// Branch or ref to scan or compare against (defaults to HEAD)
+    #[arg(long, value_name = "GIT-REF", help_heading = "Git Options")]
     pub branch: Option<String>,
 }
 

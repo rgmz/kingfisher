@@ -60,8 +60,8 @@ use tracing::debug;
 
 #[derive(Clone)]
 pub struct GitDiffConfig {
-    pub since_ref: String,
-    pub branch_ref: Option<String>,
+    pub since_ref: Option<String>,
+    pub branch_ref: String,
 }
 
 struct EnumeratorConfig {

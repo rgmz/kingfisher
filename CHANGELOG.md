@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v1.58.0]
+## [v1.59.0]
+- Fixed `kingfisher scan` so that providing `--branch` without `--since-commit` now diffs the branch against the empty tree and scans every commit reachable from that branch.
+- Added rules for meraki, duffel, finnhub, frameio, freshbooks, gitter, infracost, launchdarkly, lob, maxmind, messagebird, nytimes, prefect, scalingo, sendinblue, sentry, shippo, twitch, typeform
+
+- ## [v1.58.0]
 - Added first-class Hugging Face scanning support, including CLI enumeration, token authentication, and integration with remote scans.
 - Condensed GitError formatting to report the exit status and the first informative lines from stdout/stderr, producing concise git clone failure logs.
 - Added support for scanning Google Cloud Storage buckets via `--gcs-bucket`, including optional prefixes and service-account authentication.

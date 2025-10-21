@@ -60,10 +60,20 @@ pub fn enumerate_filesystem_inputs(
 ) -> Result<()> {
     let repo_scan_timeout = Duration::from_secs(args.git_repo_timeout);
 
-    let diff_config = args.input_specifier_args.since_commit.as_ref().map(|since| GitDiffConfig {
-        since_ref: since.clone(),
-        branch_ref: args.input_specifier_args.branch.clone(),
-    });
+    let diff_config = if args.input_specifier_args.since_commit.is_some()
+        || args.input_specifier_args.branch.is_some()
+    {
+        Some(GitDiffConfig {
+            since_ref: args.input_specifier_args.since_commit.clone(),
+            branch_ref: args
+                .input_specifier_args
+                .branch
+                .clone()
+                .unwrap_or_else(|| "HEAD".to_string()),
+        })
+    } else {
+        None
+    };
 
     let progress = if progress_enabled {
         let style =
@@ -709,101 +719,123 @@ fn enumerate_git_diff_repo(
     exclude_globset: Option<std::sync::Arc<globset::GlobSet>>,
     collect_commit_metadata: bool,
 ) -> Result<GitRepoResult> {
-    let since_ref = diff_cfg.since_ref.clone();
-    let branch_ref = diff_cfg.branch_ref.clone().unwrap_or_else(|| "HEAD".to_string());
+    let GitDiffConfig { since_ref, branch_ref } = diff_cfg;
 
-    let base_id = resolve_diff_ref(&repository, path, &since_ref).with_context(|| {
-        format!("Failed to resolve --since-commit '{}' in repository {}", since_ref, path.display())
-    })?;
-    let head_id = resolve_diff_ref(&repository, path, &branch_ref).with_context(|| {
-        format!("Failed to resolve --branch '{}' in repository {}", branch_ref, path.display())
-    })?;
+    let blobs = {
+        let head_id = resolve_diff_ref(&repository, path, &branch_ref).with_context(|| {
+            format!("Failed to resolve --branch '{}' in repository {}", branch_ref, path.display())
+        })?;
 
-    let base_commit = base_id
-        .object()
-        .with_context(|| format!("Failed to load commit {} for diffing", base_id.to_hex()))?
-        .try_into_commit()
-        .with_context(|| format!("Referenced object {} is not a commit", base_id.to_hex()))?;
-    let head_commit = head_id
-        .object()
-        .with_context(|| format!("Failed to load commit {} for diffing", head_id.to_hex()))?
-        .try_into_commit()
-        .with_context(|| format!("Referenced object {} is not a commit", head_id.to_hex()))?;
+        let head_commit = head_id
+            .object()
+            .with_context(|| format!("Failed to load commit {} for diffing", head_id.to_hex()))?
+            .try_into_commit()
+            .with_context(|| format!("Referenced object {} is not a commit", head_id.to_hex()))?;
 
-    let base_tree = base_commit
-        .tree()
-        .with_context(|| format!("Failed to read tree for commit {}", base_id.to_hex()))?;
-    let head_tree = head_commit
-        .tree()
-        .with_context(|| format!("Failed to read tree for commit {}", head_id.to_hex()))?;
+        let head_tree = head_commit
+            .tree()
+            .with_context(|| format!("Failed to read tree for commit {}", head_id.to_hex()))?;
 
-    let changes =
-        repository.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None).with_context(
-            || format!("Failed to compute diff between '{}' and '{}'", since_ref, branch_ref),
-        )?;
+        let mut base_tree = None;
 
-    // Release tree handles before returning the repository to avoid borrow check conflicts.
-    drop(base_tree);
-    drop(head_tree);
+        if let Some(ref since_ref_value) = since_ref {
+            let base_id =
+                resolve_diff_ref(&repository, path, since_ref_value).with_context(|| {
+                    format!(
+                        "Failed to resolve --since-commit '{}' in repository {}",
+                        since_ref_value,
+                        path.display()
+                    )
+                })?;
 
-    let commit_metadata = if collect_commit_metadata {
-        let committer = head_commit
-            .committer()
-            .with_context(|| format!("Failed to read committer for {}", branch_ref))?
-            .trim();
-        let timestamp = committer.time().unwrap_or_else(|_| gix::date::Time::new(0, 0));
-        Arc::new(CommitMetadata {
-            commit_id: head_commit.id,
-            committer_name: committer.name.to_str_lossy().into_owned(),
-            committer_email: committer.email.to_str_lossy().into_owned(),
-            committer_timestamp: timestamp,
-        })
-    } else {
-        Arc::new(CommitMetadata {
-            commit_id: head_commit.id,
-            committer_name: String::new(),
-            committer_email: String::new(),
-            committer_timestamp: gix::date::Time::new(0, 0),
-        })
-    };
+            let commit = base_id
+                .object()
+                .with_context(|| format!("Failed to load commit {} for diffing", base_id.to_hex()))?
+                .try_into_commit()
+                .with_context(|| {
+                    format!("Referenced object {} is not a commit", base_id.to_hex())
+                })?;
+            let tree = commit
+                .tree()
+                .with_context(|| format!("Failed to read tree for commit {}", base_id.to_hex()))?;
 
-    let mut blobs = Vec::new();
-    for change in changes {
-        let (entry_mode, id, location) = match change {
-            ChangeDetached::Addition { entry_mode, id, location, .. } => (entry_mode, id, location),
-            ChangeDetached::Modification { entry_mode, id, location, .. } => {
-                (entry_mode, id, location)
-            }
-            ChangeDetached::Rewrite { entry_mode, id, location, .. } => (entry_mode, id, location),
-            ChangeDetached::Deletion { .. } => continue,
+            base_tree = Some(tree);
+        }
+
+        let changes = repository
+            .diff_tree_to_tree(base_tree.as_ref(), Some(&head_tree), None)
+            .with_context(|| {
+                if let Some(ref since_ref_value) = since_ref {
+                    format!(
+                        "Failed to compute diff between '{}' and '{}'",
+                        since_ref_value, branch_ref
+                    )
+                } else {
+                    format!("Failed to compute tree for '{}'", branch_ref)
+                }
+            })?;
+
+        let commit_metadata = if collect_commit_metadata {
+            let committer = head_commit
+                .committer()
+                .with_context(|| format!("Failed to read committer for {}", branch_ref))?
+                .trim();
+            let timestamp = committer.time().unwrap_or_else(|_| gix::date::Time::new(0, 0));
+            Arc::new(CommitMetadata {
+                commit_id: head_commit.id,
+                committer_name: committer.name.to_str_lossy().into_owned(),
+                committer_email: committer.email.to_str_lossy().into_owned(),
+                committer_timestamp: timestamp,
+            })
+        } else {
+            Arc::new(CommitMetadata {
+                commit_id: head_commit.id,
+                committer_name: String::new(),
+                committer_email: String::new(),
+                committer_timestamp: gix::date::Time::new(0, 0),
+            })
         };
 
-        match entry_mode.kind() {
-            EntryKind::Blob | EntryKind::BlobExecutable | EntryKind::Link => {}
-            _ => continue,
-        }
+        let mut blobs = Vec::new();
+        for change in changes {
+            let (entry_mode, id, location) = match change {
+                ChangeDetached::Addition { entry_mode, id, location, .. } => {
+                    (entry_mode, id, location)
+                }
+                ChangeDetached::Modification { entry_mode, id, location, .. } => {
+                    (entry_mode, id, location)
+                }
+                ChangeDetached::Rewrite { entry_mode, id, location, .. } => {
+                    (entry_mode, id, location)
+                }
+                ChangeDetached::Deletion { .. } => continue,
+            };
 
-        let relative_path_str = String::from_utf8_lossy(location.as_ref()).into_owned();
-        let relative_path = Path::new(&relative_path_str);
-        if let Some(gs) = &exclude_globset {
-            if gs.is_match(relative_path) || gs.is_match(&path.join(relative_path)) {
-                debug!(
-                    "Skipping {} due to --exclude while diffing {}",
-                    relative_path.display(),
-                    path.display()
-                );
-                continue;
+            match entry_mode.kind() {
+                EntryKind::Blob | EntryKind::BlobExecutable | EntryKind::Link => {}
+                _ => continue,
             }
+
+            let relative_path_str = String::from_utf8_lossy(location.as_ref()).into_owned();
+            let relative_path = Path::new(&relative_path_str);
+            if let Some(gs) = &exclude_globset {
+                if gs.is_match(relative_path) || gs.is_match(&path.join(relative_path)) {
+                    debug!(
+                        "Skipping {} due to --exclude while diffing {}",
+                        relative_path.display(),
+                        path.display()
+                    );
+                    continue;
+                }
+            }
+
+            let appearance =
+                BlobAppearance { commit_metadata: Arc::clone(&commit_metadata), path: location };
+            blobs.push(GitBlobMetadata { blob_oid: id, first_seen: smallvec![appearance] });
         }
 
-        let appearance =
-            BlobAppearance { commit_metadata: Arc::clone(&commit_metadata), path: location };
-        blobs.push(GitBlobMetadata { blob_oid: id, first_seen: smallvec![appearance] });
-    }
-
-    // Release commit handles before returning the repository to avoid borrow check conflicts.
-    drop(base_commit);
-    drop(head_commit);
+        blobs
+    };
 
     Ok(GitRepoResult { repository, path: path.to_owned(), blobs })
 }
@@ -889,6 +921,16 @@ fn reference_candidates(reference: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::path::Path;
+
+    use super::{enumerate_git_diff_repo, GitDiffConfig};
+    use anyhow::Result;
+    use bstr::ByteSlice;
+    use git2::{Repository as Git2Repository, Signature};
+    use gix::{open::Options, open_opts};
+    use tempfile::tempdir;
+
     use super::reference_candidates;
 
     #[test]
@@ -940,6 +982,44 @@ mod tests {
     #[test]
     fn reference_candidates_for_head_symbol() {
         assert_eq!(reference_candidates("HEAD"), vec!["HEAD".to_string()]);
+    }
+
+    #[test]
+    fn enumerate_git_diff_repo_branch_without_since_scans_head_tree() -> Result<()> {
+        let temp = tempdir()?;
+        let repo_path = temp.path().join("repo");
+        let repo = Git2Repository::init(&repo_path)?;
+        let signature = Signature::now("tester", "tester@example.com")?;
+
+        let tracked_file = repo_path.join("secret.txt");
+        fs::create_dir_all(tracked_file.parent().unwrap())?;
+        fs::write(&tracked_file, b"super-secret")?;
+
+        let mut index = repo.index()?;
+        index.add_path(Path::new("secret.txt"))?;
+        let tree_id = index.write_tree()?;
+        let tree = repo.find_tree(tree_id)?;
+        let commit_id = repo.commit(Some("HEAD"), &signature, &signature, "initial", &tree, &[])?;
+        let commit = repo.find_commit(commit_id)?;
+        repo.branch("featurefake", &commit, true)?;
+
+        let git_dir = repo_path.join(".git");
+        let gix_repo = open_opts(&git_dir, Options::isolated().open_path_as_is(true))?;
+        let result = enumerate_git_diff_repo(
+            &repo_path,
+            gix_repo,
+            GitDiffConfig { since_ref: None, branch_ref: "featurefake".to_string() },
+            None,
+            false,
+        )?;
+
+        assert_eq!(result.blobs.len(), 1, "expected the full branch tree to be enumerated");
+        let blob = &result.blobs[0];
+        assert_eq!(blob.first_seen.len(), 1);
+        let appearance_path = blob.first_seen[0].path.to_str_lossy();
+        assert_eq!(appearance_path, "secret.txt");
+
+        Ok(())
     }
 }
 

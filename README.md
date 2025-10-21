@@ -430,6 +430,18 @@ kingfisher scan \
   --branch development
 ```
 
+When `--since-commit` is omitted, specifying `--branch` scans the requested ref directly. This makes it easy to analyze a feature branch without checking it out locally.
+
+```bash
+# Scan a branch from an existing checkout
+kingfisher scan ~/tmp/repo --branch feature-123
+
+# Or scan a branch when cloning on the fly
+kingfisher scan \
+  --git-url https://github.com/org/repo.git \
+  --branch origin/feature-123
+```
+
 In CI systems that expose the base and head commits explicitly, you can pass those SHAs directly while still using `--git-url`:
 
 ```bash
@@ -1212,7 +1224,7 @@ Since that initial fork, it has diverged heavily from Nosey Parker:
 - Added support for analyzing compressed files  
 - Added support for building "baselines" to allow for only reporting on newly discovered secrets  
 - Added Tree-Sitter based source code parsing on top of Hyperscan for deeper language-aware detection  
-- Expanded support for new targets (GitLab, BitBucket, Gitea, Jira, Confluence, Slack, S3, Docker, etc.)  
+- Expanded support for new targets (GitLab, BitBucket, Gitea, Jira, Confluence, Slack, S3, GCS, Docker, Hugging Face, etc.)  
 - Replaced the SQLite datastore with an in-memory store + Bloom filter  
 - Collapsed the workflow into a single scan-and-report phase with direct JSON/BSON/SARIF outputs  
 - Delivered cross-platform builds, including native Windows  
