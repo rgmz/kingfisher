@@ -6,10 +6,7 @@ use strum::Display;
 use sysinfo::{MemoryRefreshKind, RefreshKind, System};
 use tracing::Level;
 
-use crate::cli::commands::{
-    azure::AzureArgs, bitbucket::BitbucketArgs, gitea::GiteaArgs, github::GitHubArgs,
-    gitlab::GitLabArgs, huggingface::HuggingFaceArgs, rules::RulesArgs, scan::ScanArgs,
-};
+use crate::cli::commands::{rules::RulesArgs, scan::ScanCommandArgs};
 
 #[deny(missing_docs)]
 #[derive(Parser, Debug)]
@@ -59,31 +56,7 @@ impl CommandLineArgs {
 #[derive(Subcommand, Debug)]
 pub enum Command {
     /// Scan content for secrets and sensitive information
-    Scan(ScanArgs),
-
-    /// Interact with the GitHub API
-    #[command(name = "github")]
-    GitHub(GitHubArgs),
-
-    /// Interact with the GitLab API
-    #[command(name = "gitlab")]
-    GitLab(GitLabArgs),
-
-    /// Interact with the Gitea API
-    #[command(name = "gitea")]
-    Gitea(GiteaArgs),
-
-    /// Interact with the Bitbucket API
-    #[command(name = "bitbucket")]
-    Bitbucket(BitbucketArgs),
-
-    /// Interact with the Azure DevOps API
-    #[command(name = "azure")]
-    Azure(AzureArgs),
-
-    /// Interact with the Hugging Face Hub
-    #[command(name = "huggingface")]
-    HuggingFace(HuggingFaceArgs),
+    Scan(ScanCommandArgs),
 
     /// Manage rules
     #[command(alias = "rule")]

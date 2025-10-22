@@ -119,11 +119,7 @@ pub async fn run_async_scan(
     let mut input_roots = clone_or_update_git_repos(args, global_args, &repo_urls, &datastore)?;
 
     // Fetch issues, gists, and wikis if enabled
-    let bitbucket_auth = bitbucket::AuthConfig::from_options(
-        args.input_specifier_args.bitbucket_auth.bitbucket_username.clone(),
-        args.input_specifier_args.bitbucket_auth.bitbucket_token.clone(),
-        args.input_specifier_args.bitbucket_auth.bitbucket_oauth_token.clone(),
-    );
+    let bitbucket_auth = bitbucket::AuthConfig::from_env();
     let bitbucket_host =
         args.input_specifier_args.bitbucket_api_url.host_str().map(|s| s.to_string());
 

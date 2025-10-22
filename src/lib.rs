@@ -332,10 +332,29 @@ impl FilesystemEnumerator {
 
 /// Opens the given Git repository if it exists, returning None if not.
 pub fn open_git_repo(path: &Path) -> Result<Option<Repository>> {
-    let opts = Options::isolated().open_path_as_is(true); // <- OK now
+    let opts = Options::isolated().open_path_as_is(false);
     match open_opts(path, opts) {
         Err(gix::open::Error::NotARepository { .. }) => Ok(None),
         Err(err) => Err(err.into()),
         Ok(repo) => Ok(Some(repo)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use git2::Repository as Git2Repository;
+    use tempfile::tempdir;
+
+    #[test]
+    fn open_git_repo_accepts_worktree_root() -> Result<()> {
+        let temp = tempdir()?;
+        let repo_path = temp.path().join("repo");
+        Git2Repository::init(&repo_path)?;
+
+        assert!(open_git_repo(&repo_path)?.is_some());
+        assert!(open_git_repo(&repo_path.join(".git"))?.is_some());
+
+        Ok(())
     }
 }

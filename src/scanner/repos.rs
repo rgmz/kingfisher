@@ -396,11 +396,7 @@ pub async fn enumerate_bitbucket_repos(
         };
         let mut num_found: u64 = 0;
         let api_url = args.input_specifier_args.bitbucket_api_url.clone();
-        let auth = bitbucket::AuthConfig::from_options(
-            args.input_specifier_args.bitbucket_auth.bitbucket_username.clone(),
-            args.input_specifier_args.bitbucket_auth.bitbucket_token.clone(),
-            args.input_specifier_args.bitbucket_auth.bitbucket_oauth_token.clone(),
-        );
+        let auth = bitbucket::AuthConfig::from_env();
         let repo_strings = bitbucket::enumerate_repo_urls(
             &repo_specifiers,
             api_url,

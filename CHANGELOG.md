@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.60.0]
+- Removed the `--bitbucket-username`, `--bitbucket-token`, and `--bitbucket-oauth-token` flags in favour of `KF_BITBUCKET_*` environment variables when authenticating to Bitbucket.
+- Added provider-specific `kingfisher scan` subcommands (for example `kingfisher scan github …`) that translate into the legacy flags under the hood. The new layout keeps backwards compatibility while removing the wall of provider options from `kingfisher scan --help`.
+- Updated the README so every provider example (GitHub, GitLab, Bitbucket, Azure Repos, Gitea, Hugging Face, Slack, Jira, Confluence, S3, GCS, Docker) uses the new subcommand style.
+- Legacy provider flags (for example `--github-user`, `--gitlab-group`, `--bitbucket-workspace`, `--s3-bucket`) still work but now emit a deprecation warning to encourage migration to the new `kingfisher scan <provider>` flow.
+- Kept the direct `kingfisher scan /path/to/dir` flow for local filesystem / local git repo scans while adding a `--list-only` switch to each provider subcommand so repository enumeration no longer requires the standalone `github repos`, `gitlab repos`, etc. commands.
+- Removed the legacy top-level provider commands (`kingfisher github`, `kingfisher gitlab`, `kingfisher gitea`, `kingfisher bitbucket`, `kingfisher azure`, `kingfisher huggingface`) now that enumeration lives under `kingfisher scan <provider> --list-only`.
+
 ## [v1.59.0]
+- Fixed `kingfisher scan github …` (and other provider-specific subcommands) so they no longer demand placeholder path arguments before the CLI accepts the request.
 - Fixed `kingfisher scan` so that providing `--branch` without `--since-commit` now diffs the branch against the empty tree and scans every commit reachable from that branch.
 - Added rules for meraki, duffel, finnhub, frameio, freshbooks, gitter, infracost, launchdarkly, lob, maxmind, messagebird, nytimes, prefect, scalingo, sendinblue, sentry, shippo, twitch, typeform
 

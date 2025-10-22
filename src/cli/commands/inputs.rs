@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, ValueHint};
+use tracing::warn;
 use url::Url;
 
 use crate::{
@@ -14,46 +15,20 @@ use crate::{
     git_url::GitUrl,
 };
 
+const DEFAULT_GITHUB_API_URL: &str = "https://api.github.com/";
+const DEFAULT_GITLAB_API_URL: &str = "https://gitlab.com/";
+const DEFAULT_GITEA_API_URL: &str = "https://gitea.com/api/v1/";
+const DEFAULT_BITBUCKET_API_URL: &str = "https://api.bitbucket.org/2.0/";
+const DEFAULT_AZURE_BASE_URL: &str = "https://dev.azure.com/";
+const DEFAULT_SLACK_API_URL: &str = "https://slack.com/api/";
+
 // -----------------------------------------------------------------------------
 // Inputs
 // -----------------------------------------------------------------------------
 #[derive(Args, Debug, Clone)]
 pub struct InputSpecifierArgs {
     /// Scan this file, directory, or local Git repository
-    #[arg(
-        required_unless_present_any([
-            "github_user",
-            "github_organization",
-            "gitlab_user",
-            "gitlab_group",
-            "gitea_user",
-            "gitea_organization",
-            "huggingface_user",
-            "huggingface_organization",
-            "huggingface_model",
-            "huggingface_dataset",
-            "huggingface_space",
-            "bitbucket_user",
-            "bitbucket_workspace",
-            "bitbucket_project",
-            "azure_organization",
-            "azure_project",
-            "git_url",
-            "all_github_organizations",
-            "all_gitlab_groups",
-            "all_gitea_organizations",
-            "all_bitbucket_workspaces",
-            "all_azure_projects",
-            "jira_url",
-            "confluence_url",
-            "docker_image",
-            "slack_query",
-            "s3_bucket",
-            "gcs_bucket"
-        ]),
-        num_args = 0..,
-        value_hint = ValueHint::AnyPath
-    )]
+    #[arg(num_args = 0.., value_hint = ValueHint::AnyPath)]
     pub path_inputs: Vec<PathBuf>,
 
     /// Clone and scan the Git repository at the given URL
@@ -61,40 +36,46 @@ pub struct InputSpecifierArgs {
     pub git_url: Vec<GitUrl>,
 
     /// Scan repositories belonging to the specified GitHub user
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub github_user: Vec<String>,
 
     /// Scan repositories belonging to the specified GitHub organization
-    #[arg(long, alias = "github-org")]
+    #[arg(long, alias = "github-org", hide = true)]
     pub github_organization: Vec<String>,
 
     /// Skip repositories when enumerating GitHub users or organizations (format: owner/repo)
-    #[arg(long = "github-exclude", alias = "github-exclude-repo", value_name = "OWNER/REPO")]
+    #[arg(
+        long = "github-exclude",
+        alias = "github-exclude-repo",
+        value_name = "OWNER/REPO",
+        hide = true
+    )]
     pub github_exclude: Vec<String>,
 
     /// Scan repositories from all GitHub organizations (requires non-default --github-api-url)
-    #[arg(long, alias = "all-github-orgs", requires = "github_api_url")]
+    #[arg(long, alias = "all-github-orgs", requires = "github_api_url", hide = true)]
     pub all_github_organizations: bool,
 
     /// Use the specified URL for GitHub API access (e.g. for GitHub Enterprise)
     #[arg(
         long,
-        alias="api-url",
+        alias = "api-url",
         default_value = "https://api.github.com/",
-        value_hint = ValueHint::Url
+        value_hint = ValueHint::Url,
+        hide = true
     )]
     pub github_api_url: Url,
 
-    #[arg(long, default_value_t = GitHubRepoType::Source)]
+    #[arg(long, default_value_t = GitHubRepoType::Source, hide = true)]
     pub github_repo_type: GitHubRepoType,
 
     // GitLab Options
     /// Scan repositories belonging to the specified GitLab user
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub gitlab_user: Vec<String>,
 
     /// Scan repositories belonging to the specified GitLab group
-    #[arg(long, alias = "gitlab-group")]
+    #[arg(long, alias = "gitlab-group", hide = true)]
     pub gitlab_group: Vec<String>,
 
     /// Skip repositories when enumerating GitLab users or groups (format: group/project)
@@ -102,12 +83,13 @@ pub struct InputSpecifierArgs {
         long = "gitlab-exclude",
         alias = "gitlab-exclude-project",
         alias = "gitlab-exclude-repo",
-        value_name = "GROUP/PROJECT"
+        value_name = "GROUP/PROJECT",
+        hide = true
     )]
     pub gitlab_exclude: Vec<String>,
 
     /// Scan repositories from all GitLab groups (requires non-default --gitlab-api-url)
-    #[arg(long, alias = "all-gitlab-groups", requires = "gitlab_api_url")]
+    #[arg(long, alias = "all-gitlab-groups", requires = "gitlab_api_url", hide = true)]
     pub all_gitlab_groups: bool,
 
     /// Use the specified URL for GitLab API access (e.g. for GitLab self-hosted)
@@ -115,56 +97,62 @@ pub struct InputSpecifierArgs {
         long,
         alias="gitlab-api-url",
         default_value = "https://gitlab.com/",
-        value_hint = ValueHint::Url
+        value_hint = ValueHint::Url,
+        hide = true
     )]
     pub gitlab_api_url: Url,
 
-    #[arg(long, default_value_t = GitLabRepoType::All)]
+    #[arg(long, default_value_t = GitLabRepoType::All, hide = true)]
     pub gitlab_repo_type: GitLabRepoType,
 
     /// Include projects from GitLab subgroups when scanning groups
-    #[arg(long, alias = "include-subgroups")]
+    #[arg(long, alias = "include-subgroups", hide = true)]
     pub gitlab_include_subgroups: bool,
 
     /// Scan models, datasets, and Spaces belonging to the specified Hugging Face users
-    #[arg(long = "huggingface-user")]
+    #[arg(long = "huggingface-user", hide = true)]
     pub huggingface_user: Vec<String>,
 
     /// Scan models, datasets, and Spaces belonging to the specified Hugging Face organizations
-    #[arg(long = "huggingface-organization", alias = "huggingface-org")]
+    #[arg(long = "huggingface-organization", alias = "huggingface-org", hide = true)]
     pub huggingface_organization: Vec<String>,
 
     /// Scan a specific Hugging Face model (format: owner/name or full URL)
-    #[arg(long = "huggingface-model")]
+    #[arg(long = "huggingface-model", hide = true)]
     pub huggingface_model: Vec<String>,
 
     /// Scan a specific Hugging Face dataset (format: owner/name or full URL)
-    #[arg(long = "huggingface-dataset")]
+    #[arg(long = "huggingface-dataset", hide = true)]
     pub huggingface_dataset: Vec<String>,
 
     /// Scan a specific Hugging Face Space (format: owner/name or full URL)
-    #[arg(long = "huggingface-space")]
+    #[arg(long = "huggingface-space", hide = true)]
     pub huggingface_space: Vec<String>,
 
     /// Skip specific Hugging Face repositories during enumeration (accepts optional prefixes like model:, dataset:, or space:)
-    #[arg(long = "huggingface-exclude", value_name = "IDENTIFIER")]
+    #[arg(long = "huggingface-exclude", value_name = "IDENTIFIER", hide = true)]
     pub huggingface_exclude: Vec<String>,
 
     // Gitea Options
     /// Scan repositories belonging to the specified Gitea user
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub gitea_user: Vec<String>,
 
     /// Scan repositories belonging to the specified Gitea organization
-    #[arg(long, alias = "gitea-org")]
+    #[arg(long, alias = "gitea-org", hide = true)]
     pub gitea_organization: Vec<String>,
 
     /// Skip repositories when enumerating Gitea users or organizations (format: owner/repo)
-    #[arg(long = "gitea-exclude", alias = "gitea-exclude-repo", value_name = "OWNER/REPO")]
+    #[arg(
+        long = "gitea-exclude",
+        alias = "gitea-exclude-repo",
+        value_name = "OWNER/REPO",
+        hide = true
+    )]
     pub gitea_exclude: Vec<String>,
 
     /// Scan repositories from all accessible Gitea organizations (requires KF_GITEA_TOKEN)
-    #[arg(long, alias = "all-gitea-orgs")]
+    #[arg(long, alias = "all-gitea-orgs", hide = true)]
     pub all_gitea_organizations: bool,
 
     /// Use the specified URL for Gitea API access (e.g. for self-hosted instances)
@@ -172,39 +160,45 @@ pub struct InputSpecifierArgs {
         long,
         alias="gitea-api-url",
         default_value = "https://gitea.com/api/v1/",
-        value_hint = ValueHint::Url
+        value_hint = ValueHint::Url,
+        hide = true
     )]
     pub gitea_api_url: Url,
 
-    #[arg(long, default_value_t = GiteaRepoType::Source)]
+    #[arg(long, default_value_t = GiteaRepoType::Source, hide = true)]
     pub gitea_repo_type: GiteaRepoType,
 
     // Bitbucket Options
     /// Scan repositories belonging to the specified Bitbucket users
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub bitbucket_user: Vec<String>,
 
     /// Scan repositories belonging to the specified Bitbucket workspaces or teams
-    #[arg(long, alias = "bitbucket-workspace", alias = "bitbucket-team")]
+    #[arg(long, alias = "bitbucket-workspace", alias = "bitbucket-team", hide = true)]
     pub bitbucket_workspace: Vec<String>,
 
     /// Scan repositories belonging to the specified Bitbucket Server projects
-    #[arg(long, alias = "bitbucket-project")]
+    #[arg(long, alias = "bitbucket-project", hide = true)]
     pub bitbucket_project: Vec<String>,
 
     /// Skip repositories when enumerating Bitbucket sources (format: owner/repo)
-    #[arg(long = "bitbucket-exclude", value_name = "OWNER/REPO")]
+    #[arg(long = "bitbucket-exclude", value_name = "OWNER/REPO", hide = true)]
     pub bitbucket_exclude: Vec<String>,
 
     /// Scan repositories from all accessible Bitbucket workspaces or projects
-    #[arg(long, alias = "all-bitbucket-workspaces", requires = "bitbucket_api_url")]
+    #[arg(long, alias = "all-bitbucket-workspaces", requires = "bitbucket_api_url", hide = true)]
     pub all_bitbucket_workspaces: bool,
 
     /// Use the specified URL for Bitbucket API access (Cloud or self-hosted)
-    #[arg(long, default_value = "https://api.bitbucket.org/2.0/", value_hint = ValueHint::Url)]
+    #[arg(
+        long,
+        default_value = "https://api.bitbucket.org/2.0/",
+        value_hint = ValueHint::Url,
+        hide = true
+    )]
     pub bitbucket_api_url: Url,
 
-    #[arg(long, default_value_t = BitbucketRepoType::Source)]
+    #[arg(long, default_value_t = BitbucketRepoType::Source, hide = true)]
     pub bitbucket_repo_type: BitbucketRepoType,
 
     #[command(flatten)]
@@ -212,94 +206,96 @@ pub struct InputSpecifierArgs {
 
     // Azure DevOps Options
     /// Scan repositories belonging to the specified Azure DevOps organizations or collections
-    #[arg(long = "azure-organization")]
+    #[arg(long = "azure-organization", hide = true)]
     pub azure_organization: Vec<String>,
 
     /// Scan repositories belonging to the specified Azure DevOps projects (format: ORGANIZATION/PROJECT)
-    #[arg(long = "azure-project", value_name = "ORGANIZATION/PROJECT")]
+    #[arg(long = "azure-project", value_name = "ORGANIZATION/PROJECT", hide = true)]
     pub azure_project: Vec<String>,
 
     /// Skip repositories when enumerating Azure Repos sources (format: ORGANIZATION/PROJECT/REPOSITORY)
     #[arg(
         long = "azure-exclude",
         alias = "azure-exclude-repo",
-        value_name = "ORGANIZATION/PROJECT/REPOSITORY"
+        value_name = "ORGANIZATION/PROJECT/REPOSITORY",
+        hide = true
     )]
     pub azure_exclude: Vec<String>,
 
     /// Include repositories from every project within the specified Azure organizations
-    #[arg(long = "all-azure-projects")]
+    #[arg(long = "all-azure-projects", hide = true)]
     pub all_azure_projects: bool,
 
     /// Use the specified base URL for Azure DevOps (e.g. Azure DevOps Server)
     #[arg(
         long = "azure-base-url",
         default_value = "https://dev.azure.com/",
-        value_hint = ValueHint::Url
+        value_hint = ValueHint::Url,
+        hide = true
     )]
     pub azure_base_url: Url,
 
-    #[arg(long = "azure-repo-type", default_value_t = AzureRepoType::Source)]
+    #[arg(long = "azure-repo-type", default_value_t = AzureRepoType::Source, hide = true)]
     pub azure_repo_type: AzureRepoType,
 
     /// Jira base URL (e.g. https://jira.example.com)
-    #[arg(long, value_hint = ValueHint::Url, requires = "jql")]
+    #[arg(long, value_hint = ValueHint::Url, requires = "jql", hide = true)]
     pub jira_url: Option<Url>,
 
     /// JQL query to select Jira issues
-    #[arg(long, requires = "jira_url")]
+    #[arg(long, requires = "jira_url", hide = true)]
     pub jql: Option<String>,
 
     /// Confluence base URL (e.g. https://confluence.example.com)
-    #[arg(long, value_hint = ValueHint::Url, requires = "cql")]
+    #[arg(long, value_hint = ValueHint::Url, requires = "cql", hide = true)]
     pub confluence_url: Option<Url>,
 
     /// CQL query to select Confluence pages
-    #[arg(long, requires = "confluence_url")]
+    #[arg(long, requires = "confluence_url", hide = true)]
     pub cql: Option<String>,
 
     /// Slack search query
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub slack_query: Option<String>,
 
     /// Use the specified URL for Slack API access
-    #[arg(long, default_value = "https://slack.com/api/", value_hint = ValueHint::Url)]
+    #[arg(long, default_value = "https://slack.com/api/", value_hint = ValueHint::Url, hide = true)]
     pub slack_api_url: Url,
 
     /// Maximum number of Slack, Jira, or Confluence results to fetch
-    #[arg(long, default_value_t = 100)]
+    #[arg(long, default_value_t = 100, hide = true)]
     pub max_results: usize,
 
     /// Scan the specified S3 bucket
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub s3_bucket: Option<String>,
 
     /// Optional prefix within the S3 bucket
-    #[arg(long, requires = "s3_bucket")]
+    #[arg(long, requires = "s3_bucket", hide = true)]
     pub s3_prefix: Option<String>,
 
     /// AWS IAM role ARN to assume for S3 access
-    #[arg(long, requires = "s3_bucket")]
+    #[arg(long, requires = "s3_bucket", hide = true)]
     pub role_arn: Option<String>,
 
     /// Use credentials from a local AWS profile in ~/.aws/config
-    #[arg(long, requires = "s3_bucket")]
+    #[arg(long, requires = "s3_bucket", hide = true)]
     pub aws_local_profile: Option<String>,
 
     /// Scan the specified Google Cloud Storage bucket
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub gcs_bucket: Option<String>,
 
     /// Optional prefix within the GCS bucket
-    #[arg(long, requires = "gcs_bucket")]
+    #[arg(long, requires = "gcs_bucket", hide = true)]
     pub gcs_prefix: Option<String>,
 
     /// Path to a service account JSON file for GCS authentication
-    #[arg(long, value_hint = ValueHint::FilePath, requires = "gcs_bucket")]
+    #[arg(long, value_hint = ValueHint::FilePath, requires = "gcs_bucket", hide = true)]
     pub gcs_service_account: Option<PathBuf>,
 
     /// Docker/OCI images to scan (no local Docker required)
-    #[arg(long = "docker-image")]
+    #[arg(long = "docker-image", hide = true)]
     pub docker_image: Vec<String>,
 
     /// Select how to clone Git repositories
@@ -327,9 +323,212 @@ pub struct InputSpecifierArgs {
     #[arg(long = "since-commit", value_name = "GIT-REF", help_heading = "Git Options")]
     pub since_commit: Option<String>,
 
-    /// Branch or ref to scan or compare against (defaults to HEAD)
-    #[arg(long, value_name = "GIT-REF", help_heading = "Git Options")]
+    /// Branch, tag, or commit to scan or compare against (defaults to HEAD)
+    #[arg(
+        long,
+        value_name = "GIT-REF",
+        help_heading = "Git Options",
+        alias = "ref",
+        visible_alias = "ref"
+    )]
     pub branch: Option<String>,
+}
+
+impl InputSpecifierArgs {
+    /// Return true when any scan input has been specified.
+    pub fn has_any_input(&self) -> bool {
+        !self.path_inputs.is_empty()
+            || !self.git_url.is_empty()
+            || !self.github_user.is_empty()
+            || !self.github_organization.is_empty()
+            || self.all_github_organizations
+            || !self.gitlab_user.is_empty()
+            || !self.gitlab_group.is_empty()
+            || self.all_gitlab_groups
+            || !self.gitea_user.is_empty()
+            || !self.gitea_organization.is_empty()
+            || self.all_gitea_organizations
+            || !self.huggingface_user.is_empty()
+            || !self.huggingface_organization.is_empty()
+            || !self.huggingface_model.is_empty()
+            || !self.huggingface_dataset.is_empty()
+            || !self.huggingface_space.is_empty()
+            || !self.bitbucket_user.is_empty()
+            || !self.bitbucket_workspace.is_empty()
+            || !self.bitbucket_project.is_empty()
+            || self.all_bitbucket_workspaces
+            || !self.azure_organization.is_empty()
+            || !self.azure_project.is_empty()
+            || self.all_azure_projects
+            || self.jira_url.is_some()
+            || self.confluence_url.is_some()
+            || self.slack_query.is_some()
+            || self.s3_bucket.is_some()
+            || self.gcs_bucket.is_some()
+            || !self.docker_image.is_empty()
+    }
+
+    /// Emit deprecation warnings for legacy top-level provider flags.
+    pub fn emit_deprecated_warnings(&self) {
+        if self.using_legacy_github_flags() {
+            warn_deprecated_provider(
+                "GitHub",
+                "Use `kingfisher scan github …` instead of the legacy `--github-*` flags.",
+            );
+        }
+
+        if self.using_legacy_gitlab_flags() {
+            warn_deprecated_provider(
+                "GitLab",
+                "Use `kingfisher scan gitlab …` instead of the legacy `--gitlab-*` flags.",
+            );
+        }
+
+        if self.using_legacy_gitea_flags() {
+            warn_deprecated_provider(
+                "Gitea",
+                "Use `kingfisher scan gitea …` instead of the legacy `--gitea-*` flags.",
+            );
+        }
+
+        if self.using_legacy_bitbucket_flags() {
+            warn_deprecated_provider(
+                "Bitbucket",
+                "Use `kingfisher scan bitbucket …` instead of the legacy `--bitbucket-*` flags.",
+            );
+        }
+
+        if self.using_legacy_azure_flags() {
+            warn_deprecated_provider(
+                "Azure DevOps",
+                "Use `kingfisher scan azure …` instead of the legacy `--azure-*` flags.",
+            );
+        }
+
+        if self.using_legacy_huggingface_flags() {
+            warn_deprecated_provider(
+                "Hugging Face",
+                "Use `kingfisher scan huggingface …` instead of the legacy `--huggingface-*` flags.",
+            );
+        }
+
+        if self.slack_query.is_some() || self.slack_api_url.as_str() != DEFAULT_SLACK_API_URL {
+            warn_deprecated_provider(
+                "Slack",
+                "Use `kingfisher scan slack …` instead of the legacy `--slack-*` flags.",
+            );
+        }
+
+        if self.jira_url.is_some() || self.jql.is_some() {
+            warn_deprecated_provider(
+                "Jira",
+                "Use `kingfisher scan jira …` instead of the legacy `--jira-*` flags.",
+            );
+        }
+
+        if self.confluence_url.is_some() || self.cql.is_some() {
+            warn_deprecated_provider(
+                "Confluence",
+                "Use `kingfisher scan confluence …` instead of the legacy `--confluence-*` flags.",
+            );
+        }
+
+        if self.using_legacy_s3_flags() {
+            warn_deprecated_provider(
+                "Amazon S3",
+                "Use `kingfisher scan s3 …` instead of the legacy `--s3-*` flags.",
+            );
+        }
+
+        if self.using_legacy_gcs_flags() {
+            warn_deprecated_provider(
+                "Google Cloud Storage",
+                "Use `kingfisher scan gcs …` instead of the legacy `--gcs-*` flags.",
+            );
+        }
+
+        if !self.docker_image.is_empty() {
+            warn_deprecated_provider(
+                "Docker",
+                "Use `kingfisher scan docker …` instead of the legacy `--docker-image` flag.",
+            );
+        }
+    }
+
+    fn using_legacy_github_flags(&self) -> bool {
+        !self.github_user.is_empty()
+            || !self.github_organization.is_empty()
+            || !self.github_exclude.is_empty()
+            || self.all_github_organizations
+            || self.github_repo_type != GitHubRepoType::Source
+            || self.github_api_url.as_str() != DEFAULT_GITHUB_API_URL
+    }
+
+    fn using_legacy_gitlab_flags(&self) -> bool {
+        !self.gitlab_user.is_empty()
+            || !self.gitlab_group.is_empty()
+            || !self.gitlab_exclude.is_empty()
+            || self.all_gitlab_groups
+            || self.gitlab_include_subgroups
+            || self.gitlab_repo_type != GitLabRepoType::All
+            || self.gitlab_api_url.as_str() != DEFAULT_GITLAB_API_URL
+    }
+
+    fn using_legacy_gitea_flags(&self) -> bool {
+        !self.gitea_user.is_empty()
+            || !self.gitea_organization.is_empty()
+            || !self.gitea_exclude.is_empty()
+            || self.all_gitea_organizations
+            || self.gitea_repo_type != GiteaRepoType::Source
+            || self.gitea_api_url.as_str() != DEFAULT_GITEA_API_URL
+    }
+
+    fn using_legacy_bitbucket_flags(&self) -> bool {
+        !self.bitbucket_user.is_empty()
+            || !self.bitbucket_workspace.is_empty()
+            || !self.bitbucket_project.is_empty()
+            || !self.bitbucket_exclude.is_empty()
+            || self.all_bitbucket_workspaces
+            || self.bitbucket_repo_type != BitbucketRepoType::Source
+            || self.bitbucket_api_url.as_str() != DEFAULT_BITBUCKET_API_URL
+    }
+
+    fn using_legacy_azure_flags(&self) -> bool {
+        !self.azure_organization.is_empty()
+            || !self.azure_project.is_empty()
+            || !self.azure_exclude.is_empty()
+            || self.all_azure_projects
+            || self.azure_repo_type != AzureRepoType::Source
+            || self.azure_base_url.as_str() != DEFAULT_AZURE_BASE_URL
+    }
+
+    fn using_legacy_huggingface_flags(&self) -> bool {
+        !self.huggingface_user.is_empty()
+            || !self.huggingface_organization.is_empty()
+            || !self.huggingface_model.is_empty()
+            || !self.huggingface_dataset.is_empty()
+            || !self.huggingface_space.is_empty()
+            || !self.huggingface_exclude.is_empty()
+    }
+
+    fn using_legacy_s3_flags(&self) -> bool {
+        self.s3_bucket.is_some()
+            || self.s3_prefix.is_some()
+            || self.role_arn.is_some()
+            || self.aws_local_profile.is_some()
+    }
+
+    fn using_legacy_gcs_flags(&self) -> bool {
+        self.gcs_bucket.is_some() || self.gcs_prefix.is_some() || self.gcs_service_account.is_some()
+    }
+}
+
+fn warn_deprecated_provider(provider: &str, guidance: &str) {
+    warn!(
+        "{provider} legacy scan flags are deprecated and will be removed in a future release. {guidance}",
+        provider = provider,
+        guidance = guidance
+    );
 }
 
 // -----------------------------------------------------------------------------
