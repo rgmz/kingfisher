@@ -55,6 +55,10 @@ impl AuthConfig {
         Self { username, password, bearer_token }
     }
 
+    pub fn from_env() -> Self {
+        Self::from_options(None, None, None)
+    }
+
     fn apply(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         if let Some(token) = &self.bearer_token {
             request.bearer_auth(token)

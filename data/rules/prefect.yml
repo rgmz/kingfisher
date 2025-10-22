@@ -20,7 +20,7 @@ rules:
       content:
         request:
           method: GET
-          url: https://api.prefect.cloud/api/me
+          url: https://api.prefect.cloud/api/me/workspaces
           headers:
             Authorization: 'Bearer {{ TOKEN }}'
             Accept: application/json
