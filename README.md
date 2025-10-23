@@ -3,7 +3,9 @@
 <p align="center">
   <img src="docs/kingfisher_logo.png" alt="Kingfisher Logo" width="126" height="173" style="vertical-align: right;" />
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
+[![ghcr downloads](https://ghcr-badge.elias.eu.org/shield/mongodb/kingfisher/kingfisher)](https://github.com/mongodb/kingfisher/pkgs/container/kingfisher)
+
 
 Kingfisher is a blazingly fast secret‑scanning and live validation tool built in Rust. It combines Intel’s SIMD accelerated regex engine (Hyperscan) with language‑aware source code parsing, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
 </p>
