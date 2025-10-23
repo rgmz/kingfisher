@@ -46,5 +46,5 @@ rules:
             - report_response: true
             - type: WordMatch
               words:
-                - '"type":"invalid_request_error"'
+                - '"type":"message"'
           url: https://api.anthropic.com/v1/messages
