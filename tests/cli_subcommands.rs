@@ -930,7 +930,7 @@ mod cross_platform {
 
 mod legacy_compatibility {
     use super::*;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
 
     #[test]
     fn scan_path_still_works() {

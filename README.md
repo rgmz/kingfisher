@@ -421,6 +421,23 @@ kingfisher scan . \
   --branch "$CI_BRANCH"
 ```
 
+Another example:
+```bash
+cd /tmp
+git clone https://github.com/micksmix/SecretsTest.git
+
+cd /tmp/SecretsTest
+git checkout feature-1
+#
+# scan diff between main and feature-1 branch
+kingfisher scan /tmp/SecretsTest --branch feature-1 \
+  --since-commit=$(git -C /tmp/SecretsTest merge-base main feature-1)
+#
+# scan only a specific commit
+kingfisher scan /tmp/dev/SecretsTest \
+  --branch baba6ccb453963d3f6136d1ace843e48d7007c3f
+```
+
 When the branch under test is already checked out, `--branch HEAD` or omitting `--branch` entirely is sufficient. Kingfisher exits with `200` when any findings are discovered and `205` when validated secrets are present, allowing CI jobs to fail automatically if new credentials slip in.
 
 > **Tip:** You can point Kingfisher at a local working tree and scan another branch or commit without changing checkouts. The CLI now resolves repositories from their worktree roots, so commands like the following work without needing to pass the `.git` directory explicitly:
