@@ -1056,13 +1056,17 @@ mod cross_platform {
 
 mod legacy_compatibility {
     use super::*;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn scan_path_still_works() {
         // The old syntax of scanning a local path should still work
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        let test_file = root.join("testdata").join("generic_secrets.py");
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args(["scan", ".", "--no-validate", "--no-update-check"])
+            .args(["scan", test_file.to_str().expect("REASON"), "--no-validate", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| {
                 // May succeed or fail depending on rules, but shouldn't error on syntax
