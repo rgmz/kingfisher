@@ -502,7 +502,7 @@ mod bitbucket {
             .unwrap()
             .args(["scan", "bitbucket", "--help"])
             .assert()
-            .stdout(is_match(r"kingfisher(\\.exe)? scan bitbucket \[OPTIONS\]").unwrap());
+            .stdout(is_match(r"kingfisher(\.exe)? scan bitbucket \[OPTIONS\]").unwrap());
     }
 
     #[test]
