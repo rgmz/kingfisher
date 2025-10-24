@@ -51,14 +51,7 @@ mod github {
     fn scan_github_with_user() {
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "github",
-                "--user",
-                "testuser",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "github", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| {
                 // May succeed (exit 0) or fail with network/auth error (exit 1)
@@ -79,9 +72,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -99,9 +90,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -119,9 +108,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -139,9 +126,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -159,9 +144,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -179,9 +162,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -198,9 +179,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -236,9 +215,7 @@ mod github {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -283,36 +260,18 @@ mod gitlab {
     fn scan_gitlab_with_user() {
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "gitlab",
-                "--user",
-                "testuser",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "gitlab", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
     fn scan_gitlab_with_group() {
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "gitlab",
-                "--group",
-                "testgroup",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "gitlab", "--group", "testgroup", "--list-only", "--no-update-check"])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -329,9 +288,7 @@ mod gitlab {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -349,9 +306,7 @@ mod gitlab {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -369,9 +324,7 @@ mod gitlab {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -389,9 +342,7 @@ mod gitlab {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -408,9 +359,7 @@ mod gitlab {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -464,9 +413,7 @@ mod azure {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -482,9 +429,7 @@ mod azure {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -501,9 +446,7 @@ mod azure {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -521,9 +464,7 @@ mod azure {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -541,9 +482,7 @@ mod azure {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -596,27 +535,16 @@ mod bitbucket {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
     fn scan_bitbucket_with_user() {
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "bitbucket",
-                "--user",
-                "testuser",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "bitbucket", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -632,9 +560,7 @@ mod bitbucket {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -651,9 +577,7 @@ mod bitbucket {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -671,9 +595,7 @@ mod bitbucket {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -691,9 +613,7 @@ mod bitbucket {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -737,27 +657,16 @@ mod gitea {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
     fn scan_gitea_with_user() {
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "gitea",
-                "--user",
-                "testuser",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "gitea", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -772,9 +681,7 @@ mod gitea {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -792,9 +699,7 @@ mod gitea {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -812,9 +717,7 @@ mod gitea {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -832,9 +735,7 @@ mod gitea {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -878,9 +779,7 @@ mod huggingface {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -896,9 +795,7 @@ mod huggingface {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -914,9 +811,7 @@ mod huggingface {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -932,9 +827,7 @@ mod huggingface {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -950,9 +843,7 @@ mod huggingface {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 
     #[test]
@@ -970,9 +861,7 @@ mod huggingface {
                 "--no-update-check",
             ])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -1000,9 +889,7 @@ mod cross_platform {
                 .unwrap()
                 .args(&platform_args)
                 .assert()
-                .code(predicates::function::function(|code: &i32| {
-                    *code == 0 || *code == 1
-                }));
+                .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
         }
     }
 
@@ -1013,11 +900,7 @@ mod cross_platform {
             .args(["scan", "--no-update-check"])
             .assert()
             .failure()
-            .stderr(
-                contains("required")
-                    .or(contains("expected"))
-                    .or(contains("provide")),
-            );
+            .stderr(contains("required").or(contains("expected")).or(contains("provide")));
     }
 
     #[test]
@@ -1035,18 +918,9 @@ mod cross_platform {
         // list-only should work without providing actual scan paths
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "github",
-                "--user",
-                "testuser",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "github", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
 
@@ -1066,7 +940,12 @@ mod legacy_compatibility {
         let test_file = root.join("testdata").join("generic_secrets.py");
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args(["scan", test_file.to_str().expect("REASON"), "--no-validate", "--no-update-check"])
+            .args([
+                "scan",
+                test_file.to_str().expect("REASON"),
+                "--no-validate",
+                "--no-update-check",
+            ])
             .assert()
             .code(predicates::function::function(|code: &i32| {
                 // May succeed or fail depending on rules, but shouldn't error on syntax
@@ -1082,17 +961,8 @@ mod legacy_compatibility {
         // New syntax
         Command::cargo_bin("kingfisher")
             .unwrap()
-            .args([
-                "scan",
-                "github",
-                "--user",
-                "test",
-                "--list-only",
-                "--no-update-check",
-            ])
+            .args(["scan", "github", "--user", "test", "--list-only", "--no-update-check"])
             .assert()
-            .code(predicates::function::function(|code: &i32| {
-                *code == 0 || *code == 1
-            }));
+            .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
     }
 }
