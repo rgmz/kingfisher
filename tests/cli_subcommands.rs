@@ -5,7 +5,10 @@
 // and can be invoked with various argument combinations.
 
 use assert_cmd::Command;
-use predicates::{prelude::PredicateBooleanExt, str::contains};
+use predicates::{
+    prelude::PredicateBooleanExt,
+    str::{contains, is_match},
+};
 
 // =============================================================================
 // GitHub Scan Subcommand Tests
@@ -499,7 +502,7 @@ mod bitbucket {
             .unwrap()
             .args(["scan", "bitbucket", "--help"])
             .assert()
-            .stdout(contains("kingfisher scan bitbucket [OPTIONS]"));
+            .stdout(is_match(r"kingfisher(\.exe)? scan bitbucket \[OPTIONS\]").unwrap());
     }
 
     #[test]
