@@ -124,7 +124,9 @@ cargo build --release --target x86_64-pc-windows-msvc || (
 
 echo Generating CHECKSUM.txt...
 powershell -Command ^
-  "Get-FileHash .\target\x86_64-pc-windows-msvc\release\%PROJECT_NAME%.exe -Algorithm SHA256 | Out-File .\target\x86_64-pc-windows-msvc\release\CHECKSUM.txt"
+  "$hash = Get-FileHash '.\target\x86_64-pc-windows-msvc\release\%PROJECT_NAME%.exe' -Algorithm SHA256;" ^
+  "$line = '{0}  {1}' -f $hash.Hash, (Split-Path -Leaf $hash.Path);" ^
+  "Set-Content -Path '.\target\x86_64-pc-windows-msvc\release\CHECKSUM.txt' -Value $line"
 
 if not exist "target\release" mkdir "target\release"
 copy /Y "target\x86_64-pc-windows-msvc\release\%PROJECT_NAME%.exe" "target\release\" >nul
@@ -137,7 +139,10 @@ powershell -Command "Compress-Archive -Path '%PROJECT_NAME%.exe','CHECKSUM-windo
 
 if exist "%PROJECT_NAME%-windows-x64.zip" (
     REM -- append the ZIP’s SHA-256 to the existing checksum file ----
-    certutil -hashfile "%PROJECT_NAME%-windows-x64.zip" SHA256 >> "CHECKSUM-windows-x64.txt"
+    powershell -Command ^
+      "$hash = Get-FileHash '.\%PROJECT_NAME%-windows-x64.zip' -Algorithm SHA256;" ^
+      "$line = '{0}  {1}' -f $hash.Hash, (Split-Path -Leaf $hash.Path);" ^
+      "Add-Content -Path '.\CHECKSUM-windows-x64.txt' -Value $line"
     echo Created: %PROJECT_NAME%-windows-x64.zip
 ) else (
     echo ERROR: Archive not created.

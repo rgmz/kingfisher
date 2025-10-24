@@ -20,6 +20,7 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 use serde_json::Value;
+use tokio::task;
 use tracing::warn;
 use url::{form_urlencoded, Url};
 
@@ -50,7 +51,7 @@ pub enum RepoType {
 }
 
 /// A struct to hold GitLab repository query specifications
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RepoSpecifiers {
     pub user: Vec<String>,
     pub group: Vec<String>,
@@ -209,7 +210,23 @@ pub async fn enumerate_repo_urls(
     repo_specifiers: &RepoSpecifiers,
     gitlab_url: Url,
     ignore_certs: bool,
-    mut progress: Option<&mut ProgressBar>,
+    progress: Option<ProgressBar>,
+) -> Result<Vec<String>> {
+    let specifiers = repo_specifiers.clone();
+    let repo_urls = task::spawn_blocking(move || {
+        let progress_ref = progress.as_ref();
+        enumerate_repo_urls_blocking(&specifiers, gitlab_url, ignore_certs, progress_ref)
+    })
+    .await??;
+
+    Ok(repo_urls)
+}
+
+fn enumerate_repo_urls_blocking(
+    repo_specifiers: &RepoSpecifiers,
+    gitlab_url: Url,
+    ignore_certs: bool,
+    progress: Option<&ProgressBar>,
 ) -> Result<Vec<String>> {
     let client = create_gitlab_client(&gitlab_url, ignore_certs)?;
     let mut repo_urls = Vec::new();
@@ -249,7 +266,7 @@ pub async fn enumerate_repo_urls(
             repo_urls.push(proj.http_url_to_repo);
         }
 
-        if let Some(pb) = progress.as_mut() {
+        if let Some(pb) = progress {
             pb.inc(1);
         }
     }
@@ -286,7 +303,7 @@ pub async fn enumerate_repo_urls(
             }
             repo_urls.push(proj.http_url_to_repo);
         }
-        if let Some(pb) = progress.as_mut() {
+        if let Some(pb) = progress {
             pb.inc(1);
         }
     }
@@ -319,7 +336,7 @@ pub async fn list_repositories(
     };
 
     // Create a progress bar for displaying status
-    let mut progress = if progress_enabled {
+    let progress = if progress_enabled {
         let style = ProgressStyle::with_template("{spinner} {msg} [{elapsed_precise}]")
             .expect("progress bar style template should compile");
         let pb = ProgressBar::new_spinner().with_style(style).with_message("Fetching repositories");
@@ -330,7 +347,8 @@ pub async fn list_repositories(
     };
 
     let repo_urls =
-        enumerate_repo_urls(&repo_specifiers, api_url, ignore_certs, Some(&mut progress)).await?;
+        enumerate_repo_urls(&repo_specifiers, api_url, ignore_certs, Some(progress.clone()))
+            .await?;
 
     // Print repositories
     for url in repo_urls {

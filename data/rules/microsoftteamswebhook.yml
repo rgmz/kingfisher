@@ -22,15 +22,14 @@ rules:
       type: Http
       content:
         request:
-          body: |
-            {'text':''}
+          body: '{"text":""}'
           headers:
             Content-Type: application/json
           method: POST
           response_matcher:
             - type: StatusMatch
               status:
-                - 200
+                - 400
             - report_response: true
               type: WordMatch
               words:

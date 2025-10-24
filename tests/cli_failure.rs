@@ -13,7 +13,7 @@ fn scan_fails_for_missing_path() {
         .args(["scan", "no/such/path/here", "--no-update-check"])
         .assert()
         .failure() // exit-code ≠ 0
-        .stderr(contains("Invalid input")); // message from run_async_scan
+        .stderr(contains("unrecognized scan target or path does not exist"));
 }
 
 /// 2. Malformed rule YAML ⇒ RuleLoader::load returns an error

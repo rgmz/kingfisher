@@ -59,7 +59,7 @@ pub struct GitLabRepoSpecifiers {
     pub exclude_repos: Vec<String>,
 
     /// Repositories for all groups (Enterprise only)
-    #[arg(long, alias = "all-groups", alias = "all-gitlab-groups", requires = "gitlab_api_url")]
+    #[arg(long, alias = "all-groups", alias = "all-gitlab-groups", requires = "api_url")]
     pub all_groups: bool,
 
     /// Filter by repository type

@@ -47,7 +47,7 @@ pub struct AzureRepoSpecifiers {
     pub project: Vec<String>,
 
     /// Include repositories from all projects within the specified organizations
-    #[arg(long = "azure-all-projects", alias = "all-azure-projects")]
+    #[arg(long = "all-projects", alias = "azure-all-projects")]
     pub all_projects: bool,
 
     /// Skip repositories when enumerating Azure sources (format: ORGANIZATION/PROJECT/REPOSITORY)
@@ -59,7 +59,7 @@ pub struct AzureRepoSpecifiers {
     pub exclude_repos: Vec<String>,
 
     /// Filter by repository type
-    #[arg(long = "azure-repo-type", default_value_t = AzureRepoType::Source)]
+    #[arg(long = "repo-type", alias = "azure-repo-type", default_value_t = AzureRepoType::Source)]
     pub repo_type: AzureRepoType,
 }
 

@@ -1,17 +1,26 @@
-use clap::{Args, ValueEnum};
-use std::path::PathBuf;
+use anyhow::bail;
+use clap::{Args, Subcommand, ValueEnum, ValueHint};
+use std::path::{Path, PathBuf};
 use strum::Display;
 use tracing::debug;
+use url::Url;
 
 use crate::{
     cli::{
         commands::{
+            azure::AzureRepoSpecifiers,
+            bitbucket::BitbucketRepoSpecifiers,
+            gitea::GiteaRepoSpecifiers,
+            github::GitHubRepoSpecifiers,
+            gitlab::GitLabRepoSpecifiers,
+            huggingface::HuggingFaceRepoSpecifiers,
             inputs::{ContentFilteringArgs, InputSpecifierArgs},
             output::{OutputArgs, ReportOutputFormat},
             rules::RuleSpecifierArgs,
         },
         global::RAM_GB,
     },
+    git_url::GitUrl,
     rules::rule::Confidence,
 };
 
@@ -154,4 +163,509 @@ impl From<ConfidenceLevel> for Confidence {
             ConfidenceLevel::High => Confidence::High,
         }
     }
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ScanCommandArgs {
+    #[command(flatten)]
+    pub scan_args: ScanArgs,
+
+    #[command(subcommand)]
+    pub provider: Option<ScanInputCommand>,
+}
+
+#[derive(Debug)]
+pub enum ScanOperation {
+    Scan(ScanArgs),
+    ListRepositories(ListRepositoriesCommand),
+}
+
+#[derive(Debug)]
+pub enum ListRepositoriesCommand {
+    Github { api_url: Url, specifiers: GitHubRepoSpecifiers },
+    Gitlab { api_url: Url, specifiers: GitLabRepoSpecifiers },
+    Gitea { api_url: Url, specifiers: GiteaRepoSpecifiers },
+    Bitbucket { api_url: Url, specifiers: BitbucketRepoSpecifiers },
+    Azure { base_url: Url, specifiers: AzureRepoSpecifiers },
+    Huggingface { specifiers: HuggingFaceRepoSpecifiers },
+}
+
+impl ScanCommandArgs {
+    /// Convert CLI arguments into a scan or repository-listing operation.
+    pub fn into_operation(mut self) -> anyhow::Result<ScanOperation> {
+        let mut used_provider_subcommand = false;
+
+        if let Some(provider) = self.provider.take() {
+            used_provider_subcommand = true;
+            let scan_args = &mut self.scan_args;
+            let maybe_list = match provider {
+                ScanInputCommand::Filesystem(args) => {
+                    if args.paths.is_empty() {
+                        bail!("Provide at least one path when using the filesystem subcommand");
+                    }
+                    scan_args.input_specifier_args.path_inputs = args.paths;
+                    scan_args.input_specifier_args.git_url = args.git_url;
+                    None
+                }
+                ScanInputCommand::Github(args) => {
+                    if args.specifiers.is_empty() {
+                        bail!(
+                            "You must specify at least one --user, --org, or use --all-orgs when scanning GitHub"
+                        );
+                    }
+                    if args.list_only {
+                        Some(ListRepositoriesCommand::Github {
+                            api_url: args.api_url,
+                            specifiers: args.specifiers,
+                        })
+                    } else {
+                        scan_args.input_specifier_args.github_user = args.specifiers.user;
+                        scan_args.input_specifier_args.github_organization =
+                            args.specifiers.organization;
+                        scan_args.input_specifier_args.github_exclude =
+                            args.specifiers.exclude_repos;
+                        scan_args.input_specifier_args.all_github_organizations =
+                            args.specifiers.all_organizations;
+                        scan_args.input_specifier_args.github_repo_type = args.specifiers.repo_type;
+                        scan_args.input_specifier_args.github_api_url = args.api_url;
+                        None
+                    }
+                }
+                ScanInputCommand::Gitlab(args) => {
+                    if args.specifiers.is_empty() {
+                        bail!(
+                            "You must specify at least one --user, --group, or use --all-groups when scanning GitLab"
+                        );
+                    }
+                    if args.list_only {
+                        Some(ListRepositoriesCommand::Gitlab {
+                            api_url: args.api_url,
+                            specifiers: args.specifiers,
+                        })
+                    } else {
+                        scan_args.input_specifier_args.gitlab_user = args.specifiers.user;
+                        scan_args.input_specifier_args.gitlab_group = args.specifiers.group;
+                        scan_args.input_specifier_args.gitlab_exclude =
+                            args.specifiers.exclude_repos;
+                        scan_args.input_specifier_args.all_gitlab_groups =
+                            args.specifiers.all_groups;
+                        scan_args.input_specifier_args.gitlab_include_subgroups =
+                            args.specifiers.include_subgroups;
+                        scan_args.input_specifier_args.gitlab_repo_type = args.specifiers.repo_type;
+                        scan_args.input_specifier_args.gitlab_api_url = args.api_url;
+                        None
+                    }
+                }
+                ScanInputCommand::Gitea(args) => {
+                    if args.specifiers.is_empty() {
+                        bail!(
+                            "Specify at least one --user, --org, or use --all-orgs when scanning Gitea"
+                        );
+                    }
+                    if args.list_only {
+                        Some(ListRepositoriesCommand::Gitea {
+                            api_url: args.api_url,
+                            specifiers: args.specifiers,
+                        })
+                    } else {
+                        scan_args.input_specifier_args.gitea_user = args.specifiers.user;
+                        scan_args.input_specifier_args.gitea_organization =
+                            args.specifiers.organization;
+                        scan_args.input_specifier_args.gitea_exclude =
+                            args.specifiers.exclude_repos;
+                        scan_args.input_specifier_args.all_gitea_organizations =
+                            args.specifiers.all_organizations;
+                        scan_args.input_specifier_args.gitea_repo_type = args.specifiers.repo_type;
+                        scan_args.input_specifier_args.gitea_api_url = args.api_url;
+                        None
+                    }
+                }
+                ScanInputCommand::Bitbucket(args) => {
+                    if args.specifiers.is_empty() {
+                        bail!(
+                            "You must specify at least one --user, --workspace, --project, or use --all-workspaces when scanning Bitbucket"
+                        );
+                    }
+                    if args.list_only {
+                        Some(ListRepositoriesCommand::Bitbucket {
+                            api_url: args.api_url,
+                            specifiers: args.specifiers,
+                        })
+                    } else {
+                        scan_args.input_specifier_args.bitbucket_user = args.specifiers.user;
+                        scan_args.input_specifier_args.bitbucket_workspace =
+                            args.specifiers.workspace;
+                        scan_args.input_specifier_args.bitbucket_project = args.specifiers.project;
+                        scan_args.input_specifier_args.bitbucket_exclude =
+                            args.specifiers.exclude_repos;
+                        scan_args.input_specifier_args.all_bitbucket_workspaces =
+                            args.specifiers.all_workspaces;
+                        scan_args.input_specifier_args.bitbucket_repo_type =
+                            args.specifiers.repo_type;
+                        scan_args.input_specifier_args.bitbucket_api_url = args.api_url;
+                        None
+                    }
+                }
+                ScanInputCommand::Azure(args) => {
+                    if args.specifiers.is_empty() {
+                        bail!(
+                            "You must specify at least one --organization, --project, or use --all-projects when scanning Azure DevOps"
+                        );
+                    }
+                    if args.list_only {
+                        Some(ListRepositoriesCommand::Azure {
+                            base_url: args.base_url,
+                            specifiers: args.specifiers,
+                        })
+                    } else {
+                        scan_args.input_specifier_args.azure_organization =
+                            args.specifiers.organization;
+                        scan_args.input_specifier_args.azure_project = args.specifiers.project;
+                        scan_args.input_specifier_args.azure_exclude =
+                            args.specifiers.exclude_repos;
+                        scan_args.input_specifier_args.all_azure_projects =
+                            args.specifiers.all_projects;
+                        scan_args.input_specifier_args.azure_repo_type = args.specifiers.repo_type;
+                        scan_args.input_specifier_args.azure_base_url = args.base_url;
+                        None
+                    }
+                }
+                ScanInputCommand::Huggingface(args) => {
+                    if args.specifiers.is_empty() {
+                        bail!(
+                            "You must specify at least one --user, --org, --model, --dataset, or --space when scanning Hugging Face"
+                        );
+                    }
+                    if args.list_only {
+                        Some(ListRepositoriesCommand::Huggingface { specifiers: args.specifiers })
+                    } else {
+                        scan_args.input_specifier_args.huggingface_user = args.specifiers.user;
+                        scan_args.input_specifier_args.huggingface_organization =
+                            args.specifiers.organization;
+                        scan_args.input_specifier_args.huggingface_model = args.specifiers.model;
+                        scan_args.input_specifier_args.huggingface_dataset =
+                            args.specifiers.dataset;
+                        scan_args.input_specifier_args.huggingface_space = args.specifiers.space;
+                        scan_args.input_specifier_args.huggingface_exclude =
+                            args.specifiers.exclude;
+                        None
+                    }
+                }
+                ScanInputCommand::Slack(args) => {
+                    scan_args.input_specifier_args.slack_query = Some(args.query);
+                    scan_args.input_specifier_args.slack_api_url = args.api_url;
+                    scan_args.input_specifier_args.max_results = args.max_results;
+                    None
+                }
+                ScanInputCommand::Jira(args) => {
+                    scan_args.input_specifier_args.jira_url = Some(args.url);
+                    scan_args.input_specifier_args.jql = Some(args.jql);
+                    scan_args.input_specifier_args.max_results = args.max_results;
+                    None
+                }
+                ScanInputCommand::Confluence(args) => {
+                    scan_args.input_specifier_args.confluence_url = Some(args.url);
+                    scan_args.input_specifier_args.cql = Some(args.cql);
+                    scan_args.input_specifier_args.max_results = args.max_results;
+                    None
+                }
+                ScanInputCommand::S3(args) => {
+                    scan_args.input_specifier_args.s3_bucket = Some(args.bucket);
+                    scan_args.input_specifier_args.s3_prefix = args.prefix;
+                    scan_args.input_specifier_args.role_arn = args.role_arn;
+                    scan_args.input_specifier_args.aws_local_profile = args.profile;
+                    None
+                }
+                ScanInputCommand::Gcs(args) => {
+                    scan_args.input_specifier_args.gcs_bucket = Some(args.bucket);
+                    scan_args.input_specifier_args.gcs_prefix = args.prefix;
+                    scan_args.input_specifier_args.gcs_service_account = args.service_account;
+                    None
+                }
+                ScanInputCommand::Docker(args) => {
+                    if args.images.is_empty() {
+                        bail!("Provide at least one image when using the docker subcommand");
+                    }
+                    scan_args.input_specifier_args.docker_image = args.images;
+                    None
+                }
+            };
+
+            if let Some(list_command) = maybe_list {
+                return Ok(ScanOperation::ListRepositories(list_command));
+            }
+        }
+
+        if !self.scan_args.input_specifier_args.has_any_input() {
+            bail!(
+                "Specify a path, --git-url, or use a provider subcommand such as 'kingfisher scan github'"
+            );
+        }
+
+        for path in &self.scan_args.input_specifier_args.path_inputs {
+            if path.as_path() == Path::new("-") {
+                continue;
+            }
+
+            if !path.exists() {
+                bail!("Error: unrecognized scan target or path does not exist: {}", path.display());
+            }
+        }
+
+        if !used_provider_subcommand {
+            self.scan_args.input_specifier_args.emit_deprecated_warnings();
+        }
+
+        Ok(ScanOperation::Scan(self.scan_args))
+    }
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum ScanInputCommand {
+    /// Scan local files, directories, or Git repositories
+    #[command(hide = true)]
+    Filesystem(FilesystemScanArgs),
+
+    /// Enumerate and scan GitHub repositories
+    Github(GithubScanArgs),
+
+    /// Enumerate and scan GitLab repositories
+    Gitlab(GitLabScanArgs),
+
+    /// Enumerate and scan Gitea repositories
+    Gitea(GiteaScanArgs),
+
+    /// Enumerate and scan Bitbucket repositories
+    Bitbucket(BitbucketScanArgs),
+
+    /// Enumerate and scan Azure DevOps repositories
+    Azure(AzureScanArgs),
+
+    /// Enumerate and scan Hugging Face repositories
+    Huggingface(HuggingfaceScanArgs),
+
+    /// Scan Slack search results
+    Slack(SlackScanArgs),
+
+    /// Scan Jira issues using JQL
+    Jira(JiraScanArgs),
+
+    /// Scan Confluence content using CQL
+    Confluence(ConfluenceScanArgs),
+
+    /// Scan an S3 bucket
+    S3(S3ScanArgs),
+
+    /// Scan a Google Cloud Storage bucket
+    Gcs(GcsScanArgs),
+
+    /// Scan Docker or OCI images
+    Docker(DockerScanArgs),
+}
+
+#[derive(Args, Debug, Clone, Default)]
+pub struct FilesystemScanArgs {
+    /// Files, directories, or '-' for stdin
+    #[arg(value_name = "PATH", value_hint = ValueHint::AnyPath)]
+    pub paths: Vec<PathBuf>,
+
+    /// Git repository URLs to clone and scan
+    #[arg(long = "git-url", value_hint = ValueHint::Url)]
+    pub git_url: Vec<GitUrl>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct GithubScanArgs {
+    #[command(flatten)]
+    pub specifiers: GitHubRepoSpecifiers,
+
+    /// List matching repositories without scanning them
+    #[arg(long = "list-only")]
+    pub list_only: bool,
+
+    /// Override the GitHub API URL (e.g. Enterprise)
+    #[arg(
+        long = "api-url",
+        alias = "github-api-url",
+        default_value = "https://api.github.com/",
+        value_hint = ValueHint::Url
+    )]
+    pub api_url: Url,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct GitLabScanArgs {
+    #[command(flatten)]
+    pub specifiers: GitLabRepoSpecifiers,
+
+    /// List matching repositories without scanning them
+    #[arg(long = "list-only")]
+    pub list_only: bool,
+
+    /// Override the GitLab API URL (e.g. self-hosted)
+    #[arg(
+        long = "api-url",
+        alias = "gitlab-api-url",
+        default_value = "https://gitlab.com/",
+        value_hint = ValueHint::Url
+    )]
+    pub api_url: Url,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct GiteaScanArgs {
+    #[command(flatten)]
+    pub specifiers: GiteaRepoSpecifiers,
+
+    /// List matching repositories without scanning them
+    #[arg(long = "list-only")]
+    pub list_only: bool,
+
+    /// Override the Gitea API URL (e.g. self-hosted)
+    #[arg(
+        long = "api-url",
+        alias = "gitea-api-url",
+        default_value = "https://gitea.com/api/v1/",
+        value_hint = ValueHint::Url
+    )]
+    pub api_url: Url,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct BitbucketScanArgs {
+    #[command(flatten)]
+    pub specifiers: BitbucketRepoSpecifiers,
+
+    /// List matching repositories without scanning them
+    #[arg(long = "list-only")]
+    pub list_only: bool,
+
+    /// Override the Bitbucket API URL (Cloud or self-hosted)
+    #[arg(
+        long = "api-url",
+        alias = "bitbucket-api-url",
+        default_value = "https://api.bitbucket.org/2.0/",
+        value_hint = ValueHint::Url
+    )]
+    pub api_url: Url,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct AzureScanArgs {
+    #[command(flatten)]
+    pub specifiers: AzureRepoSpecifiers,
+
+    /// List matching repositories without scanning them
+    #[arg(long = "list-only")]
+    pub list_only: bool,
+
+    /// Override the Azure DevOps base URL
+    #[arg(
+        long = "base-url",
+        alias = "azure-base-url",
+        default_value = "https://dev.azure.com/",
+        value_hint = ValueHint::Url
+    )]
+    pub base_url: Url,
+}
+
+#[derive(Args, Debug, Clone, Default)]
+pub struct HuggingfaceScanArgs {
+    #[command(flatten)]
+    pub specifiers: HuggingFaceRepoSpecifiers,
+
+    /// List matching repositories without scanning them
+    #[arg(long = "list-only")]
+    pub list_only: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct SlackScanArgs {
+    /// Slack search query
+    #[arg(value_name = "QUERY")]
+    pub query: String,
+
+    /// Override the Slack API URL
+    #[arg(
+        long = "api-url",
+        alias = "slack-api-url",
+        default_value = "https://slack.com/api/",
+        value_hint = ValueHint::Url
+    )]
+    pub api_url: Url,
+
+    /// Maximum number of results to fetch
+    #[arg(long = "max-results", default_value_t = 100)]
+    pub max_results: usize,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct JiraScanArgs {
+    /// Jira base URL
+    #[arg(long = "url", alias = "jira-url", value_hint = ValueHint::Url)]
+    pub url: Url,
+
+    /// JQL query to select Jira issues
+    #[arg(long, alias = "jql")]
+    pub jql: String,
+
+    /// Maximum number of results to fetch
+    #[arg(long = "max-results", default_value_t = 100)]
+    pub max_results: usize,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ConfluenceScanArgs {
+    /// Confluence base URL
+    #[arg(long = "url", alias = "confluence-url", value_hint = ValueHint::Url)]
+    pub url: Url,
+
+    /// CQL query to select Confluence content
+    #[arg(long, alias = "cql")]
+    pub cql: String,
+
+    /// Maximum number of results to fetch
+    #[arg(long = "max-results", default_value_t = 100)]
+    pub max_results: usize,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct S3ScanArgs {
+    /// S3 bucket to scan
+    #[arg(value_name = "BUCKET")]
+    pub bucket: String,
+
+    /// Optional prefix within the bucket
+    #[arg(long = "prefix", alias = "s3-prefix")]
+    pub prefix: Option<String>,
+
+    /// AWS IAM role ARN to assume
+    #[arg(long = "role-arn")]
+    pub role_arn: Option<String>,
+
+    /// AWS profile name to use for credentials
+    #[arg(long = "profile", alias = "aws-local-profile")]
+    pub profile: Option<String>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct GcsScanArgs {
+    /// Google Cloud Storage bucket to scan
+    #[arg(value_name = "BUCKET")]
+    pub bucket: String,
+
+    /// Optional prefix within the bucket
+    #[arg(long = "prefix", alias = "gcs-prefix")]
+    pub prefix: Option<String>,
+
+    /// Service account JSON file for authentication
+    #[arg(long = "service-account", alias = "gcs-service-account", value_hint = ValueHint::FilePath)]
+    pub service_account: Option<PathBuf>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct DockerScanArgs {
+    /// Docker or OCI images to scan
+    #[arg(value_name = "IMAGE", num_args = 1..)]
+    pub images: Vec<String>,
 }

@@ -6,17 +6,9 @@ use crate::cli::commands::output::OutputArgs;
 
 #[derive(Args, Debug, Clone, Default)]
 pub struct BitbucketAuthArgs {
-    /// Username for Bitbucket basic authentication (app password or server)
-    #[arg(long)]
-    pub bitbucket_username: Option<String>,
-
-    /// Bitbucket app password, PAT, or server token
-    #[arg(long = "bitbucket-token", alias = "bitbucket-password")]
-    pub bitbucket_token: Option<String>,
-
-    /// Bitbucket OAuth token for bearer authentication
-    #[arg(long = "bitbucket-oauth-token", alias = "bitbucket-oauth")]
-    pub bitbucket_oauth_token: Option<String>,
+    /// Bitbucket credentials are sourced from KF_BITBUCKET_* environment variables.
+    #[arg(skip)]
+    _env_only: (),
 }
 
 /// Top-level Bitbucket command group
@@ -79,7 +71,7 @@ pub struct BitbucketRepoSpecifiers {
     pub exclude_repos: Vec<String>,
 
     /// Enumerate all accessible workspaces or projects
-    #[arg(long, alias = "all-bitbucket-workspaces", requires = "bitbucket_api_url")]
+    #[arg(long, alias = "all-bitbucket-workspaces", requires = "api_url")]
     pub all_workspaces: bool,
 
     /// Filter repositories by type

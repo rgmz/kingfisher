@@ -15,16 +15,44 @@ rules:
       - license_key="ZXCVBN_0987654321abcdef1234567890abc_mmk"
     references:
       - https://dev.maxmind.com/geoip/docs/web-services
+    depends_on_rule:
+      - rule_id: kingfisher.maxmind.2
+        variable: ACCOUNT_ID
     validation:
       type: Http
       content:
         request:
           method: GET
-          url: https://geoip.maxmind.com/geoip/v2.1/city/me?license_key={{ TOKEN }}
+          url: https://geoip.maxmind.com/geoip/v2.1/city/me
           headers:
+            Authorization: "Basic {{ ACCOUNT_ID | append: ':' | append: TOKEN | b64enc }}"
             Accept: application/json
           response_matcher:
             - report_response: true
             - type: StatusMatch
               status:
                 - 200
+  - name: MaxMind Account ID
+    id: kingfisher.maxmind.2
+    pattern: |
+      (?xi)
+      (?:maxmind|geoip|geolite)
+      (?:.|[\n\r]){0,40}?
+      (?:account|user)
+      (?:.|[\n\r]){0,10}?
+      (?:id|number)
+      (?:.|[\n\r]){0,16}?
+      \b
+      (
+        \d{4,8}
+      )
+      \b
+    min_entropy: 2.0
+    confidence: medium
+    visible: false
+    examples:
+      - MAXMIND_ACCOUNT_ID=123456
+      - '"maxmind": {"account_id": "654321", "license_key": "..."}'
+      - 'geoip_account_number: 456789'
+    references:
+      - https://dev.maxmind.com/geoip/docs/web-services

@@ -3,7 +3,9 @@
 <p align="center">
   <img src="docs/kingfisher_logo.png" alt="Kingfisher Logo" width="126" height="173" style="vertical-align: right;" />
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
+[![ghcr downloads](https://ghcr-badge.elias.eu.org/shield/mongodb/kingfisher/kingfisher)](https://github.com/mongodb/kingfisher/pkgs/container/kingfisher)
+
 
 Kingfisher is a blazingly fast secret‑scanning and live validation tool built in Rust. It combines Intel’s SIMD accelerated regex engine (Hyperscan) with language‑aware source code parsing, and **ships with hundreds of built‑in rules** to detect, validate, and triage secrets before they ever reach production
 </p>
@@ -244,12 +246,12 @@ docker run --rm \
     scan --git-url https://github.com/org/private_repo.git
 
 # Scan an S3 bucket
-# Credentials can come from KF_AWS_KEY/KF_AWS_SECRET, --role-arn, or --aws-local-profile
+# Credentials can come from KF_AWS_KEY/KF_AWS_SECRET, --role-arn, or --profile
 docker run --rm \
   -e KF_AWS_KEY=AKIA... \
   -e KF_AWS_SECRET=g5nYW... \
   ghcr.io/mongodb/kingfisher:latest \
-    scan --s3-bucket bucket-name
+    scan s3 bucket-name
 
 
 # Scan and write a JSON report locally
@@ -419,7 +421,31 @@ kingfisher scan . \
   --branch "$CI_BRANCH"
 ```
 
+Another example:
+```bash
+cd /tmp
+git clone https://github.com/micksmix/SecretsTest.git
+
+cd /tmp/SecretsTest
+git checkout feature-1
+#
+# scan diff between main and feature-1 branch
+kingfisher scan /tmp/SecretsTest --branch feature-1 \
+  --since-commit=$(git -C /tmp/SecretsTest merge-base main feature-1)
+#
+# scan only a specific commit
+kingfisher scan /tmp/dev/SecretsTest \
+  --branch baba6ccb453963d3f6136d1ace843e48d7007c3f
+```
+
 When the branch under test is already checked out, `--branch HEAD` or omitting `--branch` entirely is sufficient. Kingfisher exits with `200` when any findings are discovered and `205` when validated secrets are present, allowing CI jobs to fail automatically if new credentials slip in.
+
+> **Tip:** You can point Kingfisher at a local working tree and scan another branch or commit without changing checkouts. The CLI now resolves repositories from their worktree roots, so commands like the following work without needing to pass the `.git` directory explicitly:
+
+```bash
+kingfisher scan /path/to/local/repo --branch <ref>
+kingfisher scan C:\\src\\repo --branch <commit-hash>
+```
 
 The same diff-focused workflow works when cloning repositories on the fly with `--git-url`. Kingfisher automatically tries remote-tracking names like `origin/main` and `origin/feature-1`, so you can target the branches involved in a pull request without performing a local checkout first.
 
@@ -465,13 +491,13 @@ kingfisher scan ./my-project \
 You can scan S3 objects directly:
 
 ```bash
-kingfisher scan --s3-bucket bucket-name [--s3-prefix path/]
+kingfisher scan s3 bucket-name [--prefix path/]
 ```
 
 Credential resolution happens in this order:
 
 1. `KF_AWS_KEY` and `KF_AWS_SECRET` environment variables
-2. `--aws-local-profile` pointing to a profile in `~/.aws/config` (works with AWS SSO)
+2. `--profile` pointing to a profile in `~/.aws/config` (works with AWS SSO)
 3. anonymous access for public buckets
 
 If `--role-arn` is supplied, the credentials from steps 1–2 are used to assume that role.
@@ -482,25 +508,24 @@ Examples
 # using explicit keys
 export KF_AWS_KEY=AKIA...
 export KF_AWS_SECRET=g5nYW...
-kingfisher scan --s3-bucket some-example-bucket
+kingfisher scan s3 some-example-bucket
 
 # Above can also be run as:
-KF_AWS_KEY=AKIA... KF_AWS_SECRET=g5nYW... kingfisher scan --s3-bucket some-example-bucket
+KF_AWS_KEY=AKIA... KF_AWS_SECRET=g5nYW... kingfisher scan s3 some-example-bucket
 
 # using a local profile (e.g., SSO) that exists in your AWS profile (~/.aws/config)
-kingfisher scan --s3-bucket some-example-bucket --aws-local-profile default
+kingfisher scan s3 some-example-bucket --profile default
 
 # anonymous scan of a bucket, while providing an object prefix to only scan subset of the s3 bucket
-kingfisher scan \
-  --s3-bucket awsglue-datasets \
-  --s3-prefix examples/us-legislators/all
+kingfisher scan s3 awsglue-datasets \
+  --prefix examples/us-legislators/all
 
 # assuming a role when scanning
-kingfisher scan --s3-bucket some-example-bucket \
+kingfisher scan s3 some-example-bucket \
   --role-arn arn:aws:iam::123456789012:role/MyRole
 
 # anonymous scan of a public bucket
-kingfisher scan --s3-bucket some-example-bucket
+kingfisher scan s3 some-example-bucket
 ```
 
 Docker example:
@@ -510,29 +535,29 @@ docker run --rm \
   -e KF_AWS_KEY=AKIA... \
   -e KF_AWS_SECRET=g5nYW... \
   ghcr.io/mongodb/kingfisher:latest \
-    scan --s3-bucket bucket-name
+    scan s3 bucket-name
 ```
 
 ## <img src="./docs/assets/icons/gcs.svg" height="40" width="40" alt="Google Cloud Storage"/> Scanning a Google Cloud Storage Bucket
 
-The `--gcs-bucket` flag streams objects directly from Google Cloud Storage. Authentication uses
-Application Default Credentials, so you can provide a service-account JSON file via the
-`GOOGLE_APPLICATION_CREDENTIALS` environment variable or by passing `--gcs-service-account`. Public
+Use the `gcs` scan subcommand to stream objects directly from Google Cloud Storage. Authentication
+uses Application Default Credentials, so you can provide a service-account JSON file via the
+`GOOGLE_APPLICATION_CREDENTIALS` environment variable or by passing `--service-account`. Public
 buckets work without credentials.
 
 ```bash
-kingfisher scan --gcs-bucket bucket-name
+kingfisher scan gcs bucket-name
 
 # scan a sub-tree inside the bucket
-kingfisher scan --gcs-bucket bucket-name --gcs-prefix path/to/data/
+kingfisher scan gcs bucket-name --prefix path/to/data/
 
 # supply a service-account key explicitly
-kingfisher scan --gcs-bucket bucket-name --gcs-service-account /path/to/key.json
+kingfisher scan gcs bucket-name --service-account /path/to/key.json
 ```
 
 Functional example:
 ```bash
-kingfisher scan --gcs-bucket cloud-samples-data --gcs-prefix "storage/"
+kingfisher scan gcs cloud-samples-data --prefix "storage/"
 ```
 
 
@@ -553,25 +578,33 @@ Authentication happens *in this order*:
 
 ```bash
 # 1) Scan public or already-pulled image
-kingfisher scan --docker-image ghcr.io/owasp/wrongsecrets/wrongsecrets-master:latest-master
+kingfisher scan docker ghcr.io/owasp/wrongsecrets/wrongsecrets-master:latest-master
 
 # 2) For private registries, explicitly set KF_DOCKER_TOKEN:
 #    - Basic auth:     "user:pass"
 #    - Bearer only:    "TOKEN"
 export KF_DOCKER_TOKEN="AWS:$(aws ecr get-login-password --region us-east-1)"
-kingfisher scan --docker-image some-private-registry.dkr.ecr.us-east-1.amazonaws.com/base/amazonlinux2023:latest
+kingfisher scan docker some-private-registry.dkr.ecr.us-east-1.amazonaws.com/base/amazonlinux2023:latest
 
 # 3) Or rely on your Docker CLI login/keychain:
 #    (e.g. aws ecr get-login-password … | docker login …)
-kingfisher scan --docker-image private.registry.example.com/my-image:tag
+kingfisher scan docker private.registry.example.com/my-image:tag
 ```
+
+> **Deprecated**
+> Legacy scan flags such as `--github-user`, `--gitlab-group`,
+> `--bitbucket-workspace`, `--azure-organization`, `--huggingface-user`,
+> `--slack-query`, `--jira-url`, `--confluence-url`, `--s3-bucket`,
+> `--gcs-bucket`, and `--docker-image` still work for now, but they trigger a
+> warning and will be removed in a future release. Migrate to the
+> `kingfisher scan <provider>` subcommands below to future-proof your automations.
 
 ## <img alt="GitHub" src="./docs/assets/icons/github.svg" width="40" height="40" style="vertical-align:text-bottom;"> Scanning GitHub
 
 ### Scan GitHub organization (requires `KF_GITHUB_TOKEN`)
 
 ```bash
-kingfisher scan --github-organization my-org
+kingfisher scan github --organization my-org
 ```
 
 ### Skip specific GitHub repositories during enumeration
@@ -582,7 +615,7 @@ users or organizations. You can provide exact repositories like
 (matching is case-insensitive).
 
 ```bash
-kingfisher scan --github-organization my-org \
+kingfisher scan github --organization my-org \
   --github-exclude my-org/huge-repo \
   --github-exclude my-org/*-archive
 ```
@@ -594,6 +627,17 @@ related server-side data, supply `--repo-artifacts`. This flag pulls down the
 repository's issues (including pull requests), wiki, and any public gists owned by
 the repository owner and scans them for secrets. Fetching these extras counts
 against API rate limits and private artifacts require a `KF_GITHUB_TOKEN`.
+
+> **Why does `--git-url` sometimes report fewer findings than scanning a local checkout?**. 
+> 
+> Remote clones created via `--git-url` default to `--mirror`/bare mode so Kingfisher only
+> reads the Git history. When you point Kingfisher at an existing working tree (for example
+> `kingfisher scan ./repo`), it enumerates both the filesystem contents *and* the Git
+> history. Any secrets that are present in the checked-out files therefore appear twice:
+> once from the working tree path and once from the commit where the secret entered the
+> history. To replicate the remote behavior locally, either scan a bare clone or disable
+> history scanning with `--git-history none` when targeting a working tree.
+
 
 ```bash
 # Scan the repository only
@@ -613,15 +657,15 @@ KF_GITHUB_TOKEN="ghp_…" kingfisher scan --git-url https://github.com/org/priva
 ### Scan GitLab group (requires `KF_GITLAB_TOKEN`)
 
 ```bash
-kingfisher scan --gitlab-group my-group
+kingfisher scan gitlab --group my-group
 # include repositories from all nested subgroups
-kingfisher scan --gitlab-group my-group --gitlab-include-subgroups
+kingfisher scan gitlab --group my-group --include-subgroups
 ```
 
 ### Scan GitLab user
 
 ```bash
-kingfisher scan --gitlab-user johndoe
+kingfisher scan gitlab --user johndoe
 ```
 
 ### Skip specific GitLab projects during enumeration
@@ -632,7 +676,7 @@ use gitignore-style glob patterns like `group/**/archive-*` to drop families of
 projects across nested subgroups.
 
 ```bash
-kingfisher scan --gitlab-group my-group \
+kingfisher scan gitlab --group my-group \
   --gitlab-exclude my-group/huge-project \
   --gitlab-exclude my-group/**/archive-*
 ```
@@ -658,21 +702,21 @@ KF_GITLAB_TOKEN="glpat-…" kingfisher scan --git-url https://gitlab.com/group/p
 ### List GitLab repositories
 
 ```bash
-kingfisher gitlab repos list --group my-group
+kingfisher scan gitlab --group my-group --list-only
 # include repositories from all nested subgroups
-kingfisher gitlab repos list --group my-group --include-subgroups
+kingfisher scan gitlab --group my-group --include-subgroups --list-only
 # skip specific projects when listing or scanning (supports glob patterns)
-kingfisher gitlab repos list --group my-group --gitlab-exclude my-group/**/legacy-*
+kingfisher scan gitlab --group my-group --gitlab-exclude my-group/**/legacy-* --list-only
 ```
 ## <img alt="Azure Repos" src="./docs/assets/icons/azure-devops.svg" width="40" height="40" style="vertical-align:text-bottom;"> Scanning Azure Repos
 
 ### Scan Azure Repos organization or collection (requires `KF_AZURE_TOKEN` or `KF_AZURE_PAT`)
 
 ```bash
-kingfisher scan --azure-organization my-org
+kingfisher scan azure --organization my-org
 
 # Azure Repos Server example
-KF_AZURE_PAT="pat" kingfisher scan --azure-organization DefaultCollection --azure-base-url https://ado.internal.example/tfs/
+KF_AZURE_PAT="pat" kingfisher scan azure --organization DefaultCollection --azure-base-url https://ado.internal.example/tfs/
 ```
 
 ### Scan specific Azure Repos projects
@@ -680,7 +724,8 @@ KF_AZURE_PAT="pat" kingfisher scan --azure-organization DefaultCollection --azur
 Projects are specified as `ORGANIZATION/PROJECT`. Repeat the flag for multiple projects.
 
 ```bash
-kingfisher scan --azure-project my-org/payments --azure-project my-org/core-platform
+kingfisher scan azure --project my-org/payments \
+  --project my-org/core-platform
 ```
 
 ### Skip specific Azure repositories during enumeration
@@ -691,7 +736,7 @@ name as their project can be excluded with `ORGANIZATION/PROJECT`, and gitignore
 patterns such as `my-org/*/archive-*` are also supported.
 
 ```bash
-kingfisher scan --azure-organization my-org \
+kingfisher scan azure --organization my-org \
   --azure-exclude my-org/payments/legacy-service \
   --azure-exclude my-org/**/archive-*
 ```
@@ -699,26 +744,26 @@ kingfisher scan --azure-organization my-org \
 ### List Azure repositories
 
 ```bash
-kingfisher azure repos list --organization my-org
+kingfisher scan azure --organization my-org --list-only
 # list repositories for specific projects
-kingfisher azure repos list --project my-org/app --project my-org/api
+kingfisher scan azure --project my-org/app --project my-org/api --list-only
 # skip specific repositories while listing (supports glob patterns)
-kingfisher azure repos list --organization my-org --azure-exclude my-org/**/experimental-*
+kingfisher scan azure --organization my-org --azure-exclude my-org/**/experimental-* --list-only
 ```
 ## <img alt="Gitea" src="./docs/assets/icons/gitea.svg" width="40" height="40" style="vertical-align:text-bottom;"> Scanning Gitea
 
 ### Scan Gitea organization (requires `KF_GITEA_TOKEN`)
 
 ```bash
-kingfisher scan --gitea-organization my-org
+kingfisher scan gitea --organization my-org
 # self-hosted example
-KF_GITEA_TOKEN="gtoken" kingfisher scan --gitea-organization platform --gitea-api-url https://gitea.internal.example/api/v1/
+KF_GITEA_TOKEN="gtoken" kingfisher scan gitea --organization platform --gitea-api-url https://gitea.internal.example/api/v1/
 ```
 
 ### Scan Gitea user
 
 ```bash
-kingfisher scan --gitea-user johndoe
+kingfisher scan gitea --user johndoe
 ```
 
 ### Skip specific Gitea repositories during enumeration
@@ -728,7 +773,7 @@ or organizations. Accepts `owner/repo` identifiers or gitignore-style glob patte
 like `team/**/archive-*`.
 
 ```bash
-kingfisher scan --gitea-organization my-org \
+kingfisher scan gitea --organization my-org \
   --gitea-exclude my-org/legacy-repo \
   --gitea-exclude my-org/**/archive-*
 ```
@@ -751,25 +796,26 @@ KF_GITEA_TOKEN="gtoken" KF_GITEA_USERNAME="org" \
 ### List Gitea repositories
 
 ```bash
-kingfisher gitea repos list --gitea-organization my-org
+kingfisher scan gitea --organization my-org --list-only
 # enumerate every organization visible to the authenticated user
-KF_GITEA_TOKEN="gtoken" kingfisher gitea repos list --all-gitea-organizations
+KF_GITEA_TOKEN="gtoken" kingfisher scan gitea --all-gitea-organizations --list-only
 # self-hosted example
-KF_GITEA_TOKEN="gtoken" kingfisher gitea repos list --user johndoe --gitea-api-url https://gitea.internal.example/api/v1/
+KF_GITEA_TOKEN="gtoken" kingfisher scan gitea --user johndoe --gitea-api-url https://gitea.internal.example/api/v1/ --list-only
 ```
 ## <img alt="Bitbucket" src="./docs/assets/icons/bitbucket.svg" width="40" height="40" style="vertical-align:text-bottom;"> Scanning Bitbucket
 ### Scan Bitbucket workspace
 
 ```bash
-kingfisher scan --bitbucket-workspace my-team
+kingfisher scan bitbucket --workspace my-team
 # include Bitbucket Cloud repositories from every accessible workspace
-kingfisher scan --all-bitbucket-workspaces --bitbucket-token "$APP_PASSWORD" --bitbucket-username "$USER"
+KF_BITBUCKET_USERNAME="$USER" KF_BITBUCKET_APP_PASSWORD="$APP_PASSWORD" \
+  kingfisher scan bitbucket --all-workspaces
 ```
 
 ### Scan Bitbucket user
 
 ```bash
-kingfisher scan --bitbucket-user johndoe
+kingfisher scan bitbucket --user johndoe
 ```
 
 ### Skip specific Bitbucket repositories during enumeration
@@ -779,7 +825,7 @@ or projects. Patterns accept either `owner/repo` (case-insensitive) or
 gitignore-style globs such as `workspace/**/archive-*`.
 
 ```bash
-kingfisher scan --bitbucket-workspace my-team \
+kingfisher scan bitbucket --workspace my-team \
   --bitbucket-exclude my-team/legacy-repo \
   --bitbucket-exclude my-team/**/archive-*
 ```
@@ -803,11 +849,12 @@ KF_BITBUCKET_APP_PASSWORD="app-password" \
 ### List Bitbucket repositories
 
 ```bash
-kingfisher bitbucket repos list --bitbucket-workspace my-team
+kingfisher scan bitbucket --workspace my-team --list-only
 # enumerate all accessible workspaces or projects
-kingfisher bitbucket repos list --all-bitbucket-workspaces --bitbucket-token "$APP_PASSWORD" --bitbucket-username "$USER"
+KF_BITBUCKET_USERNAME="$USER" KF_BITBUCKET_APP_PASSWORD="$APP_PASSWORD" \
+  kingfisher scan bitbucket --all-workspaces --list-only
 # filter out repositories using glob patterns
-kingfisher bitbucket repos list --bitbucket-workspace my-team --bitbucket-exclude my-team/**/experimental-*
+kingfisher scan bitbucket --workspace my-team --bitbucket-exclude my-team/**/experimental-* --list-only
 ```
 
 ### Authenticate to Bitbucket
@@ -815,10 +862,9 @@ kingfisher bitbucket repos list --bitbucket-workspace my-team --bitbucket-exclud
 Kingfisher supports Bitbucket Cloud and Bitbucket Server credentials:
 
 - **App password or server token** – set `KF_BITBUCKET_USERNAME` and either
-  `KF_BITBUCKET_APP_PASSWORD` or `KF_BITBUCKET_TOKEN`, or pass
-  `--bitbucket-username`/`--bitbucket-token` on the CLI.
-- **OAuth/PAT token** – set `KF_BITBUCKET_OAUTH_TOKEN` or supply
-  `--bitbucket-oauth-token`.
+  `KF_BITBUCKET_APP_PASSWORD`, `KF_BITBUCKET_TOKEN`, or
+  `KF_BITBUCKET_PASSWORD`.
+- **OAuth/PAT token** – set `KF_BITBUCKET_OAUTH_TOKEN`.
 
 These credentials match the options described in the [ghorg setup
 guide](https://github.com/gabrie30/ghorg/blob/master/README.md#bitbucket-setup).
@@ -827,8 +873,8 @@ guide](https://github.com/gabrie30/ghorg/blob/master/README.md#bitbucket-setup).
 
 Use `--bitbucket-api-url` to point Kingfisher at your server's REST endpoint, for example
 `https://bitbucket.example.com/rest/api/1.0/`. Provide credentials with
-`--bitbucket-username` and `--bitbucket-token`, and pass `--ignore-certs` when
-connecting to HTTP or otherwise insecure instances.
+`KF_BITBUCKET_USERNAME` plus either `KF_BITBUCKET_TOKEN` or `KF_BITBUCKET_PASSWORD`,
+and pass `--ignore-certs` when connecting to HTTP or otherwise insecure instances.
 ## <img src="./docs/assets/icons/huggingface.svg" height="40" width="40" alt="Hugging Face"/> Scanning Hugging Face
 
 Hugging Face hosts git repositories for models, datasets, and Spaces. Kingfisher can enumerate and scan all three resource types.
@@ -836,13 +882,13 @@ Hugging Face hosts git repositories for models, datasets, and Spaces. Kingfisher
 ### Scan Hugging Face user
 
 ```bash
-kingfisher scan --huggingface-user <username>
+kingfisher scan huggingface --user <username>
 ```
 
 ### Scan Hugging Face organization
 
 ```bash
-kingfisher scan --huggingface-organization <orgname>
+kingfisher scan huggingface --organization <orgname>
 ```
 
 ### Scan specific Hugging Face resources
@@ -850,9 +896,9 @@ kingfisher scan --huggingface-organization <orgname>
 Scan individual repositories by ID (owner/name) or by passing the full HTTPS URL:
 
 ```bash
-kingfisher scan --huggingface-model <owner/model>
-kingfisher scan --huggingface-dataset https://huggingface.co/datasets/<owner>/<dataset>
-kingfisher scan --huggingface-space <owner/space>
+kingfisher scan huggingface --model <owner/model>
+kingfisher scan huggingface --dataset https://huggingface.co/datasets/<owner>/<dataset>
+kingfisher scan huggingface --space <owner/space>
 ```
 
 Use `--huggingface-exclude` to omit results returned by user or organization enumeration. Prefix values with `model:`, `dataset:`, or `space:` when you only want to skip a specific resource type.
@@ -860,7 +906,7 @@ Use `--huggingface-exclude` to omit results returned by user or organization enu
 ### List Hugging Face repositories
 
 ```bash
-kingfisher huggingface repos list --huggingface-user <username>
+kingfisher scan huggingface --user <username> --list-only
 ```
 
 ### Authenticate to Hugging Face
@@ -872,16 +918,14 @@ Private repositories require an access token provided through the `KF_HUGGINGFAC
 ### Scan Jira issues matching a JQL query
 
 ```bash
-KF_JIRA_TOKEN="token" kingfisher scan \
-    --jira-url https://jira.company.com \
+KF_JIRA_TOKEN="token" kingfisher scan jira --url https://jira.company.com \
     --jql "project = TEST AND status = Open" \
     --max-results 500
 ```
 
 ### Scan the last 1,000 Jira issues:
 ```bash
-KF_JIRA_TOKEN="token" kingfisher scan \
-  --jira-url https://jira.mongodb.org \
+KF_JIRA_TOKEN="token" kingfisher scan jira --url https://jira.mongodb.org \
   --jql 'ORDER BY created DESC' \
   --max-results 1000
 ```
@@ -891,14 +935,13 @@ KF_JIRA_TOKEN="token" kingfisher scan \
 
 ```bash
 # Bearer token
-KF_CONFLUENCE_TOKEN="token" kingfisher scan \
-    --confluence-url https://confluence.company.com \
+KF_CONFLUENCE_TOKEN="token" kingfisher scan confluence --url https://confluence.company.com \
     --cql "label = secret" \
     --max-results 500
 
 # Basic auth with username and token
-KF_CONFLUENCE_USER="user@example.com" KF_CONFLUENCE_TOKEN="token" kingfisher scan \
-    --confluence-url https://confluence.company.com \
+KF_CONFLUENCE_USER="user@example.com" KF_CONFLUENCE_TOKEN="token" \
+  kingfisher scan confluence --url https://confluence.company.com \
     --cql "text ~ 'password'" \
     --max-results 500
 ```
@@ -915,12 +958,10 @@ To use basic authentication instead, also set `KF_CONFLUENCE_USER` to your Confl
 ### Scan Slack messages matching a search query
 
 ```bash
-KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
-    --slack-query "from:username has:link" \
+KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan slack "from:username has:link" \
     --max-results 1000
 
-KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
-    --slack-query "akia" \
+KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan slack "akia" \
     --max-results 1000
 ```
 *The Slack token must be a user token with the `search:read` scope. Bot tokens (those beginning with `xoxb-`) cannot call the Slack search API.*
@@ -949,7 +990,7 @@ KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan \
 Set them temporarily per command:
 
 ```bash
-KF_GITLAB_TOKEN="glpat-…" kingfisher scan --gitlab-group my-group
+KF_GITLAB_TOKEN="glpat-…" kingfisher scan gitlab --group my-group
 ```
 
 Or export for the session:
@@ -1048,10 +1089,10 @@ kingfisher scan \
 kingfisher rules check --rules-path ./my_rules.yml
 
 # List GitHub repos
-kingfisher github repos list --user my-user
-kingfisher github repos list --organization my-org
+kingfisher scan github --user my-user --list-only
+kingfisher scan github --organization my-org --list-only
 # Skip specific repositories when listing or scanning (supports glob patterns)
-kingfisher github repos list --organization my-org --github-exclude my-org/*-archive
+kingfisher scan github --organization my-org --github-exclude my-org/*-archive --list-only
 
 ```
 
@@ -1066,7 +1107,7 @@ Use the global `--user-agent-suffix` flag to append this information between the
 kingfisher --user-agent-suffix "contact=security@example.com" scan path/
 
 # Label a one-off experiment
-kingfisher --user-agent-suffix "Sept 2025 testing" github repos list --user my-user
+kingfisher --user-agent-suffix "Sept 2025 testing" scan github --user my-user --list-only
 ```
 
 When omitted, Kingfisher defaults to `kingfisher/<version> Mozilla/5.0 ...`. The suffix is trimmed; passing an empty string

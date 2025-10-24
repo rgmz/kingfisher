@@ -59,7 +59,7 @@ pub struct GitHubRepoSpecifiers {
         alias = "all-orgs",
         alias = "all-github-organizations",
         alias = "all-github-orgs",
-        requires = "github_api_url"
+        requires = "api_url"
     )]
     pub all_organizations: bool,
 
