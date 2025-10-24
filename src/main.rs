@@ -37,9 +37,7 @@ use kingfisher::{
     cli::{
         self,
         commands::{
-            github::{
-                GitCloneMode, GitHistoryMode, GitHubCommand, GitHubRepoType, GitHubReposCommand,
-            },
+            github::{GitCloneMode, GitHistoryMode, GitHubRepoType},
             inputs::{ContentFilteringArgs, InputSpecifierArgs},
             output::{OutputArgs, ReportOutputFormat},
             rules::{
@@ -71,11 +69,11 @@ use tracing_subscriber::{
 use url::Url;
 
 use crate::cli::commands::{
-    azure::{AzureCommand, AzureRepoType, AzureReposCommand},
-    bitbucket::{BitbucketAuthArgs, BitbucketCommand, BitbucketRepoType, BitbucketReposCommand},
-    gitea::{GiteaCommand, GiteaRepoType, GiteaReposCommand},
-    gitlab::{GitLabCommand, GitLabRepoType, GitLabReposCommand},
-    huggingface::{HuggingFaceCommand, HuggingFaceReposCommand},
+    azure::AzureRepoType,
+    bitbucket::{BitbucketAuthArgs, BitbucketRepoType},
+    gitea::GiteaRepoType,
+    gitlab::GitLabRepoType,
+    scan::{ListRepositoriesCommand, ScanOperation},
 };
 
 fn main() -> anyhow::Result<()> {
@@ -86,15 +84,9 @@ fn main() -> anyhow::Result<()> {
     set_user_agent_suffix(args.global_args.user_agent_suffix.clone());
 
     // Determine the number of jobs, defaulting to the number of CPUs
-    let num_jobs = match args.command {
-        Command::Scan(ref scan_args) => scan_args.num_jobs,
+    let num_jobs = match &args.command {
+        Command::Scan(scan_args) => scan_args.scan_args.num_jobs,
         Command::SelfUpdate => 1, // Self-update doesn't need a thread pool
-        Command::GitHub(_) => num_cpus::get(), // Default for GitHub commands
-        Command::GitLab(_) => num_cpus::get(), // Default for GitLab commands
-        Command::Bitbucket(_) => num_cpus::get(), // Default for Bitbucket commands
-        Command::Gitea(_) => num_cpus::get(), // Default for Gitea commands
-        Command::Azure(_) => num_cpus::get(), // Default for Azure commands
-        Command::HuggingFace(_) => num_cpus::get(), // Default for Hugging Face commands
         Command::Rules(_) => num_cpus::get(), // Default for Rules commands
     };
 
@@ -204,145 +196,114 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
             let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
             let update_msg = check_for_update(&global_args, None);
             match command {
-                Command::Scan(mut scan_args) => {
-                    info!(
-                        "Launching with {} concurrent scan jobs. Use --num-jobs to override.",
-                        &scan_args.num_jobs
-                    );
-                    let paths = &scan_args.input_specifier_args.path_inputs;
-                    let is_dash = paths.iter().any(|p| p.as_os_str() == "-");
-                    if (paths.is_empty() || is_dash) && !atty::is(atty::Stream::Stdin) {
-                        let mut buf = Vec::new();
-                        std::io::stdin().read_to_end(&mut buf)?;
-                        let stdin_file = temp_dir.path().join("stdin_input");
-                        std::fs::write(&stdin_file, buf)?;
-                        scan_args.input_specifier_args.path_inputs = vec![stdin_file.into()];
-                    }
+                Command::Scan(scan_command) => match scan_command.into_operation()? {
+                    ScanOperation::Scan(mut scan_args) => {
+                        info!(
+                            "Launching with {} concurrent scan jobs. Use --num-jobs to override.",
+                            &scan_args.num_jobs
+                        );
+                        let paths = &scan_args.input_specifier_args.path_inputs;
+                        let is_dash = paths.iter().any(|p| p.as_os_str() == "-");
+                        if (paths.is_empty() || is_dash) && !atty::is(atty::Stream::Stdin) {
+                            let mut buf = Vec::new();
+                            std::io::stdin().read_to_end(&mut buf)?;
+                            let stdin_file = temp_dir.path().join("stdin_input");
+                            std::fs::write(&stdin_file, buf)?;
+                            scan_args.input_specifier_args.path_inputs = vec![stdin_file.into()];
+                        }
 
-                    let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
-                    run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore)).await?;
-                    let exit_code = determine_exit_code(&datastore);
+                        let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
+                        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore))
+                            .await?;
+                        let exit_code = determine_exit_code(&datastore);
 
-                    if let Err(e) = temp_dir.close() {
-                        eprintln!("Failed to close temporary directory: {}", e);
+                        if let Err(e) = temp_dir.close() {
+                            eprintln!("Failed to close temporary directory: {}", e);
+                        }
+                        std::process::exit(exit_code);
                     }
-                    std::process::exit(exit_code);
-                }
-                Command::Rules(ref rule_args) => match &rule_args.command {
-                    RulesCommand::Check(check_args) => {
-                        run_rules_check(&check_args)?;
-                    }
-                    RulesCommand::List(list_args) => {
-                        run_rules_list(&list_args)?;
-                    }
-                },
-                Command::GitHub(github_args) => match github_args.command {
-                    GitHubCommand::Repos(repos_command) => match repos_command {
-                        GitHubReposCommand::List(list_args) => {
+                    ScanOperation::ListRepositories(list_command) => match list_command {
+                        ListRepositoriesCommand::Github { api_url, specifiers } => {
                             github::list_repositories(
-                                github_args.github_api_url,
+                                api_url,
                                 global_args.ignore_certs,
                                 global_args.use_progress(),
-                                &list_args.repo_specifiers.user,
-                                &list_args.repo_specifiers.organization,
-                                list_args.repo_specifiers.all_organizations,
-                                &list_args.repo_specifiers.exclude_repos,
-                                list_args.repo_specifiers.repo_type.into(),
+                                &specifiers.user,
+                                &specifiers.organization,
+                                specifiers.all_organizations,
+                                &specifiers.exclude_repos,
+                                specifiers.repo_type.into(),
                             )
                             .await?;
                         }
-                    },
-                },
-                Command::GitLab(gitlab_args) => match gitlab_args.command {
-                    GitLabCommand::Repos(repos_command) => match repos_command {
-                        GitLabReposCommand::List(list_args) => {
+                        ListRepositoriesCommand::Gitlab { api_url, specifiers } => {
                             kingfisher::gitlab::list_repositories(
-                                gitlab_args.gitlab_api_url,
+                                api_url,
                                 global_args.ignore_certs,
                                 global_args.use_progress(),
-                                &list_args.repo_specifiers.user,
-                                &list_args.repo_specifiers.group,
-                                list_args.repo_specifiers.all_groups,
-                                list_args.repo_specifiers.include_subgroups,
-                                &list_args.repo_specifiers.exclude_repos,
-                                list_args.repo_specifiers.repo_type.into(),
+                                &specifiers.user,
+                                &specifiers.group,
+                                specifiers.all_groups,
+                                specifiers.include_subgroups,
+                                &specifiers.exclude_repos,
+                                specifiers.repo_type.into(),
                             )
                             .await?;
                         }
-                    },
-                },
-                Command::Azure(azure_args) => match azure_args.command {
-                    AzureCommand::Repos(repos_command) => match repos_command {
-                        AzureReposCommand::List(list_args) => {
-                            azure::list_repositories(
-                                azure_args.azure_base_url.clone(),
-                                global_args.ignore_certs,
-                                global_args.use_progress(),
-                                &list_args.repo_specifiers.organization,
-                                &list_args.repo_specifiers.project,
-                                list_args.repo_specifiers.all_projects,
-                                &list_args.repo_specifiers.exclude_repos,
-                                list_args.repo_specifiers.repo_type.into(),
-                            )
-                            .await?;
-                        }
-                    },
-                },
-                Command::Gitea(gitea_args) => match gitea_args.command {
-                    GiteaCommand::Repos(repos_command) => match repos_command {
-                        GiteaReposCommand::List(list_args) => {
+                        ListRepositoriesCommand::Gitea { api_url, specifiers } => {
                             gitea::list_repositories(
-                                gitea_args.gitea_api_url,
+                                api_url,
                                 global_args.ignore_certs,
                                 global_args.use_progress(),
-                                &list_args.repo_specifiers.user,
-                                &list_args.repo_specifiers.organization,
-                                list_args.repo_specifiers.all_organizations,
-                                &list_args.repo_specifiers.exclude_repos,
-                                list_args.repo_specifiers.repo_type.into(),
+                                &specifiers.user,
+                                &specifiers.organization,
+                                specifiers.all_organizations,
+                                &specifiers.exclude_repos,
+                                specifiers.repo_type.into(),
                             )
                             .await?;
                         }
-                    },
-                },
-                Command::Bitbucket(bitbucket_args) => match bitbucket_args.command {
-                    BitbucketCommand::Repos(repos_command) => match repos_command {
-                        BitbucketReposCommand::List(list_args) => {
-                            let auth = bitbucket::AuthConfig::from_options(
-                                list_args.auth.bitbucket_username.clone(),
-                                list_args.auth.bitbucket_token.clone(),
-                                list_args.auth.bitbucket_oauth_token.clone(),
-                            );
+                        ListRepositoriesCommand::Bitbucket { api_url, specifiers } => {
+                            let auth_config = bitbucket::AuthConfig::from_env();
                             bitbucket::list_repositories(
-                                bitbucket_args.bitbucket_api_url.clone(),
-                                auth,
+                                api_url,
+                                auth_config,
                                 global_args.ignore_certs,
                                 global_args.use_progress(),
-                                &list_args.repo_specifiers.user,
-                                &list_args.repo_specifiers.workspace,
-                                &list_args.repo_specifiers.project,
-                                list_args.repo_specifiers.all_workspaces,
-                                &list_args.repo_specifiers.exclude_repos,
-                                list_args.repo_specifiers.repo_type.into(),
+                                &specifiers.user,
+                                &specifiers.workspace,
+                                &specifiers.project,
+                                specifiers.all_workspaces,
+                                &specifiers.exclude_repos,
+                                specifiers.repo_type.into(),
                             )
                             .await?;
                         }
-                    },
-                },
-                Command::HuggingFace(hf_args) => match hf_args.command {
-                    HuggingFaceCommand::Repos(repos_command) => match repos_command {
-                        HuggingFaceReposCommand::List(list_args) => {
-                            let specifiers = huggingface::RepoSpecifiers {
-                                user: list_args.repo_specifiers.user.clone(),
-                                organization: list_args.repo_specifiers.organization.clone(),
-                                model: list_args.repo_specifiers.model.clone(),
-                                dataset: list_args.repo_specifiers.dataset.clone(),
-                                space: list_args.repo_specifiers.space.clone(),
-                                exclude: list_args.repo_specifiers.exclude.clone(),
+                        ListRepositoriesCommand::Azure { base_url, specifiers } => {
+                            azure::list_repositories(
+                                base_url,
+                                global_args.ignore_certs,
+                                global_args.use_progress(),
+                                &specifiers.organization,
+                                &specifiers.project,
+                                specifiers.all_projects,
+                                &specifiers.exclude_repos,
+                                specifiers.repo_type.into(),
+                            )
+                            .await?;
+                        }
+                        ListRepositoriesCommand::Huggingface { specifiers } => {
+                            let repo_specifiers = huggingface::RepoSpecifiers {
+                                user: specifiers.user.clone(),
+                                organization: specifiers.organization.clone(),
+                                model: specifiers.model.clone(),
+                                dataset: specifiers.dataset.clone(),
+                                space: specifiers.space.clone(),
+                                exclude: specifiers.exclude.clone(),
                             };
                             let auth = huggingface::AuthConfig::from_env();
                             huggingface::list_repositories(
-                                &specifiers,
+                                &repo_specifiers,
                                 &auth,
                                 global_args.ignore_certs,
                                 global_args.use_progress(),
@@ -350,6 +311,14 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                             .await?;
                         }
                     },
+                },
+                Command::Rules(ref rule_args) => match &rule_args.command {
+                    RulesCommand::Check(check_args) => {
+                        run_rules_check(&check_args)?;
+                    }
+                    RulesCommand::List(list_args) => {
+                        run_rules_list(&list_args)?;
+                    }
                 },
                 Command::SelfUpdate => {
                     anyhow::bail!("SelfUpdate command should not reach this branch")
