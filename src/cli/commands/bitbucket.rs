@@ -71,7 +71,7 @@ pub struct BitbucketRepoSpecifiers {
     pub exclude_repos: Vec<String>,
 
     /// Enumerate all accessible workspaces or projects
-    #[arg(long, alias = "all-bitbucket-workspaces", requires = "bitbucket_api_url")]
+    #[arg(long, alias = "all-bitbucket-workspaces", requires = "api_url")]
     pub all_workspaces: bool,
 
     /// Filter repositories by type

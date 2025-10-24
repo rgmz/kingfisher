@@ -214,7 +214,7 @@ pub async fn enumerate_gitlab_repos(
             &repo_specifiers,
             api_url,
             global_args.ignore_certs,
-            Some(&mut progress),
+            Some(progress.clone()),
         )
         .await
         .context("Failed to enumerate GitLab repositories")?;

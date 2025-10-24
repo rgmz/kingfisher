@@ -1,6 +1,6 @@
 use anyhow::bail;
 use clap::{Args, Subcommand, ValueEnum, ValueHint};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use strum::Display;
 use tracing::debug;
 use url::Url;
@@ -210,7 +210,7 @@ impl ScanCommandArgs {
                 ScanInputCommand::Github(args) => {
                     if args.specifiers.is_empty() {
                         bail!(
-                            "Specify at least one --user, --org, or use --all-orgs when scanning GitHub"
+                            "You must specify at least one --user, --org, or use --all-orgs when scanning GitHub"
                         );
                     }
                     if args.list_only {
@@ -234,7 +234,7 @@ impl ScanCommandArgs {
                 ScanInputCommand::Gitlab(args) => {
                     if args.specifiers.is_empty() {
                         bail!(
-                            "Specify at least one --user, --group, or use --all-groups when scanning GitLab"
+                            "You must specify at least one --user, --group, or use --all-groups when scanning GitLab"
                         );
                     }
                     if args.list_only {
@@ -283,7 +283,7 @@ impl ScanCommandArgs {
                 ScanInputCommand::Bitbucket(args) => {
                     if args.specifiers.is_empty() {
                         bail!(
-                            "Specify at least one --user, --workspace, --project, or use --all-workspaces when scanning Bitbucket"
+                            "You must specify at least one --user, --workspace, --project, or use --all-workspaces when scanning Bitbucket"
                         );
                     }
                     if args.list_only {
@@ -309,7 +309,7 @@ impl ScanCommandArgs {
                 ScanInputCommand::Azure(args) => {
                     if args.specifiers.is_empty() {
                         bail!(
-                            "Specify at least one --organization, --project, or use --all-projects when scanning Azure DevOps"
+                            "You must specify at least one --organization, --project, or use --all-projects when scanning Azure DevOps"
                         );
                     }
                     if args.list_only {
@@ -333,7 +333,7 @@ impl ScanCommandArgs {
                 ScanInputCommand::Huggingface(args) => {
                     if args.specifiers.is_empty() {
                         bail!(
-                            "Specify at least one --user, --org, --model, --dataset, or --space when scanning Hugging Face"
+                            "You must specify at least one --user, --org, --model, --dataset, or --space when scanning Hugging Face"
                         );
                     }
                     if args.list_only {
@@ -400,6 +400,16 @@ impl ScanCommandArgs {
             bail!(
                 "Specify a path, --git-url, or use a provider subcommand such as 'kingfisher scan github'"
             );
+        }
+
+        for path in &self.scan_args.input_specifier_args.path_inputs {
+            if path.as_path() == Path::new("-") {
+                continue;
+            }
+
+            if !path.exists() {
+                bail!("Error: unrecognized scan target or path does not exist: {}", path.display());
+            }
         }
 
         if !used_provider_subcommand {
