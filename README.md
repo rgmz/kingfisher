@@ -452,7 +452,7 @@ kingfisher scan /tmp/SecretsTest --branch feature-1 \
   --since-commit=$(git -C /tmp/SecretsTest merge-base main feature-1)
 #
 # scan only a specific commit
-kingfisher scan /tmp/dev/SecretsTest \
+kingfisher scan /tmp/SecretsTest \
   --branch baba6ccb453963d3f6136d1ace843e48d7007c3f
 #
 # scan feature-1 starting at a specific commit (inclusive)

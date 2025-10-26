@@ -4,26 +4,27 @@ rules:
     pattern: |
       (?xi)
       (?:
-        \b
-        azure
-        (?:.|[\n\r]){0,32}?
-        (?i:
-          (?:Account|Storage)
-          (?:[._-]Account)?
-          [._-]?Name
-        )
-        (?:.|[\n\r]){0,20}?
-        ([a-z0-9]{3,24})
+        # A) Connection string: AccountName=<name>
+        (?i:AccountName)\s*=\s*([a-z0-9]{3,24})(?:\b|[^a-z0-9])
+
       |
-        ([a-z0-9]{3,24})
-        (?i:\.blob\.core\.windows\.net)
-      )\b
-    min_entropy: 2.5
+        # B) Blob endpoint URL: <name>.blob.core.windows.net
+        ([a-z0-9]{3,24})\.blob\.core\.windows\.net\b
+
+      |
+        # C) Explicit KV labels near 'azure storage/account name' with tight separators
+        \bazure(?:[_\s-]*)(?:storage|account)(?:[_\s-]*)(?:name)\b
+        [\s:=\"']{0,6}
+        ([a-z0-9]{3,24})(?:\b|[^a-z0-9])
+      )
+    min_entropy: 2.0
     visible: false
     confidence: medium
     examples:
-      - azure_storage_name=mystorageaccount123
+      - AccountName=mystorageaccount
       - mystorageaccount.blob.core.windows.net
+      - azure_storage_name="prodblob2024"
+
 
   - name: Azure Storage Account Key
     id: kingfisher.azurestorage.2
@@ -35,7 +36,7 @@ rules:
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,128}?
       (
-        [A-Z0-9+\\/-]{86,88}={0,2}
+        [A-Za-z0-9+/]{86,88}={0,2}
       )
     min_entropy: 4.0
     confidence: medium
