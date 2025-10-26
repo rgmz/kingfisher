@@ -120,6 +120,8 @@ fn test_bitbucket_remote_scan() -> Result<()> {
             scan_nested_repos: true,
             since_commit: None,
             branch: None,
+            branch_root: false,
+            branch_root_commit: None,
         },
         content_filtering_args: ContentFilteringArgs {
             max_file_size_mb: 25.0,

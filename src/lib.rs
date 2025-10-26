@@ -62,6 +62,7 @@ use tracing::debug;
 pub struct GitDiffConfig {
     pub since_ref: Option<String>,
     pub branch_ref: String,
+    pub branch_root: Option<String>,
 }
 
 struct EnumeratorConfig {
@@ -332,7 +333,16 @@ impl FilesystemEnumerator {
 
 /// Opens the given Git repository if it exists, returning None if not.
 pub fn open_git_repo(path: &Path) -> Result<Option<Repository>> {
-    let opts = Options::isolated().open_path_as_is(false);
+    open_git_repo_with_options(path, true)
+}
+
+/// Opens the given Git repository with explicit control over the
+/// `open_path_as_is` option, returning None if not.
+pub fn open_git_repo_with_options(
+    path: &Path,
+    open_path_as_is: bool,
+) -> Result<Option<Repository>> {
+    let opts = Options::isolated().open_path_as_is(open_path_as_is);
     match open_opts(path, opts) {
         Err(gix::open::Error::NotARepository { .. }) => Ok(None),
         Err(err) => Err(err.into()),

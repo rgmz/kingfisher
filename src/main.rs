@@ -418,6 +418,8 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
             scan_nested_repos: true,
             since_commit: None,
             branch: None,
+            branch_root: false,
+            branch_root_commit: None,
         },
         extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {

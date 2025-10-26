@@ -117,3 +117,135 @@ aws_secret_access_key = efnegoUp/WXc3XwlL77dXu1aKIICzvz+n+7Sz88i
 
     Ok(())
 }
+
+#[test]
+fn scan_branch_root_inclusive_history() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let repo_dir = dir.path().join("repo");
+    let repo = Repository::init(&repo_dir)?;
+    let signature = Signature::now("tester", "tester@example.com")?;
+
+    let secrets_path = repo_dir.join("secrets.txt");
+
+    let aws_value = "UpUbsQANRHLf2uuQ7QOlNXPbbtV5fmseW/GgTs5D/";
+    let gcp_value = "c4c474d61701fd6fd4191883b8fea9a8411bf771";
+    let slack_value = "xoxb-123465789012-0987654321123-AbDcEfGhIjKlMnOpQrStUvWx";
+    let github_value = "ghp_aBcDeFgHiJkLmNoqpRsTuVwXyZ1243567890";
+    let stripe_value =
+        "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";
+
+    let aws_line = "AWS_SECRET_ACCESS_KEY = 'UpUbsQANRHLf2uuQ7QOlNXPbbtV5fmseW/GgTs5D/'";
+    let gcp_line = "GCP_PRIVATE_KEY_ID = 'c4c474d61701fd6fd4191883b8fea9a8411bf771'";
+    let slack_line = "SLACK_BOT_TOKEN = 'xoxb-123465789012-0987654321123-AbDcEfGhIjKlMnOpQrStUvWx'";
+    let github_line = "GITHUB_TOKEN = 'ghp_aBcDeFgHiJkLmNoqpRsTuVwXyZ1243567890'";
+    let stripe_line = concat!(
+        "STRIPE_SECRET_KEY = '",
+        "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",
+        "'",
+    );
+
+    fs::write(&secrets_path, aws_line)?;
+
+    let mut index = repo.index()?;
+    index.add_path(Path::new("secrets.txt"))?;
+    let tree_id = index.write_tree()?;
+    let tree = repo.find_tree(tree_id)?;
+    let initial_commit_id =
+        repo.commit(Some("HEAD"), &signature, &signature, "Add AWS secret", &tree, &[])?;
+    let initial_commit = repo.find_commit(initial_commit_id)?;
+    let initial_commit_hex = initial_commit_id.to_string();
+
+    let additions = [
+        ("Add GCP private key id", gcp_line),
+        ("Add Slack bot token", slack_line),
+        ("Add GitHub PAT", github_line),
+        ("Add Stripe API key", stripe_line),
+    ];
+
+    let mut parent_commit = initial_commit;
+    let mut contents = String::from(aws_line);
+
+    for (message, line) in additions {
+        contents.push('\n');
+        contents.push_str(line);
+        fs::write(&secrets_path, &contents)?;
+
+        let mut index = repo.index()?;
+        index.add_path(Path::new("secrets.txt"))?;
+        let tree_id = index.write_tree()?;
+        let tree = repo.find_tree(tree_id)?;
+        let new_commit_id =
+            repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[&parent_commit])?;
+        parent_commit = repo.find_commit(new_commit_id)?;
+    }
+
+    let latest_commit_hex = parent_commit.id().to_string();
+    repo.branch("long-lived", &parent_commit, true)?;
+
+    // Scanning the initial commit without --branch-root should report only the
+    // secret present at that commit.
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            repo_dir.to_str().unwrap(),
+            "--branch",
+            initial_commit_hex.as_str(),
+            "--no-validate",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(200)
+        .stdout(
+            contains(aws_value)
+                .and(contains(gcp_value).not())
+                .and(contains(slack_value).not())
+                .and(contains(github_value).not())
+                .and(contains(stripe_value).not()),
+        );
+
+    // Using --branch-root should include the selected commit and the remaining
+    // branch history up to HEAD, surfacing the later secrets too.
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            repo_dir.to_str().unwrap(),
+            "--branch",
+            initial_commit_hex.as_str(),
+            "--branch-root",
+            "--no-validate",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(200)
+        .stdout(
+            contains(aws_value)
+                .and(contains(gcp_value))
+                .and(contains(slack_value))
+                .and(contains(github_value))
+                .and(contains(stripe_value)),
+        );
+
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            repo_dir.to_str().unwrap(),
+            "--branch",
+            "long-lived",
+            "--branch-root-commit",
+            initial_commit_hex.as_str(),
+            "--no-validate",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(200)
+        .stdout(
+            contains(aws_value)
+                .and(contains(gcp_value))
+                .and(contains(slack_value))
+                .and(contains(github_value))
+                .and(contains(stripe_value))
+                .and(contains(latest_commit_hex.as_str())),
+        );
+
+    Ok(())
+}

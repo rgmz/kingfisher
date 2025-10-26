@@ -120,6 +120,8 @@ fn run_skiplist(skip_regex: Vec<String>, skip_skipword: Vec<String>) -> Result<u
             scan_nested_repos: true,
             since_commit: None,
             branch: None,
+            branch_root: false,
+            branch_root_commit: None,
         },
         extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {

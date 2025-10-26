@@ -125,6 +125,8 @@ fn test_gitlab_remote_scan() -> Result<()> {
             scan_nested_repos: true,
             since_commit: None,
             branch: None,
+            branch_root: false,
+            branch_root_commit: None,
         },
         extra_ignore_comments: Vec::new(),
         content_filtering_args: ContentFilteringArgs {
@@ -271,6 +273,8 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
             scan_nested_repos: true,
             since_commit: None,
             branch: None,
+            branch_root: false,
+            branch_root_commit: None,
             gcs_bucket: None,
             gcs_prefix: None,
             gcs_service_account: None,

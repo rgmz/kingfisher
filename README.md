@@ -166,17 +166,23 @@ brew install kingfisher
 
 <details>
 
-You can easily install using [ubi](https://github.com/houseabsolute/ubi), which downloads the correct binary for your platform.
+Use the bundled installer script to fetch the latest release and place it in
+`~/.local/bin` (or a directory of your choice):
 
 ```bash
 # Linux, macOS
 curl --silent --location \
-    https://raw.githubusercontent.com/houseabsolute/ubi/master/bootstrap/bootstrap-ubi.sh | \
-    sh && \
-  ubi --project mongodb/kingfisher --in "$HOME/.local/bin"
+  https://raw.githubusercontent.com/mongodb/kingfisher/main/scripts/install-kingfisher.sh | \
+  bash
 ```
 
-This installs and runs `ubi` and then places the `kingfisher` executable in `~/.local/bin` on Unix-like systems.
+To install into a custom location, pass the desired directory as an argument:
+
+```bash
+curl --silent --location \
+  https://raw.githubusercontent.com/mongodb/kingfisher/main/scripts/install-kingfisher.sh | \
+  bash -s -- /opt/kingfisher
+```
 
 </details>
 
@@ -184,14 +190,21 @@ This installs and runs `ubi` and then places the `kingfisher` executable in `~/.
 
 <details>
 
-You can easily install using [ubi](https://github.com/houseabsolute/ubi), which downloads the correct binary for your platform.
+Download and run the PowerShell installer to place the binary in
+`$env:USERPROFILE\bin` (or another directory you specify):
 
 ```powershell
 # Windows
-powershell -exec bypass -c "Invoke-WebRequest -URI 'https://raw.githubusercontent.com/houseabsolute/ubi/master/bootstrap/bootstrap-ubi.ps1' -UseBasicParsing | Invoke-Expression" && ubi --project mongodb/kingfisher --in .
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/mongodb/kingfisher/main/scripts/install-kingfisher.ps1' -OutFile install-kingfisher.ps1
+./install-kingfisher.ps1
 ```
 
-This installs and runs `ubi` and then places the `kingfisher` executable in the current directory on Windows.
+You can provide a custom destination using the `-InstallDir` parameter:
+
+```powershell
+./install-kingfisher.ps1 -InstallDir 'C:\Tools\Kingfisher'
+```
 </details>
 
 
@@ -415,6 +428,11 @@ kingfisher scan ./my-project \
 
 Limit scanning to the delta between your default branch and a pull request branch by combining `--since-commit` with `--branch` (defaults to `HEAD`). This only scans files that differ between the two references, which keeps CI runs fast while still blocking new secrets.
 
+Use `--branch-root-commit` alongside `--branch` when you need to include a specific commit (and everything after it) in a diff-focused scan without re-examining earlier history. Provide the branch tip (or other comparison ref) via `--branch`, and pass the commit or merge-base you want to include with `--branch-root-commit`. If you omit `--branch-root-commit`, you can still enable `--branch-root` to fall back to treating the `--branch` ref itself as the inclusive root for backwards compatibility. This is especially useful in long-lived branches where you want to resume scanning from a previous review point or from the commit where a hotfix forked.
+
+> **How is this different from `--since-commit`?**   
+> `--since-commit` computes a diff between the branch tip and another ref, so it only inspects files that changed between those two points in history. `--branch-root-commit` rewinds to the parent of the commit you provide and then scans everything introduced from that commit forward, even if the files are unchanged relative to another baseline. Reach for `--since-commit` to keep CI scans fast by checking only the latest delta, and use `--branch-root-commit` when you want to re-audit the full contents of a branch starting at a specific commit.
+
 ```bash
 kingfisher scan . \
   --since-commit origin/main \
@@ -436,6 +454,19 @@ kingfisher scan /tmp/SecretsTest --branch feature-1 \
 # scan only a specific commit
 kingfisher scan /tmp/dev/SecretsTest \
   --branch baba6ccb453963d3f6136d1ace843e48d7007c3f
+#
+# scan feature-1 starting at a specific commit (inclusive)
+kingfisher scan /tmp/SecretsTest --branch feature-1 \
+  --branch-root-commit baba6ccb453963d3f6136d1ace843e48d7007c3f
+#
+# scan feature-1 starting from the commit where the branch diverged from main
+kingfisher scan /tmp/SecretsTest --branch feature-1 \
+  --branch-root-commit $(git -C /tmp/SecretsTest merge-base main feature-1)
+#
+# scan from a hotfix commit that should be re-checked before merging
+HOTFIX_COMMIT=$(git -C /tmp/SecretsTest rev-parse hotfix~1)
+kingfisher scan /tmp/SecretsTest --branch hotfix \
+  --branch-root-commit "$HOTFIX_COMMIT"
 ```
 
 When the branch under test is already checked out, `--branch HEAD` or omitting `--branch` entirely is sufficient. Kingfisher exits with `200` when any findings are discovered and `205` when validated secrets are present, allowing CI jobs to fail automatically if new credentials slip in.

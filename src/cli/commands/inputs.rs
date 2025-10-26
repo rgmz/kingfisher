@@ -332,6 +332,32 @@ pub struct InputSpecifierArgs {
         visible_alias = "ref"
     )]
     pub branch: Option<String>,
+
+    /// Treat the `--branch` commit or ref as the inclusive root for the scan.
+    ///
+    /// When enabled, Kingfisher diffs from the parent of the selected commit
+    /// through the current HEAD of the repository, ensuring the chosen commit
+    /// and every descendant is scanned exactly once. Providing
+    /// `--branch-root-commit` will also enable this behaviour automatically.
+    #[arg(
+        long = "branch-root",
+        help_heading = "Git Options",
+        requires = "branch",
+        conflicts_with = "since_commit",
+        action = clap::ArgAction::SetTrue
+    )]
+    pub branch_root: bool,
+
+    /// Explicit commit or ref to use as the inclusive branch root. Supplying
+    /// this flag implicitly enables branch-root scanning even if `--branch-root`
+    /// is omitted.
+    #[arg(
+        long = "branch-root-commit",
+        value_name = "GIT-REF",
+        help_heading = "Git Options",
+        conflicts_with = "since_commit"
+    )]
+    pub branch_root_commit: Option<String>,
 }
 
 impl InputSpecifierArgs {
