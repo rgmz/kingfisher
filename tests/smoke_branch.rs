@@ -2,16 +2,35 @@
 //
 // Integration tests that exercise `kingfisher scan` against Git branches and commit
 // references using locally constructed repositories. These ensure that the
-// `--branch` and `--since-commit` flags behave as expected when scanning a repo
-// without validation.
+// branch-focused flags behave as expected when scanning a repo without
+// validation, including the ability to resume from a specific commit.
+
 
 use std::fs;
 use std::path::Path;
 
+use anyhow::Result;
 use assert_cmd::Command;
 use git2::{build::CheckoutBuilder, BranchType, Repository, Signature};
 use predicates::{prelude::PredicateBooleanExt, str::contains};
-use tempfile::tempdir;
+use tempfile::{tempdir, TempDir};
+
+const AWS_SECRET_VALUE: &str = "UpUbsQANRHLf2uuQ7QOlNXPbbtV5fmseW/GgTs5D";
+const GCP_PRIVATE_KEY_VALUE: &str = "c4c474d61701fd6fd4191883b8fea9a8411bf771";
+const SLACK_TOKEN_VALUE: &str = "xoxb-123465789012-0987654321123-AbDcEfGhIjKlMnOpQrStUvWx";
+const STRIPE_SECRET_VALUE: &str = "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";
+
+const AWS_SECRET_LINE: &str = "AWS_SECRET_ACCESS_KEY = 'UpUbsQANRHLf2uuQ7QOlNXPbbtV5fmseW/GgTs5D/'";
+const GCP_PRIVATE_KEY_LINE: &str =
+    "GCP_PRIVATE_KEY_ID = 'c4c474d61701fd6fd4191883b8fea9a8411bf771'";
+const SLACK_TOKEN_LINE: &str =
+    "SLACK_BOT_TOKEN = 'xoxb-123465789012-0987654321123-AbDcEfGhIjKlMnOpQrStUvWx'";
+const STRIPE_SECRET_LINE: &str = concat!(
+    "STRIPE_SECRET_KEY = '",
+    "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",
+    "'",
+);
+
 
 #[test]
 fn scan_by_commit_and_branch_diff() -> anyhow::Result<()> {
@@ -114,6 +133,152 @@ aws_secret_access_key = efnegoUp/WXc3XwlL77dXu1aKIICzvz+n+7Sz88i
                 .and(contains("efnegoUp/WXc3XwlL77dXu1aKIICzvz+n+7Sz88i")),
         )
         .stdout(contains("config.py").not());
+
+    Ok(())
+}
+
+///
+///
+///
+///
+///
+/// Create a repo with a single file `secrets.txt` and five commits that append
+/// lines in order, exactly like the provided shell script. Returns the repo dir
+/// and the vector of commit IDs (oldest → newest).
+fn setup_linear_repo_with_secrets() -> Result<(TempDir, std::path::PathBuf, Vec<git2::Oid>)> {
+    let dir = tempdir()?;
+    let repo_dir = dir.path().join("repo");
+    let repo = Repository::init(&repo_dir)?;
+    let sig = Signature::now("tester", "tester@example.com")?;
+
+    let secrets_path = repo_dir.join("secrets.txt");
+
+    // Commit #1 — AWS
+    fs::write(&secrets_path, AWS_SECRET_LINE)?;
+    let mut index = repo.index()?;
+    index.add_path(Path::new("secrets.txt"))?;
+    let tree_id = index.write_tree()?;
+    let tree = repo.find_tree(tree_id)?;
+    let mut commits = Vec::new();
+    let c1 = repo.commit(Some("HEAD"), &sig, &sig, "Add AWS secret", &tree, &[])?;
+    commits.push(c1);
+    let mut parent_commit = repo.find_commit(c1)?;
+    let mut contents = String::from(AWS_SECRET_LINE);
+
+    // Remaining commits mirror the shell script example.
+    let additions = [
+        ("Add GCP private key id", GCP_PRIVATE_KEY_LINE),
+        ("Add Slack bot token", SLACK_TOKEN_LINE),
+        ("Add Stripe API key", STRIPE_SECRET_LINE),
+    ];
+
+    for (message, line) in additions {
+        contents.push('\n');
+        contents.push_str(line);
+        fs::write(&secrets_path, &contents)?;
+
+        let mut index = repo.index()?;
+        index.add_path(Path::new("secrets.txt"))?;
+        let tree_id = index.write_tree()?;
+        let tree = repo.find_tree(tree_id)?;
+        let oid = repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[&parent_commit])?;
+        commits.push(oid);
+        parent_commit = repo.find_commit(oid)?;
+    }
+
+    // Create a named branch to mirror long-lived branch workflows.
+    repo.branch("long-lived", &parent_commit, true)?;
+
+    Ok((dir, repo_dir, commits))
+}
+
+#[test]
+fn scan_specific_commit_reports_only_that_commit() -> Result<()> {
+    let (_temp_dir, repo_dir, commits) = setup_linear_repo_with_secrets()?;
+    let c1_hex = commits[0].to_string(); // first commit (AWS only)
+
+    // Scan exactly the initial commit via --branch <commit>
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            repo_dir.to_str().unwrap(),
+            "--branch",
+            c1_hex.as_str(),
+            "--no-validate",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(200)
+        .stdout(
+            // Must contain AWS, must NOT contain the later secrets
+            contains("AWS SECRET ACCESS KEY")
+                .and(contains(AWS_SECRET_VALUE))
+                .and(contains(GCP_PRIVATE_KEY_VALUE).not())
+                .and(contains(SLACK_TOKEN_VALUE).not())
+                .and(contains(STRIPE_SECRET_VALUE).not()),
+        );
+
+    Ok(())
+}
+
+#[test]
+fn scan_with_branch_root_includes_descendants() -> Result<()> {
+    let (_temp_dir, repo_dir, commits) = setup_linear_repo_with_secrets()?;
+    let c1_hex = commits[0].to_string(); // start from first commit
+
+    // Using --branch-root should include the selected commit and remaining history up to HEAD
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            repo_dir.to_str().unwrap(),
+            "--branch",
+            c1_hex.as_str(),
+            "--branch-root",
+            "--no-validate",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(200)
+        .stdout(
+            contains("AWS SECRET ACCESS KEY")
+                .and(contains(AWS_SECRET_VALUE))
+                .and(contains(GCP_PRIVATE_KEY_VALUE))
+                .and(contains(SLACK_TOKEN_VALUE))
+                .and(contains(STRIPE_SECRET_VALUE)),
+        );
+
+    Ok(())
+}
+
+#[test]
+fn scan_branch_tip_with_branch_root_commit() -> Result<()> {
+    let (_temp_dir, repo_dir, commits) = setup_linear_repo_with_secrets()?;
+    let root_commit_hex = commits[0].to_string();
+    let latest_commit_hex = commits.last().expect("expected at least one commit").to_string();
+
+    // Passing --branch-root-commit should implicitly enable inclusive scanning even
+    // without the legacy --branch-root flag when targeting a named branch tip.
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            repo_dir.to_str().unwrap(),
+            "--branch",
+            "long-lived",
+            "--branch-root-commit",
+            root_commit_hex.as_str(),
+            "--no-validate",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(200)
+        .stdout(
+            contains("AWS SECRET ACCESS KEY")
+                .and(contains(AWS_SECRET_VALUE))
+                .and(contains(GCP_PRIVATE_KEY_VALUE))
+                .and(contains(SLACK_TOKEN_VALUE))
+                .and(contains(STRIPE_SECRET_VALUE))
+                .and(contains(latest_commit_hex.as_str())),
+        );
 
     Ok(())
 }
