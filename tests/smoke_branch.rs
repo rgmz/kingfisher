@@ -5,7 +5,6 @@
 // branch-focused flags behave as expected when scanning a repo without
 // validation, including the ability to resume from a specific commit.
 
-
 use std::fs;
 use std::path::Path;
 
@@ -30,7 +29,6 @@ const STRIPE_SECRET_LINE: &str = concat!(
     "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",
     "'",
 );
-
 
 #[test]
 fn scan_by_commit_and_branch_diff() -> anyhow::Result<()> {
