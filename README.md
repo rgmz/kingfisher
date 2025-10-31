@@ -9,8 +9,7 @@
 
 Kingfisher is a blazingly fast secret-scanning and **live validation** tool built in Rust.
 
-It combines Intel’s SIMD-accelerated regex engine (Hyperscan) with language-aware parsing to achieve high accuracy at massive scale,  
-and **ships with hundreds of built-in rules** to detect, **validate**, and triage secrets before they ever reach production.  
+It combines Intel’s SIMD-accelerated regex engine (Hyperscan) with language-aware parsing to achieve high accuracy at massive scale, and **ships with hundreds of built-in rules** to detect, **validate**, and triage secrets before they ever reach production.  
 
 For a look at how Kingfisher has grown from its early foundations into today's full-featured scanner, see [Lineage and Evolution](#lineage-and-evolution).
 
