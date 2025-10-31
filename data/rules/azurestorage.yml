@@ -24,8 +24,6 @@ rules:
       - AccountName=mystorageaccount
       - mystorageaccount.blob.core.windows.net
       - azure_storage_name="prodblob2024"
-
-
   - name: Azure Storage Account Key
     id: kingfisher.azurestorage.2
     pattern: |
@@ -36,7 +34,7 @@ rules:
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,128}?
       (
-        [A-Za-z0-9+/]{86,88}={0,2}
+        [A-Z0-9+\\/-]{86,88}={0,2}
       )
     min_entropy: 4.0
     confidence: medium

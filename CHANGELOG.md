@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - Fixed local filesystem scans to keep `open_path_as_is` enabled when opening Git repositories and only disable it for diff-based scans.
 - Created Linux and Windows specific installer script
 - Updated diff-focused scanning so `--branch-root-commit` can be provided alongside `--branch`, letting you diff from a chosen commit while targeting a specific branch tip (still defaulting back to the `--branch` ref when the commit is omitted).
+- Updated rules
 
 ## [v1.60.0]
 - Removed the `--bitbucket-username`, `--bitbucket-token`, and `--bitbucket-oauth-token` flags in favour of `KF_BITBUCKET_*` environment variables when authenticating to Bitbucket.
