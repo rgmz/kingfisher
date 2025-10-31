@@ -4,7 +4,8 @@
   <img src="docs/kingfisher_logo.png" alt="Kingfisher Logo" width="126" height="173" style="vertical-align: right;" />
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
-[![ghcr downloads](https://ghcr-badge.elias.eu.org/shield/mongodb/kingfisher/kingfisher)](https://github.com/mongodb/kingfisher/pkgs/container/kingfisher)
+[![ghcr downloads](https://ghcr-badge.elias.eu.org/shield/mongodb/kingfisher/kingfisher)](https://github.com/mongodb/kingfisher/pkgs/container/kingfisher)<br>
+
 
 Kingfisher is a blazingly fast secret-scanning and **live validation** tool built in Rust.
 
@@ -159,7 +160,7 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
 Pre-built binaries are available from the [Releases](https://github.com/mongodb/kingfisher/releases) section.
 
 ### Homebrew
-
+![Homebrew Formula Version](https://img.shields.io/homebrew/v/kingfisher)
 
 ```bash
 brew install kingfisher
