@@ -1301,6 +1301,7 @@ Since then it has evolved far beyond that starting point, introducing live valid
 - **Baseline management** to suppress known findings over time  
 - **Tree-sitter parsing** layered on Hyperscan for language-aware detection  
 - **More scan targets** (GitLab, Bitbucket, Gitea, Jira, Confluence, Slack, S3, GCS, Docker, Hugging Face, etc.)  
+- **Compressed Files** scanning support added
 - **New storage model** (in-memory + Bloom filter, replacing SQLite)  
 - **Unified workflow** with JSON/BSON/SARIF outputs  
 - **Cross-platform builds** for Linux, macOS, and Windows
