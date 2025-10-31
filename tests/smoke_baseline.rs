@@ -26,6 +26,7 @@ fn baseline_create_and_filter() -> anyhow::Result<()> {
             "--manage-baseline",
             "--baseline-file",
             baseline.to_str().unwrap(),
+            "--git-history=none",
             "--no-update-check",
         ])
         .assert()
@@ -34,7 +35,10 @@ fn baseline_create_and_filter() -> anyhow::Result<()> {
 
     assert!(baseline.exists(), "baseline file created");
 
-    // Scan again using the baseline
+    let initial_baseline = fs::read_to_string(&baseline)?;
+
+    // Scanning with the baseline should suppress the existing finding and leave
+    // the baseline untouched.
     Command::cargo_bin("kingfisher")?
         .args([
             "scan",
@@ -46,11 +50,38 @@ fn baseline_create_and_filter() -> anyhow::Result<()> {
             "json",
             "--baseline-file",
             baseline.to_str().unwrap(),
+            "--git-history=none",
             "--no-update-check",
         ])
         .assert()
         .code(0)
         .stdout(predicate::str::contains(GH_PAT).not());
+
+    let baseline_after_scan = fs::read_to_string(&baseline)?;
+    assert_eq!(initial_baseline, baseline_after_scan, "baseline remains stable after reuse");
+
+    // Managing the baseline again should not churn entries or report the secret
+    Command::cargo_bin("kingfisher")?
+        .args([
+            "scan",
+            dir.path().to_str().unwrap(),
+            "--no-binary",
+            "--confidence=low",
+            "--no-validate",
+            "--format",
+            "json",
+            "--manage-baseline",
+            "--baseline-file",
+            baseline.to_str().unwrap(),
+            "--git-history=none",
+            "--no-update-check",
+        ])
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains(GH_PAT).not());
+
+    let rerun_baseline = fs::read_to_string(&baseline)?;
+    assert_eq!(initial_baseline, rerun_baseline, "baseline remains stable");
 
     Ok(())
 }

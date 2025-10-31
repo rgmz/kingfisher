@@ -31,7 +31,7 @@ use crate::{
     git_commit_metadata::CommitMetadata,
     git_repo_enumerator::GitBlobMetadata,
     matcher::{Matcher, MatcherStats},
-    open_git_repo,
+    open_git_repo_with_options,
     origin::{Origin, OriginSet},
     rule_profiling::ConcurrentRuleProfiler,
     rules_database::RulesDatabase,
@@ -60,16 +60,29 @@ pub fn enumerate_filesystem_inputs(
 ) -> Result<()> {
     let repo_scan_timeout = Duration::from_secs(args.git_repo_timeout);
 
+    let branch_root_enabled = args.input_specifier_args.branch_root
+        || args.input_specifier_args.branch_root_commit.is_some();
+
     let diff_config = if args.input_specifier_args.since_commit.is_some()
         || args.input_specifier_args.branch.is_some()
+        || branch_root_enabled
     {
+        let branch_arg = args.input_specifier_args.branch.clone();
+        let branch_root_commit = args.input_specifier_args.branch_root_commit.clone();
+        let (branch_ref, branch_root) = if branch_root_enabled {
+            if let Some(explicit_root) = branch_root_commit {
+                (branch_arg.clone().unwrap_or_else(|| "HEAD".to_string()), Some(explicit_root))
+            } else {
+                ("HEAD".to_string(), branch_arg.clone())
+            }
+        } else {
+            (branch_arg.clone().unwrap_or_else(|| "HEAD".to_string()), None)
+        };
+
         Some(GitDiffConfig {
             since_ref: args.input_specifier_args.since_commit.clone(),
-            branch_ref: args
-                .input_specifier_args
-                .branch
-                .clone()
-                .unwrap_or_else(|| "HEAD".to_string()),
+            branch_ref,
+            branch_root,
         })
     } else {
         None
@@ -609,13 +622,14 @@ impl<'cfg> ParallelBlobIterator for (&'cfg EnumeratorConfig, FoundInput) {
             // ───────────── directory (possible Git repo) ─────────────
             FoundInput::Directory(i) => {
                 let path = &i.path;
+                let open_path_as_is = cfg.git_diff.is_none();
 
-                if cfg.git_diff.is_none() && !cfg.enumerate_git_history {
+                if open_path_as_is && !cfg.enumerate_git_history {
                     return Ok(None);
                 }
 
                 // Try to open a Git repository at that path
-                let repository = match open_git_repo(path)? {
+                let repository = match open_git_repo_with_options(path, open_path_as_is)? {
                     Some(r) => r,
                     None => return Ok(None),
                 };
@@ -719,7 +733,7 @@ fn enumerate_git_diff_repo(
     exclude_globset: Option<std::sync::Arc<globset::GlobSet>>,
     collect_commit_metadata: bool,
 ) -> Result<GitRepoResult> {
-    let GitDiffConfig { since_ref, branch_ref } = diff_cfg;
+    let GitDiffConfig { since_ref, branch_ref, branch_root } = diff_cfg;
 
     let blobs = {
         let head_id = resolve_diff_ref(&repository, path, &branch_ref).with_context(|| {
@@ -760,6 +774,40 @@ fn enumerate_git_diff_repo(
                 .with_context(|| format!("Failed to read tree for commit {}", base_id.to_hex()))?;
 
             base_tree = Some(tree);
+        } else if let Some(ref branch_root_value) = branch_root {
+            let root_id =
+                resolve_diff_ref(&repository, path, branch_root_value).with_context(|| {
+                    format!(
+                        "Failed to resolve --branch-root '{}' in repository {}",
+                        branch_root_value,
+                        path.display()
+                    )
+                })?;
+
+            let root_commit = root_id
+                .object()
+                .with_context(|| format!("Failed to load commit {} for diffing", root_id.to_hex()))?
+                .try_into_commit()
+                .with_context(|| {
+                    format!("Referenced object {} is not a commit", root_id.to_hex())
+                })?;
+
+            let mut parent_ids = root_commit.parent_ids();
+            if let Some(parent_id) = parent_ids.next() {
+                let parent_commit = parent_id
+                    .object()
+                    .with_context(|| {
+                        format!("Failed to load parent commit {} for diffing", parent_id.to_hex())
+                    })?
+                    .try_into_commit()
+                    .with_context(|| {
+                        format!("Referenced object {} is not a commit", parent_id.to_hex())
+                    })?;
+                let parent_tree = parent_commit.tree().with_context(|| {
+                    format!("Failed to read tree for commit {}", parent_id.to_hex())
+                })?;
+                base_tree = Some(parent_tree);
+            }
         }
 
         let changes = repository
@@ -1008,7 +1056,11 @@ mod tests {
         let result = enumerate_git_diff_repo(
             &repo_path,
             gix_repo,
-            GitDiffConfig { since_ref: None, branch_ref: "featurefake".to_string() },
+            GitDiffConfig {
+                since_ref: None,
+                branch_ref: "featurefake".to_string(),
+                branch_root: None,
+            },
             None,
             false,
         )?;
