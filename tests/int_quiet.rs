@@ -10,8 +10,7 @@ fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
 #[test]
 fn scan_quiet_suppresses_summary() {
     for format in FORMATS {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .env("NO_COLOR", "1")
             .args([
                 "scan",
@@ -35,8 +34,7 @@ fn scan_quiet_suppresses_summary() {
 #[test]
 fn scan_quiet_with_rule_stats_prints_rule_stats() {
     for format in FORMATS {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .env("NO_COLOR", "1")
             .args([
                 "scan",

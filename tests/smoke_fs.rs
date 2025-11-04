@@ -18,7 +18,7 @@ fn smoke_scan_filesystem_text_and_binary() -> anyhow::Result<()> {
     fs::write(&bin_path, [0x89, 0x50, 0x4E, 0x47])?; // tiny PNG header
 
     // ── run kingfisher ────────────────────────────────────────────────
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),

@@ -19,8 +19,7 @@ mod github {
 
     #[test]
     fn scan_github_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "github", "--help"])
             .assert()
             .success()
@@ -29,8 +28,7 @@ mod github {
 
     #[test]
     fn scan_github_list_only_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "github", "--help"])
             .assert()
             .success()
@@ -42,8 +40,7 @@ mod github {
 
     #[test]
     fn scan_github_requires_specifier() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "github", "--no-update-check"])
             .assert()
             .failure()
@@ -52,8 +49,7 @@ mod github {
 
     #[test]
     fn scan_github_with_user() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "github", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| {
@@ -64,8 +60,7 @@ mod github {
 
     #[test]
     fn scan_github_with_organization() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -80,8 +75,7 @@ mod github {
 
     #[test]
     fn scan_github_multiple_users() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -98,8 +92,7 @@ mod github {
 
     #[test]
     fn scan_github_with_exclude() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -116,8 +109,7 @@ mod github {
 
     #[test]
     fn scan_github_with_repo_type_fork() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -134,8 +126,7 @@ mod github {
 
     #[test]
     fn scan_github_with_repo_type_source() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -152,8 +143,7 @@ mod github {
 
     #[test]
     fn scan_github_custom_api_url() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -170,8 +160,7 @@ mod github {
 
     #[test]
     fn scan_github_all_organizations() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -187,8 +176,7 @@ mod github {
 
     #[test]
     fn scan_github_invalid_repo_type() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -205,8 +193,7 @@ mod github {
 
     #[test]
     fn scan_github_mixed_user_and_org() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "github",
@@ -231,8 +218,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitlab", "--help"])
             .assert()
             .success()
@@ -241,8 +227,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_list_only_flag() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitlab", "--help"])
             .assert()
             .success()
@@ -251,8 +236,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_requires_specifier() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitlab", "--no-update-check"])
             .assert()
             .failure()
@@ -261,8 +245,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_with_user() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitlab", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
@@ -270,8 +253,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_with_group() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitlab", "--group", "testgroup", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
@@ -279,8 +261,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_with_include_subgroups() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitlab",
@@ -296,8 +277,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_with_repo_type() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitlab",
@@ -314,8 +294,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_with_exclude() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitlab",
@@ -332,8 +311,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_custom_api_url() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitlab",
@@ -350,8 +328,7 @@ mod gitlab {
 
     #[test]
     fn scan_gitlab_all_groups() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitlab",
@@ -375,8 +352,7 @@ mod azure {
 
     #[test]
     fn scan_azure_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "azure", "--help"])
             .assert()
             .success()
@@ -385,8 +361,7 @@ mod azure {
 
     #[test]
     fn scan_azure_list_only_flag() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "azure", "--help"])
             .assert()
             .success()
@@ -395,8 +370,7 @@ mod azure {
 
     #[test]
     fn scan_azure_requires_specifier() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "azure", "--no-update-check"])
             .assert()
             .failure()
@@ -405,8 +379,7 @@ mod azure {
 
     #[test]
     fn scan_azure_with_organization() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "azure",
@@ -421,8 +394,7 @@ mod azure {
 
     #[test]
     fn scan_azure_with_project() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "azure",
@@ -437,8 +409,7 @@ mod azure {
 
     #[test]
     fn scan_azure_all_projects() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "azure",
@@ -454,8 +425,7 @@ mod azure {
 
     #[test]
     fn scan_azure_with_exclude() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "azure",
@@ -472,8 +442,7 @@ mod azure {
 
     #[test]
     fn scan_azure_with_repo_type() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "azure",
@@ -498,8 +467,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "bitbucket", "--help"])
             .assert()
             .stdout(is_match(r"kingfisher(\.exe)? scan bitbucket \[OPTIONS\]").unwrap());
@@ -507,8 +475,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_list_only_flag() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "bitbucket", "--help"])
             .assert()
             .success()
@@ -517,8 +484,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_requires_specifier() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "bitbucket", "--no-update-check"])
             .assert()
             .failure()
@@ -527,8 +493,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_with_workspace() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "bitbucket",
@@ -543,8 +508,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_with_user() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "bitbucket", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
@@ -552,8 +516,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_with_project() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "bitbucket",
@@ -568,8 +531,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_all_workspaces() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "bitbucket",
@@ -585,8 +547,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_with_exclude() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "bitbucket",
@@ -603,8 +564,7 @@ mod bitbucket {
 
     #[test]
     fn scan_bitbucket_with_repo_type() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "bitbucket",
@@ -629,8 +589,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitea", "--help"])
             .assert()
             .success()
@@ -639,8 +598,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_requires_specifier() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitea", "--no-update-check"])
             .assert()
             .failure()
@@ -649,8 +607,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_with_organization() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitea",
@@ -665,8 +622,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_with_user() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "gitea", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
@@ -674,8 +630,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_all_organizations() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitea",
@@ -689,8 +644,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_with_exclude() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitea",
@@ -707,8 +661,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_with_repo_type() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitea",
@@ -725,8 +678,7 @@ mod gitea {
 
     #[test]
     fn scan_gitea_custom_api_url() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "gitea",
@@ -751,8 +703,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_help() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "huggingface", "--help"])
             .assert()
             .success()
@@ -761,8 +712,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_requires_specifier() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "huggingface", "--no-update-check"])
             .assert()
             .failure()
@@ -771,8 +721,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_with_user() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "huggingface",
@@ -787,8 +736,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_with_organization() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "huggingface",
@@ -803,8 +751,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_with_model() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "huggingface",
@@ -819,8 +766,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_with_dataset() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "huggingface",
@@ -835,8 +781,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_with_space() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "huggingface",
@@ -851,8 +796,7 @@ mod huggingface {
 
     #[test]
     fn scan_huggingface_with_exclude() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 "huggingface",
@@ -888,8 +832,7 @@ mod cross_platform {
 
         for mut platform_args in platforms {
             platform_args.extend_from_slice(&["--list-only", "--no-update-check"]);
-            Command::cargo_bin("kingfisher")
-                .unwrap()
+            Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
                 .args(&platform_args)
                 .assert()
                 .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
@@ -898,8 +841,7 @@ mod cross_platform {
 
     #[test]
     fn scan_requires_subcommand_or_path() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "--no-update-check"])
             .assert()
             .failure()
@@ -908,8 +850,7 @@ mod cross_platform {
 
     #[test]
     fn scan_invalid_platform_subcommand() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "invalid-platform", "--no-update-check"])
             .assert()
             .failure()
@@ -919,8 +860,7 @@ mod cross_platform {
     #[test]
     fn scan_github_without_scanning_no_paths() {
         // list-only should work without providing actual scan paths
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "github", "--user", "testuser", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));
@@ -941,8 +881,7 @@ mod legacy_compatibility {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
         let test_file = root.join("testdata").join("generic_secrets.py");
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args([
                 "scan",
                 test_file.to_str().expect("REASON"),
@@ -962,8 +901,7 @@ mod legacy_compatibility {
         // This just validates the CLI parsing works
 
         // New syntax
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["scan", "github", "--user", "test", "--list-only", "--no-update-check"])
             .assert()
             .code(predicates::function::function(|code: &i32| *code == 0 || *code == 1));

@@ -3,7 +3,7 @@ use std::process::Command;
 
 #[test]
 fn smoke_scan_docker_image() -> anyhow::Result<()> {
-    let mut cmd = Command::cargo_bin("kingfisher")?;
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"));
     let output = cmd
         .args([
             "scan",

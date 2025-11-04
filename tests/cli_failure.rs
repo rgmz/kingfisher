@@ -8,8 +8,7 @@ use tempfile::TempDir;
 /// 1. Path-does-not-exist ⇒ run_async_scan bails with “Invalid input”
 #[test]
 fn scan_fails_for_missing_path() {
-    Command::cargo_bin("kingfisher")
-        .unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args(["scan", "no/such/path/here", "--no-update-check"])
         .assert()
         .failure() // exit-code ≠ 0
@@ -22,8 +21,7 @@ fn scan_fails_for_bad_rule_yaml() {
     let tmp = TempDir::new().unwrap();
     fs::write(tmp.path().join("broken.yml"), "this: is: : not yaml").unwrap();
 
-    Command::cargo_bin("kingfisher")
-        .unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             tmp.path().to_str().unwrap(), // dummy input dir (exists)
@@ -68,8 +66,7 @@ rules:
     // Create a dummy input file that matches the rule
     fs::write(tmp.path().join("input.txt"), "dummy_dead").unwrap();
 
-    Command::cargo_bin("kingfisher")
-        .unwrap()
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             tmp.path().join("input.txt").to_str().unwrap(),

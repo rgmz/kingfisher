@@ -1171,19 +1171,29 @@ mod test {
         let mut matcher =
             Matcher::new(&rules_db, scanner_pool, &seen_blobs, None, false, None, &[], false)?;
 
-        matcher.scan_bytes_raw(input, "fname")?;
+        let blob = Blob::from_bytes(input.to_vec());
+        let origin = OriginSet::from(Origin::from_file(PathBuf::from("exclude.txt")));
 
-        let matches = &matcher.user_data.raw_matches_scratch;
+        let matches = match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
+            ScanResult::New(matches) => matches,
+            ScanResult::SeenWithMatches => {
+                panic!("unexpected scan result: blob should not be considered previously seen with matches")
+            }
+            ScanResult::SeenSansMatches => {
+                panic!("unexpected scan result: blob should not be considered previously seen without matches")
+            }
+        };
+
         assert_eq!(matches.len(), 1, "exclude_words should drop filtered matches");
-        let RawMatch { start_idx, end_idx, .. } = matches[0];
         assert_eq!(
-            &input[start_idx as usize..end_idx as usize],
+            matches[0].matching_input,
             b"prefixgood",
             "remaining match should be the non-excluded token",
         );
 
         Ok(())
     }
+
 
     // ---------------------------------------------------------------------
     // additional deterministic unit-tests

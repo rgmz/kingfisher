@@ -7,7 +7,7 @@ use predicates::prelude::*;
 #[test]
 fn check_rules() -> anyhow::Result<()> {
     // ── run kingfisher ────────────────────────────────────────────────
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "rules",
             "check",

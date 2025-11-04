@@ -3,6 +3,7 @@ use std::fs;
 use assert_cmd::Command;
 use predicates::prelude::*;
 use tempfile::tempdir;
+use clap::Parser;
 
 const GH_PAT: &str = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
 
@@ -47,7 +48,7 @@ fn baseline_create_and_filter() -> anyhow::Result<()> {
     let baseline = dir.path().join("baseline.yaml");
 
     // Create baseline with manage flag
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -72,7 +73,7 @@ fn baseline_create_and_filter() -> anyhow::Result<()> {
 
     // Scanning with the baseline should suppress the existing finding and leave
     // the baseline untouched.
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -94,7 +95,7 @@ fn baseline_create_and_filter() -> anyhow::Result<()> {
     assert_eq!(initial_baseline, baseline_after_scan, "baseline remains stable after reuse");
 
     // Managing the baseline again should not churn entries or report the secret
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -129,7 +130,7 @@ fn baseline_exclude_prunes_entries() -> anyhow::Result<()> {
     let baseline = dir.path().join("baseline.yaml");
 
     // Initial baseline includes the .git secret
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -150,7 +151,7 @@ fn baseline_exclude_prunes_entries() -> anyhow::Result<()> {
     assert!(content.contains(".git/secret.txt"));
 
     // Rescan with exclusion, which should prune the .git entry
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),

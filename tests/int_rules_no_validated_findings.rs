@@ -4,7 +4,7 @@ use serde_json::Value;
 
 #[test]
 fn scan_rules_has_no_validated_findings() -> Result<()> {
-    let output = Command::cargo_bin("kingfisher")?
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args(["scan", "data/rules", "--format", "json", "--no-update-check", "--only-valid"])
         .output()?;
 

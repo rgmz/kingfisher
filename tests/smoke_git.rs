@@ -31,7 +31,7 @@ fn smoke_scan_git_history() -> anyhow::Result<()> {
     repo.commit(Some("HEAD"), &sig, &sig, "update", &tree2, &[&head])?;
 
     // ── run kingfisher with git-history mode FULL ─────────────────────
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             repo_dir.to_str().unwrap(),

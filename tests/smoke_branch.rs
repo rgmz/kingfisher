@@ -94,7 +94,7 @@ aws_secret_access_key = efnegoUp/WXc3XwlL77dXu1aKIICzvz+n+7Sz88i
     )?;
 
     // ── scan the repository by commit hash ───────────────────────────────────
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             repo_dir.to_str().unwrap(),
@@ -112,7 +112,7 @@ aws_secret_access_key = efnegoUp/WXc3XwlL77dXu1aKIICzvz+n+7Sz88i
         );
 
     // ── scan only the diff between feature-1 and the merge base ─────────────
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             repo_dir.to_str().unwrap(),
@@ -196,7 +196,7 @@ fn scan_specific_commit_reports_only_that_commit() -> Result<()> {
     let c1_hex = commits[0].to_string(); // first commit (AWS only)
 
     // Scan exactly the initial commit via --branch <commit>
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             repo_dir.to_str().unwrap(),
@@ -225,7 +225,7 @@ fn scan_with_branch_root_includes_descendants() -> Result<()> {
     let c1_hex = commits[0].to_string(); // start from first commit
 
     // Using --branch-root should include the selected commit and remaining history up to HEAD
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             repo_dir.to_str().unwrap(),
@@ -256,7 +256,7 @@ fn scan_branch_tip_with_branch_root_commit() -> Result<()> {
 
     // Passing --branch-root-commit should implicitly enable inclusive scanning even
     // without the legacy --branch-root flag when targeting a named branch tip.
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             repo_dir.to_str().unwrap(),

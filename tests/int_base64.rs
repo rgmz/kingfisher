@@ -12,7 +12,7 @@ fn detects_base64_encoded_secret() -> anyhow::Result<()> {
     let encoded = "Z2hwXzF3dUhGaWtCS1F0Q2NIM0VCMkZCVWt5bjhrclhoUDJxTHFQYQ==";
     fs::write(&file_path, encoded)?;
 
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -42,7 +42,7 @@ fn skips_base64_when_disabled() -> anyhow::Result<()> {
     let encoded = "Z2hwXzF3dUhGaWtCS1F0Q2NIM0VCMkZCVWt5bjhrclhoUDJxTHFQYQ==";
     fs::write(&file_path, encoded)?;
 
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -68,7 +68,7 @@ fn no_base64_skips_empty_files() -> anyhow::Result<()> {
     let file_path = dir.path().join("empty.py");
     fs::write(&file_path, "")?;
 
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),
@@ -96,7 +96,7 @@ fn detects_base64_in_code_with_tree_sitter() -> anyhow::Result<()> {
     let encoded = "Z2hwXzF3dUhGaWtCS1F0Q2NIM0VCMkZCVWt5bjhrclhoUDJxTHFQYQ==";
     fs::write(&file_path, format!("token = \"{}\"\n", encoded))?;
 
-    Command::cargo_bin("kingfisher")?
+    Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
         .args([
             "scan",
             dir.path().to_str().unwrap(),

@@ -6,8 +6,7 @@ mod test {
     use super::*;
     #[test]
     fn cli_lists_rules_pretty() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["rules", "list", "--format", "pretty", "--no-update-check"])
             .assert()
             .success()
@@ -15,8 +14,7 @@ mod test {
     }
     #[test]
     fn cli_lists_rules_json() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .args(["rules", "list", "--format", "json", "--no-update-check"])
             .assert()
             .success()
@@ -25,8 +23,7 @@ mod test {
 
     #[test]
     fn cli_version_flag() {
-        Command::cargo_bin("kingfisher")
-            .unwrap()
+        Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
             .arg("--version")
             .assert()
             .success()
