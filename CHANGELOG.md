@@ -3,10 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-- pattern_requirements for rules — Post-regex character-class gating to cut false positives without lookarounds. Authors can now require minimum counts of digits, uppercase, lowercase, and special characters, with an optional custom special-char set. Why? Hyperscan doesn’t support lookaheads/behinds, so many "must contain X and Y" checks had to be baked into the regex (hurting readability) or were impossible. `pattern_requirements` applies lightweight, in-memory checks after a match is found, keeping patterns fast and clean.
+- Added `pattern_requirements` for rules. Enables post-regex character-class checks (digits, uppercase, lowercase, specials) to reduce false positives without lookarounds. Provides lightweight, in-memory validation after matches, keeping patterns fast and readable.
+- Added an optional `exclude_words` list to `PatternRequirements` so matches containing case-insensitive placeholder words are filtered out, with accompanying tests to cover the new behavior.
 - Updated many rules with `pattern_requirements`
 - Automatically set `--no-dedup` whenever `--manage-baseline` is supplied so baseline management retains every occurrence of a finding
-- Added an optional `exclude_words` list to `PatternRequirements` so matches containing case-insensitive placeholder words are filtered out, with accompanying tests to cover the new behavior.
 
 ## [v1.61.0]
 - Fixed local filesystem scans to keep `open_path_as_is` enabled when opening Git repositories and only disable it for diff-based scans.
