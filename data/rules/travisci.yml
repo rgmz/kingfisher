@@ -13,6 +13,8 @@ rules:
         [A-Z-_0-9]{22}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.0
     confidence: medium
     examples:
@@ -35,10 +37,8 @@ rules:
     id: kingfisher.travisci.2
     pattern: |
       (?xis)
-      \b
       (?:language|env|deploy|script):[\r\n]
       (?:.|[\\n\r]){0,256}?
-      \b
       (
         secure:\s*"?[A-Za-z0-9+/=\\]+"?\s*
       )

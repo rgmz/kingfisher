@@ -8,10 +8,13 @@ rules:
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
+      \b
       (
         [A-Z0-9]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     examples:
       - |
           get('https://api.nasa.gov/planetary/earth/imagery?api_key=fWfSMcDzyHfMuH8BW6jiIUBYaj0hKRyKBRTBqgEQ')

@@ -52,6 +52,73 @@ pub struct DependsOnRule {
     pub variable: String,
 }
 
+/// Specifies character type requirements for matched secrets.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct PatternRequirements {
+    /// Minimum number of digits required (0-9)
+    #[serde(default)]
+    pub min_digits: Option<usize>,
+    /// Minimum number of uppercase letters required (A-Z)
+    #[serde(default)]
+    pub min_uppercase: Option<usize>,
+    /// Minimum number of lowercase letters required (a-z)
+    #[serde(default)]
+    pub min_lowercase: Option<usize>,
+    /// Minimum number of special characters required
+    #[serde(default)]
+    pub min_special_chars: Option<usize>,
+    /// Custom set of characters to consider as "special" (defaults to common punctuation)
+    #[serde(default)]
+    pub special_chars: Option<String>,
+}
+
+impl PatternRequirements {
+    /// Default special characters if none are specified
+    const DEFAULT_SPECIAL_CHARS: &'static str = "!@#$%^&*()_+-=[]{}|;:'\",.<>?/\\`~";
+
+    /// Validates whether the given byte slice meets the character requirements.
+    /// Returns true if all requirements are met, false otherwise.
+    pub fn validate(&self, input: &[u8]) -> bool {
+        // Convert to string (lossy for non-UTF8)
+        let s = String::from_utf8_lossy(input);
+
+        // Check digit requirement
+        if let Some(min_digits) = self.min_digits {
+            let digit_count = s.chars().filter(|c| c.is_ascii_digit()).count();
+            if digit_count < min_digits {
+                return false;
+            }
+        }
+
+        // Check uppercase requirement
+        if let Some(min_uppercase) = self.min_uppercase {
+            let uppercase_count = s.chars().filter(|c| c.is_ascii_uppercase()).count();
+            if uppercase_count < min_uppercase {
+                return false;
+            }
+        }
+
+        // Check lowercase requirement
+        if let Some(min_lowercase) = self.min_lowercase {
+            let lowercase_count = s.chars().filter(|c| c.is_ascii_lowercase()).count();
+            if lowercase_count < min_lowercase {
+                return false;
+            }
+        }
+
+        // Check special character requirement
+        if let Some(min_special) = self.min_special_chars {
+            let special_chars = self.special_chars.as_deref().unwrap_or(Self::DEFAULT_SPECIAL_CHARS);
+            let special_count = s.chars().filter(|c| special_chars.contains(*c)).count();
+            if special_count < min_special {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
 /// Configuration for HTTP validation. This contains a request configuration
 /// and an optional multipart configuration.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -283,6 +350,9 @@ pub struct RuleSyntax {
     /// Optional dependencies on other rules.
     #[serde(default)]
     pub depends_on_rule: Vec<Option<DependsOnRule>>,
+    /// Optional character type requirements for matched secrets.
+    #[serde(default)]
+    pub pattern_requirements: Option<PatternRequirements>,
 }
 
 lazy_static! {
@@ -333,6 +403,7 @@ impl RuleSyntax {
     ///     visible: true,
     ///     validation: None,
     ///     depends_on_rule: vec![],
+    ///     pattern_requirements: None,
     /// };
     /// assert_eq!(r.as_anchored_regex().unwrap().as_str(), r"hello\s*world$");
     /// ```
@@ -435,5 +506,157 @@ impl Rule {
     /// Returns the confidence level of the rule.
     pub fn confidence(&self) -> Confidence {
         self.syntax.confidence
+    }
+
+    /// Returns the character requirements for this rule, if any.
+    pub fn pattern_requirements(&self) -> Option<&PatternRequirements> {
+        self.syntax.pattern_requirements.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pattern_requirements_digits() {
+        let reqs = PatternRequirements {
+            min_digits: Some(2),
+            min_uppercase: None,
+            min_lowercase: None,
+            min_special_chars: None,
+            special_chars: None,
+        };
+
+        // Should pass: has 3 digits
+        assert!(reqs.validate(b"abc123def"));
+
+        // Should fail: only 1 digit
+        assert!(!reqs.validate(b"abc1def"));
+
+        // Should fail: no digits
+        assert!(!reqs.validate(b"abcdef"));
+    }
+
+    #[test]
+    fn test_pattern_requirements_uppercase() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: Some(2),
+            min_lowercase: None,
+            min_special_chars: None,
+            special_chars: None,
+        };
+
+        // Should pass: has 3 uppercase
+        assert!(reqs.validate(b"ABCdef"));
+
+        // Should fail: only 1 uppercase
+        assert!(!reqs.validate(b"Adef"));
+
+        // Should fail: no uppercase
+        assert!(!reqs.validate(b"abcdef"));
+    }
+
+    #[test]
+    fn test_pattern_requirements_lowercase() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: None,
+            min_lowercase: Some(2),
+            min_special_chars: None,
+            special_chars: None,
+        };
+
+        // Should pass: has 3 lowercase
+        assert!(reqs.validate(b"ABCdef"));
+
+        // Should fail: only 1 lowercase
+        assert!(!reqs.validate(b"ABCd"));
+
+        // Should fail: no lowercase
+        assert!(!reqs.validate(b"ABC123"));
+    }
+
+    #[test]
+    fn test_pattern_requirements_special_chars() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: None,
+            min_lowercase: None,
+            min_special_chars: Some(2),
+            special_chars: None, // uses default
+        };
+
+        // Should pass: has 2 special chars
+        assert!(reqs.validate(b"abc!@def"));
+
+        // Should fail: only 1 special char
+        assert!(!reqs.validate(b"abc!def"));
+
+        // Should fail: no special chars
+        assert!(!reqs.validate(b"abcdef"));
+    }
+
+    #[test]
+    fn test_pattern_requirements_custom_special_chars() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: None,
+            min_lowercase: None,
+            min_special_chars: Some(2),
+            special_chars: Some("$%^".to_string()),
+        };
+
+        // Should pass: has 2 custom special chars
+        assert!(reqs.validate(b"abc$%def"));
+
+        // Should fail: has special chars but not the custom ones
+        assert!(!reqs.validate(b"abc!@def"));
+
+        // Should fail: only 1 custom special char
+        assert!(!reqs.validate(b"abc$def"));
+    }
+
+    #[test]
+    fn test_pattern_requirements_combined() {
+        let reqs = PatternRequirements {
+            min_digits: Some(1),
+            min_uppercase: Some(1),
+            min_lowercase: Some(1),
+            min_special_chars: Some(1),
+            special_chars: None,
+        };
+
+        // Should pass: has all requirements
+        assert!(reqs.validate(b"Abc1!"));
+
+        // Should fail: missing digit
+        assert!(!reqs.validate(b"Abc!"));
+
+        // Should fail: missing uppercase
+        assert!(!reqs.validate(b"abc1!"));
+
+        // Should fail: missing lowercase
+        assert!(!reqs.validate(b"ABC1!"));
+
+        // Should fail: missing special
+        assert!(!reqs.validate(b"Abc1"));
+    }
+
+    #[test]
+    fn test_pattern_requirements_none() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: None,
+            min_lowercase: None,
+            min_special_chars: None,
+            special_chars: None,
+        };
+
+        // Should pass: no requirements
+        assert!(reqs.validate(b"anything"));
+        assert!(reqs.validate(b"123"));
+        assert!(reqs.validate(b"!@#"));
     }
 }

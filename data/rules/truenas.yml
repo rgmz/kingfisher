@@ -6,6 +6,8 @@ rules:
       "params"\s*:\s*\[\s*"
       (\d+-[a-zA-Z0-9]{64})
       "\s*\]
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -36,6 +38,8 @@ rules:
       Bearer\s*
       (\d+-[a-zA-Z0-9]{64})
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

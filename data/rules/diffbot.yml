@@ -11,6 +11,8 @@ rules:
         [0-9a-z]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.0
     examples:
       - diffbot_key = a7424adbafc4624e61482d0f60e43016

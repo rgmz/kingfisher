@@ -840,6 +840,7 @@ mod tests {
             references: vec![],
             validation: None,
             depends_on_rule: vec![],
+            pattern_requirements: None,
         }));
 
         let blob_id = BlobId::new(b"blob-data");

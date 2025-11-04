@@ -9,6 +9,8 @@ rules:
       (
         [a-z0-9_\-=]{40}
       )
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.2
     confidence: medium
     examples:

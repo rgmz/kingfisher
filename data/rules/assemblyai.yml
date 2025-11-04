@@ -11,6 +11,9 @@ rules:
         [0-9a-z]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 1
     min_entropy: 3.0
     confidence: medium
     examples:

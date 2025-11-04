@@ -3,13 +3,15 @@ rules:
     id: kingfisher.wandb.1
     pattern: |
       (?xi)
-      \b
       (?:wandb|weightsandbiases)
       (?:.|[\n\r]){0,16}?
+      \b
       (
         [a-f0-9]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.5
     examples:

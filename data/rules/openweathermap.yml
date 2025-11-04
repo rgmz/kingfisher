@@ -6,7 +6,6 @@ rules:
     id: kingfisher.openweather.1
     pattern: |
       (?xi)
-      \b
       (?:pyowm|openweather|owm\b)
       (?:.|[\n\r]){0,64}?
       \b
@@ -17,6 +16,8 @@ rules:
         [a-z0-9]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

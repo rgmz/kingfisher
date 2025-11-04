@@ -8,6 +8,8 @@ rules:
         npm_[A-Z0-9]{36}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://docs.npmjs.com/about-access-tokens
       - https://github.com/github/roadmap/issues/557
@@ -35,7 +37,6 @@ rules:
     id: kingfisher.npm.2
     pattern: |
       (?xi)
-      \b
       (?:_authToken|NPM_TOKEN)
       (?:.|[\n\r]){0,16}?
         (                                  

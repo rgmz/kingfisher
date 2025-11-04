@@ -8,6 +8,8 @@ rules:
         dckr_pat_[A-Z0-9_-]{27}
       )
       (?: $ | [^A-Z0-9_-] )
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

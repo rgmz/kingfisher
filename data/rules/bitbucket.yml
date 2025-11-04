@@ -8,9 +8,10 @@ rules:
       (?:.|[\n\r]){0,16}?
       (?:client|id)
       (?:.|[\n\r]){0,16}?
-      \b
       ([a-z0-9]{30,40})
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:
@@ -43,6 +44,9 @@ rules:
       (
         [a-z0-9+_\-+]{44}
       )
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

@@ -18,8 +18,12 @@ rules:
         [0-9a-z]{4}
         -
         [0-9a-z]{12}
-      )                        
-      \b                   
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     examples:

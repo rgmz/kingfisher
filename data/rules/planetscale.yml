@@ -8,6 +8,8 @@ rules:
         pscale_tkn_[a-z0-9-_]{43}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4
     examples:
       - pscale_tkn_abcdefghijklmnopqrstuvwxyZ1234567890_ABCDEF
@@ -41,11 +43,11 @@ rules:
       (?:.|[\n\r]){0,16}?
       (?:USER|ID|NAME)
       (?:.|[\n\r]){0,16}?
-      \b
       (
         [a-z0-9]{12}
       )
-      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     visible: false
     examples:

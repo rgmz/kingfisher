@@ -5,11 +5,12 @@ rules:
       (?xi)
       meraki
       (?:.|[\n\r]){0,32}?
-      \b
       (
         [0-9a-f]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

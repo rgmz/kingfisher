@@ -2,13 +2,15 @@ rules:
   - name: Stability AI API Key
     id: kingfisher.stabilityai.1
     pattern: |           
-      (?x)          
+      (?x)
       \b
       (                
         sk-     
         [A-Za-z0-9]{48}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.0
     confidence: medium
     examples:

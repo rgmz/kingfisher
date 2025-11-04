@@ -10,9 +10,11 @@ rules:
         (?:.|[\n\r]){0,16}?
         \b
         (
-          [a-zA-Z-0-9]{32}
+          [a-z-0-9]{32}
         )
         \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     examples:
       - coinbase_token = 32iAkQCcHHYxXGx20VogBZoj27PC1ouI

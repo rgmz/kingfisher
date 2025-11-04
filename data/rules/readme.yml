@@ -2,11 +2,14 @@ rules:
   - name: ReadMe API Key
     id: kingfisher.readme.1
     pattern: |
-      (?x)(?i)
+      (?xi)
       \b
       (
         rdme_(?P<RDMVAL>[a-z0-9]{70})
       )
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

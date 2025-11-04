@@ -5,10 +5,13 @@ rules:
       (?xi)
       (?: CODECLIMATE| CC_TEST_REPORTER_ID)
       (?:.|[\n\r]){0,64}?
+      \b
       (
         [a-f0-9]{64}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

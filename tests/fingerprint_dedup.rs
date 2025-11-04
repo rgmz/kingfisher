@@ -33,6 +33,7 @@ fn make_match(fp: u64) -> Match {
         references: vec![],
         validation: None,
         depends_on_rule: vec![],
+        pattern_requirements: None,
     };
     let rule = Arc::new(Rule::new(syntax));
     Match {

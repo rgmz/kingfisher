@@ -8,6 +8,8 @@ rules:
         FlyV1\s[A-Za-z0-9=_\-,/+]{100,}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 4.0
     validation:

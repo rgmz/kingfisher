@@ -9,6 +9,8 @@ rules:
         [a-f0-9]{64}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -33,12 +35,10 @@ rules:
     id: kingfisher.digitalocean.2
     pattern: |
       (?x)
-      \b
       (
         dor_v1_
         [a-f0-9]{64}
       )
-      \b
     min_entropy: 3.3
     confidence: medium
     examples:

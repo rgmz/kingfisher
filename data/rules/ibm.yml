@@ -3,15 +3,16 @@ rules:
     id: kingfisher.ibm.1
     pattern: |
       (?xi)
-      \b
       (?:ibm(?:cloud)?|bx)
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
-      \b
       (                             
         [0-9A-Z_-]{42,44}
       )
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
 

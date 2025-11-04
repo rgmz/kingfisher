@@ -10,9 +10,12 @@ rules:
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [a-zA-Z0-9_-]{43,45}
+        [A-Z0-9_-]{43,45}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_special_chars: 1
     confidence: medium
     min_entropy: 4.0
     validation:
@@ -42,11 +45,11 @@ rules:
     id: kingfisher.contentful.2
     pattern: |
       (?xi)
-      \b
       (
         CFPAT-[A-Z0-9_-]{43}
       )
-      \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.5
     validation:

@@ -8,6 +8,8 @@ rules:
         duffel_(?:test|live)_[a-z0-9_\-=]{43}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.2
     confidence: medium
     examples:

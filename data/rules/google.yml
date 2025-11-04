@@ -15,9 +15,12 @@ rules:
     id: kingfisher.google.2
     pattern: |
       (?xi)
-      \b
       (GOCSPX-[A-Z0-9_-]{28})
       (?:[^A-Z0-9_-] | $)
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -28,9 +31,14 @@ rules:
     pattern: |
       (?xi)
       client.?secret .{0,10}
-      \b
-      ([a-z0-9_-]{24})
+      (
+        [a-z0-9_-]{24}
+      )
       (?: [^a-z0-9_-] |$)
+    pattern_requirements:
+      min_digits: 4
+      min_uppercase: 3
+      min_lowercase: 3
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -42,9 +50,12 @@ rules:
     id: kingfisher.google.4
     pattern: |
       (?xi)
-      \b
       (ya29\.[0-9A-Z_-]{20,1024})
       (?: [^0-9A-Z_-]|$)
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -66,12 +77,10 @@ rules:
     id: kingfisher.google.6
     pattern: |
       (?xi)
-      \b
       ([0-9]+-[a-z0-9_]{32}\.apps\.googleusercontent\.com)
       (?:
         (?s).{0,40}
       )
-      \b
       (?:
         (GOCSPX-[A-Z0-9_-]{28})
         |
@@ -80,6 +89,10 @@ rules:
         )
       )
       (?:[^A-Z0-9_-] | $)
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -98,11 +111,16 @@ rules:
     id: kingfisher.google.7
     pattern: |
       (?xi)           
+      \b
       (               
         AIza          
         [A-Za-z0-9_-]{35}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     examples:

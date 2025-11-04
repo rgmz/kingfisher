@@ -8,6 +8,8 @@ rules:
         sbp_[a-z0-9_-]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:
@@ -37,8 +39,10 @@ rules:
         sb_secret_[a-z0-9_-]{31}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.0
-    confidence: high
+    confidence: medium
     validation:
       type: Http
       content:
@@ -67,9 +71,11 @@ rules:
     id: kingfisher.supabase.3
     pattern: 
       (?xi)
+      \b
       (
         https:\/\/[a-z0-9]{16,32}\.supabase\.co
       )
+      \b
     confidence: medium
     min_entropy: 3.0
     visible: false

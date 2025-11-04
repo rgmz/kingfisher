@@ -8,10 +8,16 @@ rules:
       (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,16}?
+      \b
       (                                               
         pk_live_                                  
         (?:[0-9A-Z]{6}){4,30}
-      )                                 
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     categories: [api, key]
@@ -27,12 +33,16 @@ rules:
       (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,16}?
+      \b
       (
         (?:                                           
           sk|rk                                        
         )_live_
         (?:[0-9A-Z]{8}){3,25}                    
       )
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

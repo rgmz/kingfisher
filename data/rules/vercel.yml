@@ -11,6 +11,10 @@ rules:
         [A-Z0-9]{24}
       )
       \b
+    pattern_requirements:
+      min_digits: 6
+      min_uppercase: 1
+      min_lowercase: 1
     confidence: medium
     min_entropy: 3.5
     validation:

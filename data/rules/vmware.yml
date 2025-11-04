@@ -8,7 +8,6 @@ rules:
       -User \s+ (\S{3,30}) \s+        (?# username )
       .{0,50}
       -Password \s+ (\S{3,30})        (?# password )
-
     examples:
     - 'Connect-VIServer -Server 192.168.1.51 -User administrator@vSphere.local -Password VMware1!'
     - |

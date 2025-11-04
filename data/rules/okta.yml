@@ -10,6 +10,9 @@ rules:
       (
         00[a-z0-9_-]{39}[a-z0-9_]
       )
+      \b
+    pattern_requirements:
+      min_digits: 4
     min_entropy: 3.3
     examples:
       - okta_api_token=00hqNORUpnTcdFWA5WEM4YwOkw6RXeFw21lFDRKmY1
@@ -44,7 +47,6 @@ rules:
     id: kingfisher.okta.2
     pattern: |
       (?xi)
-      \b
       (
         [a-z0-9-]{1,40}\.okta(?:preview|-emea)?\.com
       )

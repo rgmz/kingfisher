@@ -4,8 +4,12 @@ rules:
     pattern: |
       (?xi)
       \b
-      sgp_(?:[a-f0-9]{16}_local_)?[a-f0-9]{40}
+      (
+        sgp_(?:[a-f0-9]{16}_local_)?[a-f0-9]{40}
+      )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     examples:
       - sgp_210f1131b08e93adcfc3f05faa2d768ff883a61f
@@ -41,6 +45,8 @@ rules:
         (?:sgp_(?:[a-f0-9]{16}_local_)?[a-f0-9]{40}|[a-f0-9]{40})
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

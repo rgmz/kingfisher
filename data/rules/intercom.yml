@@ -7,9 +7,12 @@ rules:
       (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,16}?
+      \b
       (                               
         [0-9A-Z+/]{59}=                
       )
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
 

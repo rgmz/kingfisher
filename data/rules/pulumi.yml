@@ -8,6 +8,8 @@ rules:
         pul-[a-f0-9]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     examples:
       - pul-18e13e3eebebeb94eac318d421ca8ecc5ca78d5f

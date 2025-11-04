@@ -6,6 +6,10 @@ rules:
       https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/external/api/[A-Z0-9/]*\?token=
       ([A-Z0-9_\-]{32})
       &
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -21,6 +25,10 @@ rules:
       -H\s*"Authorization:\s*Bearer\s*
       ([A-Z0-9_\-]{40})
       "
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -35,6 +43,10 @@ rules:
       -H\s*"Authorization:\s*Bearer\s*
       ([A-Z0-9_\-]{40})
       "[\s\\]*https://(?:fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/api
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -50,6 +62,10 @@ rules:
       (oa2-client-id_[A-Z0-9_\-]{32})
       (?: : | &client_secret= )
       ([A-Z0-9_\-]{40})
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -66,6 +82,10 @@ rules:
       (oa2-client-id_[A-Z0-9_\-]{32})
       :([A-Z0-9_\-]{40})
       [\s\\]*https://(fra1\.|lon1\.|ny3\.|sgp1\.|blr1\.)*blynk\.cloud/oauth2
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:

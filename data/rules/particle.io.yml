@@ -5,9 +5,12 @@ rules:
       (?xi)
       https://api\.particle\.io/v1/[A-Z0-9_\-\s/"\\?]*
       (?:access_token=|Authorization:\s*Bearer\s*)
+      (
+        [A-Z0-9]{40}
+      )
       \b
-      ([A-Z0-9]{40})
-      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -42,7 +45,6 @@ rules:
     pattern: |
       (?xi)
       (?:access_token=|Authorization:\s*Bearer\s*)
-      \b
       ([A-Z0-9]{40})
       \b
       [\s"\\]*https://api\.particle\.io/v1

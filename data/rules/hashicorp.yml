@@ -5,16 +5,20 @@ rules:
     pattern: |
       (?x)
       (?i: hashicorp | vault | token | key | secret )
-      ["':=\ ]{0,5}
+      (?:.|[\n\r]){0,32}?
       \b
-      (s\.[A-Za-z0-9_-]{24,128})
-      (?: [^A-Za-z0-9_-] | $ )
+      (
+        s\.[A-Za-z0-9_-]{24,128}
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.0
 
     examples:
       - 'VAULT_CLIENT_TOKEN="s.Z4bTMtngfLeQ18AqVoBBkUAOD1"'
-      - '`-vaultToken s.CAESIP2jTxc9S3K7Z6CtcFWQv7-044m_oSsxkingfisher.0H3nF89l3GiYKHGh3cy5sQmlIZVNyTWJNcDRsYWJpQjlhYjVlb2cQh6PL8wEYAg"`'
+      - 'vaultToken="s.CAESIP2jTxc9S3K7Z6CtcFWQv7-044m_oS.0H3nF89l3GiYKHGh3cy5sQmlIZVNyTWJNcDRsYWJpQjlhYjVlb2cQh6PL8wEYAg"`'
 
     references:
       - https://developer.hashicorp.com/vault/docs/concepts/tokens
@@ -26,9 +30,10 @@ rules:
       (?x)
       (?i: hashicorp | vault | token | key | secret )
       ["':=\ ]{0,5}
-      \b
       (b\.[A-Za-z0-9_-]{24,500})
       (?: [^A-Za-z0-9_-] | $ )
+    pattern_requirements:
+      min_digits: 2
 
     examples:
       - 'VAULT_CLIENT_TOKEN="b.Z4bTMtngfLeQ18AqVoBBkUAOD1"'
@@ -44,9 +49,10 @@ rules:
       (?x)
       (?i: hashicorp | vault | token | key | secret )
       ["':=\ ]{0,5}
-      \b
       (r\.[A-Za-z0-9_-]{24,500})
       (?: [^A-Za-z0-9_-] | $ )
+    pattern_requirements:
+      min_digits: 2
 
     examples:
       - 'VAULT_CLIENT_TOKEN="r.Z4bTMtngfLeQ18AqVoBBkUAOD1"'
@@ -62,9 +68,10 @@ rules:
 
     pattern: |
       (?x)
-      \b
       (hvs\.[A-Za-z0-9]{24,130})
       (?: [^A-Za-z0-9_-] | $ )
+    pattern_requirements:
+      min_digits: 2
 
     examples:
       - "apikey: hvs.JGbZZaCkOSgsZ56uhGlTK2zyC1j2mwhy0VLp4"
@@ -79,9 +86,10 @@ rules:
 
     pattern: |
       (?x)
-      \b
       (hvb\.[A-Za-z0-9_-]{24,500})
       (?: [^A-Za-z0-9_-] | $ )
+    pattern_requirements:
+      min_digits: 2
 
     examples:
       - "apikey: hvb.JGbZZaCkOSgsZ56uhGlTK2zyC1j2mwhy0VLp4"
@@ -98,9 +106,10 @@ rules:
 
     pattern: |
       (?x)
-      \b
       (hvr\.[A-Za-z0-9]{24,130})
       (?: [^A-Za-z0-9_-] | $ )
+    pattern_requirements:
+      min_digits: 2
 
     examples:
       - "apikey: hvr.JGbZZaCkOSgsZ56uhGlTK2zyC1j2mwhy0VLp4"
@@ -119,9 +128,10 @@ rules:
       (?i: unseal )
       \b
       .{1,10}
-      \b
       ([a-zA-Z0-9+/]{44})
       (?: [^a-zA-Z0-9+/] | $ )
+    pattern_requirements:
+      min_digits: 2
 
     examples:
       - "Unseal Key 2: 0tZn+7QQCxphpHwTm7/dC3LpP5JGIbYl3PK8Sy81R+P2"

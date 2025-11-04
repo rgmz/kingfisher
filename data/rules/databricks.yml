@@ -2,12 +2,17 @@ rules:
   - name: Databricks API token
     id: kingfisher.databricks.1
     pattern: |
-      (?xi)          
+      (?xi)
+      \b
       (             
         dapi
         [a-f0-9]{32}
       )
-      \b            
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:

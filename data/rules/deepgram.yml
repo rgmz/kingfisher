@@ -6,11 +6,13 @@ rules:
       \b
       deepgram
       (?:.|[\n\r]){0,32}?
-      \b                 
+      \b
       (
         [0-9a-f]{40}    
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

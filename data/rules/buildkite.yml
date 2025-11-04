@@ -3,11 +3,13 @@ rules:
     id: kingfisher.buildkite.1
     pattern: |
       (?xi)
-      \b
       (
         bkua_[a-z0-9]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     examples:

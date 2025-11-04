@@ -8,6 +8,8 @@ rules:
         pat-[a-z0-9]{2,3}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.0
     validation:

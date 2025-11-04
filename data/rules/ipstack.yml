@@ -13,6 +13,8 @@ rules:
         (?:[0-9a-f]{16}){2}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.0
     confidence: medium
     examples:

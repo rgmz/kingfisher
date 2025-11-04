@@ -1,0 +1,24 @@
+rules:
+  - name: Secure API Key with Character Requirements
+    id: test.char_requirements.1
+    pattern: |
+      (?xi)
+      api[_-]?key
+      (?:.|[\n\r]){0,32}?
+      \b
+      ([A-Za-z0-9!@#$%^&*]{16,})
+      \b
+    min_entropy: 3.0
+    confidence: high
+    pattern_requirements:
+      min_digits: 1
+      min_uppercase: 1
+      min_lowercase: 1
+      min_special_chars: 1
+    examples:
+      - api_key = "Abc123!SecureToken"
+      - api-key: "MyK3y!WithSpecial"
+    negative_examples:
+      - api_key = "abcdefghijklmnop"  # no uppercase, no digit, no special
+      - api_key = "ABCDEFGHIJKLMNOP"  # no lowercase, no digit, no special
+      - api_key = "abc123defghijklm"  # no uppercase, no special

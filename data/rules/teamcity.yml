@@ -12,6 +12,8 @@ rules:
       \.
       [A-Za-z0-9_-]{48}
       )
+    pattern_requirements:
+      min_digits: 2
     examples:
       - '<add key="ClearTextPassword" value="eyJ0eXAiOiAiVENWMiJ9.RkNWLXdXS3M1RVBfencxM4A0WmJzdVlCQzFj.OGY1OWRkNGMtYTUxYS04ZDYwLWFiZGYtZWE5MWFhZWJiODhh" />'
     references:

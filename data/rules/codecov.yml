@@ -8,10 +8,13 @@ rules:
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
+      \b
       (
         [A-Z0-9-]{36}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.5
     validation:

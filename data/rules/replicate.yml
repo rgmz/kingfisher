@@ -2,13 +2,15 @@ rules:
   - name: Replicate API Token
     id: kingfisher.replicate.1
     pattern: |
-      (?x)              
-      \b
+      (?x)
+      \b        
       (                 
         r8_            
         [A-Za-z0-9]{37}
       )
       \b
+    pattern_requirements:
+      min_digits: 3
     min_entropy: 3.0
     confidence: medium
     examples:

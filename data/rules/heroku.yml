@@ -5,13 +5,15 @@ rules:
       (?xi)
       \b                                
       heroku
-      (?:.|[\n\r]){0,32}?                  
+      (?:.|[\n\r]){0,32}?
       \b
       (                                    
         [0-9a-f]{8}-[0-9a-f]{4}-         
         [0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.0
     confidence: medium
     examples:
@@ -35,10 +37,11 @@ rules:
     id: kingfisher.heroku.2
     pattern: |
       (?xi)
-      \b
       (
         HRKU-[A-Z0-9_]{60}
       )
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 4.0
     validation:

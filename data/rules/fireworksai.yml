@@ -8,6 +8,8 @@ rules:
         fw_[A-Z0-9]{24}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.5
     validation:

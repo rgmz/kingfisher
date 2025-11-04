@@ -25,7 +25,6 @@ rules:
     id: kingfisher.saucelabs.2
     pattern: |
       (?xi)
-      \b
       (
         (?:api|ondemand)\.(?:us|eu)-(?:west|east|central)-[0-9]\.saucelabs\.com
       )
@@ -47,11 +46,12 @@ rules:
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
-      \b
       (
         [a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}
       )
       \b
+    pattern_requirements:
+      min_digits: 4
     confidence: medium
     min_entropy: 3.0
     depends_on_rule:

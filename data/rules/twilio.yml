@@ -8,6 +8,9 @@ rules:
         (?:SK|AC)[A-F0-9]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+    visible: false
     min_entropy: 3.5
     examples:
       - |
@@ -31,7 +34,10 @@ rules:
       (
         [a-z0-9]{32}
       )
-      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.0
     examples:
       - Twilio_key=Cd2Bd1dE1201aE2DFFEcfeBafCc3c31D

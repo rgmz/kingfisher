@@ -8,6 +8,8 @@ rules:
         pnu_[a-z0-9]{36}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.0
     confidence: medium
     examples:

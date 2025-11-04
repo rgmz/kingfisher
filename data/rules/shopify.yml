@@ -8,6 +8,8 @@ rules:
         (?:shpat|shpca|shppa|shpss)_[a-f0-9]{30,34}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     examples:
       - 'shopify_app_secret: "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"'

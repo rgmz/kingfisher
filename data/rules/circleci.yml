@@ -20,7 +20,9 @@ rules:
         _
         [a-z0-9]{40}
       )                      
-      \b                     
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:
@@ -56,7 +58,10 @@ rules:
       (                      
         [a-f0-9]{40}
       )
-      \b            
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 2
     min_entropy: 3.3
     confidence: medium
     examples:
