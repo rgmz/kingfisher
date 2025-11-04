@@ -6,6 +6,10 @@ rules:
       (
         (?:sc|ext|scauth|authress)_[a-z0-9]{5,30}\.[a-z0-9]{4,6}\.acc[_-][a-z0-9-]{10,32}\.[a-z0-9+/_=-]{30,120}
       )
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 1
     confidence: medium
     min_entropy: 4.0
     validation:

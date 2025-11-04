@@ -8,6 +8,8 @@ rules:
         figd_[A-Z0-9_-]{38,42}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:
@@ -36,14 +38,14 @@ rules:
       (?xi)
       figma
       (?:.|[\n\r]){0,32}?
-      \b
       (
         [0-9A-F]{4}
         -[0-9A-F]{8}
         (?:-[0-9A-F]{4}){3}
         -[0-9A-F]{12}
       )
-      \b
+    pattern_requirements:
+      min_digits: 2
     examples:
       - "--header='X-Figma-Token: 1394-0ca7a5be-8e22-40ee-8c40-778d41ab2313'"
     references:

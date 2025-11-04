@@ -7,8 +7,10 @@ rules:
       (                      
         lin_api_
         (?:[0-9A-Z]{8}){5}
-      )                      
-      \b                     
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2      
     min_entropy: 3.5
     confidence: medium
     examples:

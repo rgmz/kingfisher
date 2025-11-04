@@ -1,7 +1,18 @@
 rules:
   - name: Coze Personal Access Token
     id: kingfisher.coze.1
-    pattern: '(?i)\b(pat_[a-zA-Z0-9]{64})\b'
+    pattern: |
+      (?xi)
+      \b
+      coze
+      (?:.|[\n\r]){0,32}?
+      \b
+      (
+        pat_[A-Z0-9]{64}
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 5.0
     validation:

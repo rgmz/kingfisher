@@ -3,12 +3,12 @@ rules:
     id: kingfisher.kagi.1
     pattern: |
       (?x)(?s)
-      \b
       (?: kagi | KAGI )
       .{0,100}
-      \b
       ( [a-zA-Z0-9_-]{11}\.[a-zA-Z0-9_-]{43} )
       (?: $ | [^a-zA-Z0-9_-] )
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.0
     references:

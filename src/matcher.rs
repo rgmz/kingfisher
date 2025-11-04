@@ -602,6 +602,18 @@ fn filter_match<'b>(
             );
             continue;
         }
+
+        // Check character requirements if specified
+        if let Some(char_reqs) = rule.pattern_requirements() {
+            if !char_reqs.validate(mi_bytes) {
+                debug!(
+                    "Skipping match that does not meet character requirements for rule {}",
+                    rule.id()
+                );
+                continue;
+            }
+        }
+
         let matching_input_offset_span = OffsetSpan::from_range(
             (start + matching_input.start())..(start + matching_input.end()),
         );
@@ -1027,6 +1039,7 @@ mod test {
                 references: vec![],
                 validation: None::<Validation>,          // no HTTP validation needed
                 depends_on_rule: vec![],
+                pattern_requirements: None,
             });
 
             let rules_db  = RulesDatabase::from_rules(vec![rule]).unwrap();
@@ -1098,6 +1111,7 @@ mod test {
                     variable: "domain".to_string(),
                 }),
             ],
+            pattern_requirements: None,
         })];
         let rules_db = RulesDatabase::from_rules(rules)?;
         let input = "some test data for vectorscan";
@@ -1197,6 +1211,7 @@ mod test {
             references: vec![],
             validation: None::<Validation>,
             depends_on_rule: vec![],
+            pattern_requirements: None,
         });
 
         let rules_db = RulesDatabase::from_rules(vec![rule])?;
@@ -1234,6 +1249,7 @@ mod test {
             references: vec![],
             validation: None::<Validation>,
             depends_on_rule: vec![],
+            pattern_requirements: None,
         });
         let rules_db = RulesDatabase::from_rules(vec![rule])?;
         let seen = BlobIdMap::new();
@@ -1266,6 +1282,7 @@ mod test {
             references: vec![],
             validation: None::<Validation>,
             depends_on_rule: vec![],
+            pattern_requirements: None,
         });
         let rules_db = RulesDatabase::from_rules(vec![rule])?;
         let seen = BlobIdMap::new();
@@ -1306,6 +1323,7 @@ line2
             references: vec![],
             validation: None::<Validation>,
             depends_on_rule: vec![],
+            pattern_requirements: None,
         });
         let rules_db = RulesDatabase::from_rules(vec![rule])?;
 

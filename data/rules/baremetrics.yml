@@ -10,7 +10,9 @@ rules:
       (
         [a-z0-9_-]{25}
       )
-      \b                         
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     references:

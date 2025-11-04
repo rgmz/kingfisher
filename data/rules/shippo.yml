@@ -8,6 +8,8 @@ rules:
         shippo_(?:live|test)_[a-f0-9]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

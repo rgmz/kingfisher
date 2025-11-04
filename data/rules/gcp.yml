@@ -15,6 +15,8 @@ rules:
         "auth_provider_x509_cert_url":\s*".+?"
         (?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*
       \}
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.5
     confidence: high
     examples:
@@ -48,9 +50,13 @@ rules:
       [=:]
       \s{0,8}
       ["']?
-      ([0-9a-z]{35,40})
+      (
+        [0-9a-z]{35,40}
+      )
       ["']?
-      \b                     
+      \b
+    pattern_requirements:
+      min_digits: 2             
     min_entropy: 3.5
     confidence: medium
     examples:

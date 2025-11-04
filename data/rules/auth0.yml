@@ -10,7 +10,10 @@ rules:
       (
         [a-z0-9_-]{32,60}
       )
-      \b                         
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     visible: false

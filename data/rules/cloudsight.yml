@@ -11,8 +11,10 @@ rules:
       \b                     
       (                      
         [a-z0-9]{20,24}
-      )                      
-      \b                     
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

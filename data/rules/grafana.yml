@@ -8,6 +8,8 @@ rules:
         eyJrIjoi[a-z0-9]{60,100}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -20,12 +22,15 @@ rules:
     id: kingfisher.grafana.2
     pattern: |
       (?xi)                   
-      \b                
+      \b          
       (
         glc_             
         [a-z0-9+/]{40,150}
         ={0,2}
       )
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -56,6 +61,8 @@ rules:
         glsa_[A-Z0-9]{32}_[A-F0-9]{8}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

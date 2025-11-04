@@ -8,6 +8,8 @@ rules:
         pplx-[A-Za-z0-9]{48}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.8
     confidence: medium
     examples:

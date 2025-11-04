@@ -6,10 +6,15 @@ rules:
       \b
       twitch
       (?:.|[\n\r]){0,32}?
+      \b
       (
         [a-z0-9]{30}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     examples:

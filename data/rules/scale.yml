@@ -4,11 +4,13 @@ rules:
     pattern: |
       (?x)
       \b
-      (               # capture => TOKEN
-        live_         # live-mode prefix per docs
-        [0-9a-f]{32}  # 32 lowercase hex chars
+      (
+        live_
+        [0-9a-f]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.1
     confidence: medium
     examples:
@@ -50,6 +52,8 @@ rules:
         [0-9a-f]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.1
     confidence: medium
     examples:

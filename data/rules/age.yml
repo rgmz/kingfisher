@@ -3,11 +3,14 @@ rules:
     id: kingfisher.age.1
     pattern: |
       (?xi)
-      \b
       (
         age1[0-9a-z]{58}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -21,11 +24,9 @@ rules:
     id: kingfisher.age.2
     pattern: |
       (?xi)
-      \b
       (
         AGE-SECRET-KEY-1[0-9A-Z]{58}
       )
-      \b
     min_entropy: 3.3
     confidence: medium
     examples:

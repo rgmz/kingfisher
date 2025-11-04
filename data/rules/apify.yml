@@ -3,11 +3,14 @@ rules:
     id: kingfisher.apify.1
     pattern: |
       (?xi)
-      \b
       (
         apify_api_[A-Z0-9]{34,38}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     confidence: medium
     min_entropy: 3.5
     validation:

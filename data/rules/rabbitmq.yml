@@ -3,7 +3,6 @@ rules:
     id: kingfisher.rabbitmq.1
     pattern: |
       (?xi)
-      \b
       (?:
         amqps?
       )
@@ -16,6 +15,8 @@ rules:
       @
       [-.%\w\/:]+
       \b
+    pattern_requirements:
+      min_special_chars: 1
     min_entropy: 3.5
     confidence: medium
     examples:

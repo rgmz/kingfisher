@@ -2,7 +2,8 @@ rules:
   - name: Jenkins Token or Crumb
     id: kingfisher.jenkins.1
     pattern: '(?i)jenkins.{0,10}(?:crumb)?.{0,10}\b([0-9a-f]{32,36})\b'
-    categories: [api, fuzzy, secret]
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -17,8 +18,6 @@ rules:
         export JENKINS=jenkins-cicd.apps.sno.openshiftlabs.net
       - |
         sh "curl -X POST 'http://jenkins.lsfusion.luxsoft.by/job/${Paths.updateParentVersionsJob}/build' --user ${USERPASS} -H 'Jenkins-Crumb:440561953171ba44ace9740562d172bb'"
-    negative_examples:
-      - '1. ~~Does not play well with [Build Token Root Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Build+Token+Root+Plugin) URL formats.~~ (added with [this commit](https://github.com/morficus/Parameterized-Remote-Trigger-Plugin/commit/f687dbe75d1c4f39f7e14b68220890384d7c5674)  )'
     references:
       - https://www.jenkins.io/blog/2018/07/02/new-api-token-system/
       - https://www.jenkins.io/doc/book/security/csrf-protection/

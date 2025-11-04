@@ -6,8 +6,10 @@ rules:
       \b
       (
         sk-[a-f0-9]{32}
-      )                   
+      )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.7
     confidence: medium
     examples:

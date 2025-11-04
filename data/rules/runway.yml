@@ -2,13 +2,15 @@ rules:
   - name: Runway API Key
     id: kingfisher.runway.1
     pattern: |          
-      (?x)             
+      (?x)
       \b
       (               
         key_    
         [A-Fa-f0-9]{128} 
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.0
     confidence: medium
     examples:

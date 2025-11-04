@@ -4,11 +4,12 @@ rules:
     pattern: |
       (?xi)
       \b
-      sl\.
       (
-        [A-Z0-9\-\_]{130,152}
+        sl\.[A-Z0-9\-\_]{130,152}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

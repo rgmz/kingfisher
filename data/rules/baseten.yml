@@ -13,6 +13,10 @@ rules:
         [A-Za-z0-9]{32}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.4
     confidence: medium
     examples:

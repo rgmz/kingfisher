@@ -10,6 +10,8 @@ rules:
       (?: id | identifier | key )
       .{0,2} \s{0,20} .{0,2} \s{0,20} .{0,2}
       \b ([a-z0-9]{12,14}) \b
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://docs.microsoft.com/en-us/linkedin/shared/api-guide/best-practices/secure-applications
     min_entropy: 2.5
@@ -44,6 +46,8 @@ rules:
       (?: key | oauth | sec | secret )?
       .{0,2} \s{0,20} .{0,2} \s{0,20} .{0,2}
       \b ([a-z0-9]{16}) \b
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://docs.microsoft.com/en-us/linkedin/shared/api-guide/best-practices/secure-applications
     min_entropy: 3.3

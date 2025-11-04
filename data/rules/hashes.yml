@@ -7,6 +7,8 @@ rules:
       - https://unix.stackexchange.com/a/511017
       - https://hashcat.net/wiki/doku.php?id=example_hashes
       - https://passwordvillage.org/salted.html#md5crypt
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples: # generated with `openssl passwd -1 -salt 'OKgLCmVl' 'a'`
@@ -38,6 +40,8 @@ rules:
       \$ [./A-Za-z0-9]{8,16}
       \$ [./A-Za-z0-9]{43}
       )
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://en.wikipedia.org/wiki/Crypt_(C)#Key_derivation_functions_supported_by_crypt
       - https://hashcat.net/wiki/doku.php?id=example_hashes
@@ -58,6 +62,8 @@ rules:
       \$ [./A-Za-z0-9]{8,16}
       \$ [./A-Za-z0-9]{86}
       )
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://en.wikipedia.org/wiki/Crypt_(C)#Key_derivation_functions_supported_by_crypt
       - https://hashcat.net/wiki/doku.php?id=example_hashes
@@ -76,6 +82,8 @@ rules:
       \$ [./A-Za-z0-9]{8,16}
       \$ [./A-Za-z0-9]{43}
       )
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://en.wikipedia.org/wiki/Crypt_(C)#Key_derivation_functions_supported_by_crypt
       - https://hashcat.net/wiki/doku.php?id=example_hashes
@@ -96,7 +104,8 @@ rules:
       [0-9a-f]{32}
       \$ [0-9a-f]{64,}
       )
-      \b
+    pattern_requirements:
+      min_digits: 2
     references:
       - https://hashcat.net/wiki/doku.php?id=example_hashes
     min_entropy: 3.3

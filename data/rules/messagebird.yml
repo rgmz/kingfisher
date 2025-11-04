@@ -6,10 +6,13 @@ rules:
       \b
       message[_-]?bird
       (?:.|[\n\r]){0,32}?
+      \b
       (
         [a-z0-9]{25}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.4
     confidence: medium
     examples:

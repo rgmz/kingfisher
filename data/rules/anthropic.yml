@@ -10,15 +10,16 @@ rules:
         -
         [\w\-]{93}
         AA
-      )                        
-      \b                       
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1    
     min_entropy: 3.3
     confidence: medium
     examples:
       - sk-ant-api668-Clm512odot9WDD7itfUU9R880nefA1EtYZDbpE-C9b0XQEWpqFKf9DQUo03vOfXl16oSmyar1CLF1SzV3YzpZJ6bahcpLAA
-    categories:
-      - api
-      - secret
     references:
       - https://docs.anthropic.com/claude/reference/authentication
     validation:

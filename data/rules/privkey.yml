@@ -22,6 +22,8 @@ rules:
       PRIVATE\sKEY
       (\sBLOCK)?
       -----
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.5
     confidence: high
     examples:
@@ -73,7 +75,11 @@ rules:
         PRIVATE\sKEY
         (\sBLOCK)?
         -----
-      )                       
+      )
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 4.5
     confidence: high
     examples:

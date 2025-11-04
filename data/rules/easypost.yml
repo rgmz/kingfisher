@@ -6,9 +6,11 @@ rules:
       \b
       (
         EZ[AT]K
-        [A-Za-z0-9]{54}
+        [A-Z0-9]{54}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

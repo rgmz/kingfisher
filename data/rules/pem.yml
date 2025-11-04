@@ -8,6 +8,8 @@ rules:
       ( (?: [a-zA-Z0-9+/=\s"',] | \\r | \\n ) {50,} )
       \s*
       -----END\ .{0,20}\ ?PRIVATE\ KEY\ ?.{0,20}-----
+    pattern_requirements:
+      min_digits: 4
     min_entropy: 4.5
     confidence: high
     examples:
@@ -60,6 +62,8 @@ rules:
         [a-zA-Z0-9+/=]{50,}
       )
       (?: [^a-zA-Z0-9+/=] | $ )
+    pattern_requirements:
+      min_digits: 4
     min_entropy: 4.5
     confidence: high
     examples:

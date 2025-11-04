@@ -4,8 +4,12 @@ rules:
     pattern: |
       (?xi)
       \b
-      (dp\.ct\.[A-Z0-9]{40,44})
+      (
+        dp\.ct\.[A-Z0-9]{40,44}
+      )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

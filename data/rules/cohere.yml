@@ -6,10 +6,13 @@ rules:
       \b
       cohere
       (?:.|[\n\r]){0,16}?
+      \b
       (
         [A-Z0-9]{40}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

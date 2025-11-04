@@ -8,6 +8,8 @@ rules:
         sgp_[A-Z0-9_-]{60,70}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -33,7 +35,6 @@ rules:
     id: kingfisher.segment.2
     pattern: |
       (?xi)
-      \b
       (?:segment|sgmt)
       (?:.|[\n\r]){0,16}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
@@ -42,7 +43,8 @@ rules:
       (
         [A-Z0-9_-]{40,50}\.[A-Z0-9_-]{40,50}
       )
-      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

@@ -8,6 +8,8 @@ rules:
         pub-c-[a-z0-9]{8}(?:-[a-z0-9]{4}){3}-[a-z0-9]{12}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     examples:
       - pub-c-12345678-1234-1234-1234-123456789012
@@ -34,6 +36,8 @@ rules:
         sub-c-[a-z0-9]{8}(?:-[a-z0-9]{4}){3}-[a-z0-9]{12}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     confidence: medium
     examples:

@@ -8,6 +8,8 @@ rules:
         gsk_[a-zA-Z0-9]{52}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 4.5
     validation:

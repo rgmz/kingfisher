@@ -8,6 +8,10 @@ rules:
         AKC[A-Z0-9]{64,74}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     examples:

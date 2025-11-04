@@ -8,7 +8,6 @@ rules:
       -p \s* (\S+)        (?# password )
     min_entropy: 3.3
     confidence: medium
-    categories: [fuzzy, secret]
     examples:
       - 'cmd.exe /C PSEXEC \\10.0.94.120 -u Administrator -p dev_admin CMD /C ECHO'
       - 'PSEXEC.EXE \\LocalComputerIPAddress -u DOMAIN\my-user -p mypass CMD'

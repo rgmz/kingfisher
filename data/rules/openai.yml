@@ -8,6 +8,8 @@ rules:
         sk-[A-Z0-9]{48}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:
@@ -38,6 +40,8 @@ rules:
         (sk-(?:proj|svcacct|None)-[A-Z0-9_-]{100,})
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.0
     confidence: medium
     examples:

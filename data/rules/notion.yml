@@ -10,6 +10,8 @@ rules:
         secret_[A-Z0-9]{43}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.0
     confidence: medium
     examples:
@@ -38,11 +40,9 @@ rules:
       (?xi)
       notion
       (?:.|[\\n\r]){0,32}?
-      \b
       (
         ntn_[A-Z0-9]{40,55}
       )
-      \b
     min_entropy: 4.0
     confidence: medium
     references:
@@ -74,11 +74,9 @@ rules:
       (?xi)
       notion
       (?:.|[\\n\r]){0,32}?
-      \b
       (
         nrt_[A-Z0-9_]{40,55}
       )
-      \b
     min_entropy: 3.5
     confidence: medium
     examples:

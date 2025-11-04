@@ -3,7 +3,6 @@ rules:
     id: kingfisher.jwt.1
     pattern: |
       (?x)
-      \b
       (
         (?:ey|ewogIC)[A-Za-z0-9_-]{12,}  (?# header )
         \.
@@ -11,7 +10,9 @@ rules:
         \.
         [A-Za-z0-9_-]{12,}    (?# signature )
       )
-      (?:[^A-Z0-9_-]|$)   (?# this instead of a \b anchor because that doesn't play nicely with `-` )
+      (?:[^A-Z0-9_-]|$)
+    pattern_requirements:
+      min_digits: 4
     min_entropy: 3.3
     confidence: medium
     examples:

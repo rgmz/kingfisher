@@ -12,7 +12,11 @@ rules:
       (
         [a-z0-9_-]{38,42}
       )
-      \b                     
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.5
     confidence: medium
     examples:
@@ -47,8 +51,9 @@ rules:
       (
         v1\.0-[a-z0-9._-]{160,}
       )
-      ["'`]?
-      \b                     
+      \b      
+    pattern_requirements:
+      min_digits: 2               
     min_entropy: 4.5
     confidence: medium
     examples:
@@ -58,9 +63,6 @@ rules:
     references:
       - https://developers.cloudflare.com/api/keys/
       - https://developers.cloudflare.com/fundamentals/api/get-started/keys/
-    categories:
-      - api
-      - secret
     validation:
       type: Http
       content:

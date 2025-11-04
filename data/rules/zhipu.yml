@@ -10,6 +10,8 @@ rules:
         [A-Z0-9]{16}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 4.0
     examples:

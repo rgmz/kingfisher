@@ -8,6 +8,8 @@ rules:
         [a-z0-9]{6}_[a-z0-9]{29}_mmk
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.8
     confidence: medium
     examples:
@@ -42,11 +44,9 @@ rules:
       (?:.|[\n\r]){0,10}?
       (?:id|number)
       (?:.|[\n\r]){0,16}?
-      \b
       (
         \d{4,8}
       )
-      \b
     min_entropy: 2.0
     confidence: medium
     visible: false

@@ -8,6 +8,8 @@ rules:
         nvapi-[A-Z0-9_-]{60,70}
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.5
     examples:

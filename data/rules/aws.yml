@@ -3,12 +3,14 @@ rules:
     id: kingfisher.aws.1
     pattern: |
       (?xi)             
-      \b                  
+      \b
       (
         (?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
         [2-7A-Z]{16}
       )
-      \b                  
+      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.2
     visible: false
     confidence: medium
@@ -37,6 +39,8 @@ rules:
         ([A-Za-z0-9/+]{40})
         \b
       )
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 4.5
     confidence: medium
     examples:
@@ -60,6 +64,8 @@ rules:
   - name: AWS Session Token
     id: kingfisher.aws.4
     pattern: '(?i)(?:aws.?session|aws.?session.?token|aws.?token)["''`]?\s{0,30}(?::|=>|=)\s{0,30}["''`]?([a-z0-9/+=]{16,200})[^a-z0-9/+=]'
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

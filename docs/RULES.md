@@ -38,6 +38,13 @@ rules:
       - rule_id: kingfisher.aws.id
         variable: AKID              # referenced as {{ AKID }}
 
+    pattern_requirements:         # (optional) character type requirements
+      min_digits: 1                 # require at least 1 digit
+      min_uppercase: 1              # require at least 1 uppercase letter
+      min_lowercase: 1              # require at least 1 lowercase letter
+      min_special_chars: 1          # require at least 1 special character
+      special_chars: "!@#$%^&*()"   # optional: custom special character set
+
     validation:                     # (optional) live validation
       type: Http
       content:
@@ -61,17 +68,18 @@ rules:
             - type: JsonValid
 ```
 
-| Field             | What it does                                                         |
-| ----------------- | -------------------------------------------------------------------- |
-| name              | Friendly name shown in reports                                       |
-| id                | Unique text ID (namespace.v#) used internally                        |
-| pattern           | Regex used to spot secrets (free‑spacing & flags allowed)            |
-| min_entropy       | Threshold to guard against low‑complexity false positives            |
-| confidence        | Suggests severity: low → high                                        |
-| examples          | Good matches; used for testing                                       |
-| visible           | false to hide non‑secret captures (e.g. IDs)                         |
-| depends_on_rule   | Chain rules: use captures from one rule in another’s validation      |
-| validation        | Configure HTTP, AWS, GCP, etc. checks to verify live validity        |
+| Field                   | What it does                                                         |
+| ----------------------- | -------------------------------------------------------------------- |
+| name                    | Friendly name shown in reports                                       |
+| id                      | Unique text ID (namespace.v#) used internally                        |
+| pattern                 | Regex used to spot secrets (free‑spacing & flags allowed)            |
+| min_entropy             | Threshold to guard against low‑complexity false positives            |
+| confidence              | Suggests severity: low → high                                        |
+| examples                | Good matches; used for testing                                       |
+| visible                 | false to hide non‑secret captures (e.g. IDs)                         |
+| depends_on_rule         | Chain rules: use captures from one rule in another's validation      |
+| pattern_requirements  | Require specific character types (digits, uppercase, lowercase, special) |
+| validation              | Configure HTTP, AWS, GCP, etc. checks to verify live validity        |
 
 
 *responser_matcher* variants. Multiple can be used
@@ -236,6 +244,89 @@ The `visible: false` property tells Kingfisher to hide the finding from the fina
 For example, a rule might match a username, an email address, an AWS Access Key ID, or an Application ID. While these pieces of information are captured during scanning, they are not secrets on their own. Instead, they are used by other rules—via the `depends_on_rule` mechanism—to validate an associated secret. By marking such rules as `visible: false`, you prevent these non-secret findings from cluttering your report, yet their values remain available for dependent rules.
 
 `visible: false` helps keep the scan output focused on actual secrets while still capturing important contextual data needed for comprehensive validation.
+
+## Character Requirements
+
+The `pattern_requirements` field allows you to specify data type requirements for matched secrets. This is particularly useful when:
+
+- Your regex pattern must be permissive (due to Hyperscan limitations)
+- You want to enforce password complexity requirements
+- You need to filter out low-quality matches that lack certain character types
+
+Kingfisher's regex engine (Hyperscan) does not support lookahead assertions like `(?=.*\d)` to require specific character types. Instead, use the `pattern_requirements` field to filter matches post-detection.
+
+### Available Requirements
+
+```yaml
+pattern_requirements:
+  min_digits: 1              # Require at least 1 digit (0-9)
+  min_uppercase: 1           # Require at least 1 uppercase letter (A-Z)
+  min_lowercase: 1           # Require at least 1 lowercase letter (a-z)
+  min_special_chars: 1       # Require at least 1 special character
+  special_chars: "!@#$%^&*"  # Optional: define which characters are "special"
+```
+
+All fields are optional. If `special_chars` is not specified, the default set includes: `!@#$%^&*()_+-=[]{}|;:'",.<>?/\`~`
+
+### Example: Secure API Key
+
+```yaml
+rules:
+  - name: Secure API Key
+    id: custom.secure_api.1
+    pattern: |
+      (?xi)
+      api[_-]?key
+      (?:.|[\n\r]){0,32}?
+      \b
+      ([A-Za-z0-9!@#$%^&*]{20,})
+      \b
+    min_entropy: 4.0
+    confidence: high
+    pattern_requirements:
+      min_digits: 1           # Must contain at least 1 digit
+      min_uppercase: 1        # Must contain at least 1 uppercase letter
+      min_lowercase: 1        # Must contain at least 1 lowercase letter
+      min_special_chars: 1    # Must contain at least 1 special character
+    examples:
+      - api_key = "MyS3cur3K3y!2024"
+      - api-key: "Abc123!@#Token"
+```
+
+In this example:
+- The regex pattern is permissive: `[A-Za-z0-9!@#$%^&*]{20,}` matches any combination of those characters
+- The `pattern_requirements` filters out matches that don't have at least one of each required type
+- A match like `"abcdefghijklmnopqrst"` would be rejected (no uppercase, no digit, no special)
+- A match like `"Abc123!SecureToken"` would be accepted (has all required types)
+
+### Example: Custom Special Characters
+
+```yaml
+rules:
+  - name: Token with Custom Special Chars
+    id: custom.token.1
+    pattern: |
+      (?xi)
+      token
+      (?:.|[\n\r]){0,16}?
+      \b([A-Za-z0-9$%^]{16,})\b
+    min_entropy: 3.5
+    confidence: medium
+    pattern_requirements:
+      min_special_chars: 2
+      special_chars: "$%^"    # Only these characters count as "special"
+    examples:
+      - token = "abc$%defgh123456"
+```
+
+### How It Works
+
+1. Hyperscan regex matches a pattern in the input
+2. Entropy check filters low-complexity matches (if `min_entropy` is set)
+3. **Character requirements check filters matches that don't meet the criteria**
+4. Validation checks verify the secret is live (if `validation` is configured)
+
+Matches that fail the character requirements check are silently dropped with a debug log message.
 
 
 ## Writing Custom Rules

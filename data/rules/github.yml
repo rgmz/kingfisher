@@ -18,6 +18,9 @@ rules:
         )
       )                        
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_lowercase: 2
     min_entropy: 3.5
     examples:
       - "GITHUB_KEY=ghp_XIxB7KMNdAr3zqWtQqhE94qglHqOzn1D1stg"
@@ -57,8 +60,9 @@ rules:
       (                        
         gho_
         [A-Z0-9]{36}
-      )                        
-      \b                       
+      )
+    pattern_requirements:
+      min_digits: 2                 
     min_entropy: 3.5
     confidence: medium
     examples:
@@ -90,11 +94,9 @@ rules:
     id: kingfisher.github.3
     pattern: |
       (?xi)
-      \b
       (
         (?:ghu|ghs)_[A-Z0-9]{36}
       )
-      \b
     examples:
       - '            "token": "ghu_16C7e42F292c69C2E7C10c838347Ae178B4a",'
       - |
@@ -126,11 +128,9 @@ rules:
     id: kingfisher.github.4
     pattern: |
       (?xi)
-      \b
       (
         ghr_[A-Z0-9]{76}
       )
-      \b
     examples:
       - '    "refresh_token": "ghr_1B4a2e77838347a7E420ce178F2E7c6912E169246c3CE1ccbF66C46812d16D5B1A9Dc86A1498",'
     references:
@@ -210,11 +210,9 @@ rules:
     id: kingfisher.github.7
     pattern: |
       (?xi)
-      \b
       (
         github_pat_[0-9A-Z_]{82}
       )
-      \b
     examples:
       - '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'
     validation:

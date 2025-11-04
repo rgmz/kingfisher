@@ -11,8 +11,10 @@ rules:
       \b                     
       (                      
         \d{15}
-      )                      
-      \b                     
+      )
+      \b
+    pattern_requirements:
+      min_digits: 15     
     min_entropy: 2.0
     visible: false
     confidence: medium
@@ -37,6 +39,8 @@ rules:
       - "    var fbApiKey = '0278fc1adf6dc1d82a156f306ce2c5cc';"
       - '     fbApiKey:            "171e84fd57f430fc59afa8fad3dbda2a",'
       - '"facebook appSecret = "ce3f9f0362bbe5ab01dfc8ee565e4372"'
+    pattern_requirements:
+      min_digits: 2
     validation:
       type: Http
       content:
@@ -69,9 +73,12 @@ rules:
         (?:access_token|access[\s-]token)
         (?:.|[\n\r]){0,32}?
       )?
+      (
+        EAACEdEose0cBA[A-Z0-9]{20,}
+      )
       \b
-      (EAACEdEose0cBA[A-Z0-9]{20,})
-      \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.3
     confidence: medium
     examples:

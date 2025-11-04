@@ -13,6 +13,10 @@ rules:
         A{10,}[A-Za-z0-9_\-]{40,200}         
       )
       \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 4.0
     confidence: medium
     examples:
@@ -45,11 +49,9 @@ rules:
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
-      \b
       (
         [A-Z0-9]{25}
       )
-      \b
     min_entropy: 3.5
     visible: false
     examples:
@@ -63,11 +65,9 @@ rules:
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
-      \b
       (
         [A-Z0-9]{50}
       )
-      \b
     min_entropy: 4.5
     examples:
       - "TWITTER_SECRET=ZGwXeK2DNCqv49Z9ofwYdqlBgeoHDyh8uoAgHju6OeYC7wTQJq"

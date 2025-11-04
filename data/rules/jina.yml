@@ -4,8 +4,12 @@ rules:
     pattern: |
       (?x)
       \b
-      (jina_[a-zA-Z0-9]{60})
+      (
+        jina_[a-zA-Z0-9]{60}
+      )
       \b
+    pattern_requirements:
+      min_digits: 2
     confidence: medium
     min_entropy: 3.0
     examples:

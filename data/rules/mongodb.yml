@@ -11,6 +11,7 @@ rules:
       .{0,1000}?
       (?:private|priv|secret|auth|pass|key)
       (?:.|[\n\r]){0,32}?
+      \b
       (                        
         [a-fA-F0-9]{8}
         -
@@ -21,7 +22,12 @@ rules:
         [a-fA-F0-9]{4}
         -
         [a-fA-F0-9]{12}
-      )                        
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.7
     examples:
       - ATLAS_PRIVATE_KEY=4b18315e-6b7d-4337-b449-5d38f5a189ec
@@ -90,7 +96,6 @@ rules:
       (
         mdb_sa_sk_[0-9A-Z_-]{6}[0-9A-Z]{34}
       )
-      \b
     min_entropy: 3.5
     examples:
       - mdb_sa_sk_BdIX_jLzut2WTgglKzKvSgWMDDj5hEoTqdwOyLOL

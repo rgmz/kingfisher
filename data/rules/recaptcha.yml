@@ -9,6 +9,9 @@ rules:
       (
         6l[c-f][a-z0-9_-].{36}
       )
+      \b
+    pattern_requirements:
+      min_digits: 3
     min_entropy: 3
     confidence: medium
     examples:

@@ -2,7 +2,7 @@ rules:
   - name: Salesforce Access / Refresh Token
     id: kingfisher.salesforce.1
     pattern: |
-      (?xi)                
+      (?xi)
       \b
       (                     
         00
@@ -10,6 +10,8 @@ rules:
         !
         [A-Z0-9._-]{90,120}
       )
+    pattern_requirements:
+      min_digits: 6
     min_entropy: 3.3
     confidence: medium
     examples:

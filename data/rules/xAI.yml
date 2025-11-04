@@ -6,8 +6,10 @@ rules:
       \b
       (
         xai-[A-Za-z0-9_-]{70,120}
-      )         
+      )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.8
     confidence: medium
     examples:

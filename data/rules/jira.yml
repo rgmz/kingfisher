@@ -2,11 +2,14 @@ rules:
   - name: Jira Domain
     id: kingfisher.jira.1
     pattern: |
-      (?xi)                   
+      (?xi)    
+      \b               
       (
         [a-z][a-z0-9-]{5,24}\.atlassian\.net
       )
       \b
+    pattern_requirements:
+      min_digits: 2
     min_entropy: 3.5
     visible: false
     confidence: medium
@@ -26,8 +29,12 @@ rules:
       \b                     
       (                      
         [a-z0-9-]{24}
-      )                      
-      \b                     
+      )
+      \b
+    pattern_requirements:
+      min_digits: 2
+      min_uppercase: 1
+      min_lowercase: 1
     min_entropy: 3.3
     confidence: medium
     examples:

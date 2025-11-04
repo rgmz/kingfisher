@@ -147,6 +147,7 @@ mod tests {
             references: vec![],
             validation: None,
             depends_on_rule: vec![],
+            pattern_requirements: None,
         }))
     }
 
