@@ -1083,6 +1083,8 @@ kingfisher scan /path/to/code \
   --baseline-file ./baseline-file.yml
 ```
 
+`--manage-baseline` automatically enables `--no-dedup` so the baseline captures every individual occurrence.
+
 Use the same YAML file with the `--baseline-file` option on future scans to hide all recorded findings:
 
 ```bash
@@ -1159,7 +1161,7 @@ leaves the default unchanged.
 - `--redact`: Replaces discovered secrets with a one-way hash for secure output
 - `--exclude <PATTERN>`: Skip any file or directory whose path matches this glob pattern (repeatable, uses gitignore-style syntax, case sensitive)
 - `--baseline-file <FILE>`: Ignore matches listed in a baseline YAML file
-- `--manage-baseline`: Create or update the baseline file with current findings
+- `--manage-baseline`: Create or update the baseline file with current findings (automatically enables `--no-dedup`)
 - `--skip-regex <PATTERN>`: Ignore findings whose text matches this regex (repeatable)
 - `--skip-word <WORD>`: Ignore findings containing this case-insensitive word (repeatable)
 - `--skip-aws-account <ACCOUNT_ID>`: Skip live AWS validation for findings tied to the specified AWS account number (repeatable, accepts comma-separated lists)

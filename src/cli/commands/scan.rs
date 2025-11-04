@@ -416,6 +416,10 @@ impl ScanCommandArgs {
             self.scan_args.input_specifier_args.emit_deprecated_warnings();
         }
 
+        if self.scan_args.manage_baseline {
+            self.scan_args.no_dedup = true;
+        }
+
         Ok(ScanOperation::Scan(self.scan_args))
     }
 }

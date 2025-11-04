@@ -7,6 +7,39 @@ use tempfile::tempdir;
 const GH_PAT: &str = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
 
 #[test]
+fn manage_baseline_enables_no_dedup() -> anyhow::Result<()> {
+    use kingfisher::cli::{
+        commands::scan::ScanOperation,
+        global::{Command, CommandLineArgs},
+    };
+
+    let dir = tempdir()?;
+
+    let args = CommandLineArgs::try_parse_from([
+        "kingfisher",
+        "scan",
+        dir.path().to_str().unwrap(),
+        "--manage-baseline",
+        "--no-update-check",
+    ])?;
+
+    let command = match args.command {
+        Command::Scan(scan_args) => scan_args,
+        other => panic!("unexpected command parsed: {:?}", other),
+    };
+
+    let scan_args = match command.into_operation()? {
+        ScanOperation::Scan(scan_args) => scan_args,
+        op => panic!("expected scan operation, got {:?}", op),
+    };
+
+    assert!(scan_args.manage_baseline);
+    assert!(scan_args.no_dedup);
+
+    Ok(())
+}
+
+#[test]
 fn baseline_create_and_filter() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let file = dir.path().join("leak.txt");
