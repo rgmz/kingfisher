@@ -28,6 +28,7 @@ rules:
       ignore_if_contains:
         - "@localhost"
         - "@127.0.0.1"
+        - "localhost:"
     min_entropy: 3.3
     confidence: medium
     examples:

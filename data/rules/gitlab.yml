@@ -86,7 +86,7 @@ rules:
     id: kingfisher.gitlab.3
     pattern: |
       (?xi)
-      \b
+      (?:[^A-Za-z0-9/+=]|\r\n|\\n)
       (
         glptt-[0-9a-f]{40}
       )
