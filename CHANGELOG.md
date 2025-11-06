@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-- Added `pattern_requirements` for rules. Enables post-regex character-class checks (digits, uppercase, lowercase, specials) to reduce false positives without lookarounds. Provides lightweight, in-memory validation after matches, keeping patterns fast and readable.
-- Added an optional `ignore_if_contains` list to `PatternRequirements` within the Rules structure, so matches containing case-insensitive placeholder words are filtered out, with accompanying tests to cover the new behavior.
-- Updated many rules with `pattern_requirements`
-- Automatically set `--no-dedup` whenever `--manage-baseline` is supplied so baseline management retains every occurrence of a finding
+## [v1.62.0]
+- Added `pattern_requirements` checks to rules, providing lightweight post-regex character-class validation without lookarounds.
+- Added an `ignore_if_contains` option to `PatternRequirements` to drop matches containing case-insensitive placeholder words, with tests covering the new behavior.
+- Updated rules to adopt the new `pattern_requirements` support.
+- Automatically enable `--no-dedup` when `--manage-baseline` is supplied so baseline management keeps every finding.
+
 
 ## [v1.61.0]
 - Fixed local filesystem scans to keep `open_path_as_is` enabled when opening Git repositories and only disable it for diff-based scans.
