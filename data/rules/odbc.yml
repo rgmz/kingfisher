@@ -6,6 +6,10 @@ rules:
       (?: User | User\ Id | UserId | Uid) \s*=\s* ([^\s;]{3,100}) \s* ;
       [\ \t]* .{0,10} [\ \t]* 
       (?: Password | Pwd) \s*=\s* ([^\t\ ;]{3,100}) \s* (?: [;] | $)
+    pattern_requirements:
+      ignore_if_contains:
+        - "localhost"
+        - "127.0.0.1"
     min_entropy: 3.3
     confidence: medium
     examples:

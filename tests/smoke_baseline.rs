@@ -1,9 +1,9 @@
 use std::fs;
 
 use assert_cmd::Command;
+use clap::Parser;
 use predicates::prelude::*;
 use tempfile::tempdir;
-use clap::Parser;
 
 const GH_PAT: &str = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
 

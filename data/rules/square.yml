@@ -16,7 +16,7 @@ rules:
     min_entropy: 3.3
     confidence: medium
     examples:
-      - square EAAA7h9fL9zQJR8P0eAioAf9239345rDA2349bQ8edUA9FgA5JojdsF3A9f6nKLmn
+      - square EAAA7h9fL9zQJR8P0eAioAf9239345rDA2349bQ8edUA9FgA5JojdsF3A9f6nKLm
       - square EAAAvlYh9H7dZwC9ash2hrHjtlL5D2srERGK5OM6F2nvle23he3NzA60PAeFXNHj
     validation:
       type: Http

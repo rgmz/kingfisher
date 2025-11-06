@@ -72,7 +72,7 @@ pub struct PatternRequirements {
     pub special_chars: Option<String>,
     /// Words that should cause the match to be excluded when present (case-insensitive)
     #[serde(default)]
-    pub exclude_words: Option<Vec<String>>,
+    pub ignore_if_contains: Option<Vec<String>>,
 }
 
 impl PatternRequirements {
@@ -80,8 +80,13 @@ impl PatternRequirements {
     const DEFAULT_SPECIAL_CHARS: &'static str = "!@#$%^&*()_+-=[]{}|;:'\",.<>?/\\`~";
 
     /// Validates whether the given byte slice meets the character requirements.
-    /// Returns true if all requirements are met, false otherwise.
-    pub fn validate(&self, input: &[u8]) -> bool {
+    /// Returns the validation outcome, including whether the match should be ignored
+    /// due to `ignore_if_contains` entries when that behaviour is enabled.
+    pub fn validate(
+        &self,
+        input: &[u8],
+        respect_ignore_if_contains: bool,
+    ) -> PatternValidationResult {
         // Convert to string (lossy for non-UTF8)
         let s = String::from_utf8_lossy(input);
 
@@ -89,7 +94,7 @@ impl PatternRequirements {
         if let Some(min_digits) = self.min_digits {
             let digit_count = s.chars().filter(|c| c.is_ascii_digit()).count();
             if digit_count < min_digits {
-                return false;
+                return PatternValidationResult::Failed;
             }
         }
 
@@ -97,7 +102,7 @@ impl PatternRequirements {
         if let Some(min_uppercase) = self.min_uppercase {
             let uppercase_count = s.chars().filter(|c| c.is_ascii_uppercase()).count();
             if uppercase_count < min_uppercase {
-                return false;
+                return PatternValidationResult::Failed;
             }
         }
 
@@ -105,7 +110,7 @@ impl PatternRequirements {
         if let Some(min_lowercase) = self.min_lowercase {
             let lowercase_count = s.chars().filter(|c| c.is_ascii_lowercase()).count();
             if lowercase_count < min_lowercase {
-                return false;
+                return PatternValidationResult::Failed;
             }
         }
 
@@ -115,31 +120,50 @@ impl PatternRequirements {
                 self.special_chars.as_deref().unwrap_or(Self::DEFAULT_SPECIAL_CHARS);
             let special_count = s.chars().filter(|c| special_chars.contains(*c)).count();
             if special_count < min_special {
-                return false;
+                return PatternValidationResult::Failed;
             }
         }
 
-        // Check exclude words requirement
-        if let Some(exclude_words) = self.exclude_words.as_ref() {
-            let lowercase_input = s.to_lowercase();
-            if exclude_words
-                .iter()
-                .filter_map(|word| {
-                    let trimmed = word.trim();
-                    if trimmed.is_empty() {
-                        None
-                    } else {
-                        Some(trimmed.to_lowercase())
-                    }
-                })
-                .any(|word| lowercase_input.contains(&word))
-            {
-                return false;
+        // Check ignore-if-contains requirement
+        if respect_ignore_if_contains {
+            if let Some(ignore_terms) = self.ignore_if_contains.as_ref() {
+                let lowercase_input = s.to_lowercase();
+                if let Some(matched_term) = ignore_terms
+                    .iter()
+                    .filter_map(|term| {
+                        let trimmed = term.trim();
+                        if trimmed.is_empty() {
+                            None
+                        } else {
+                            Some((trimmed, trimmed.to_lowercase()))
+                        }
+                    })
+                    .find_map(|(original, lowered)| {
+                        if lowercase_input.contains(&lowered) {
+                            Some(original.to_string())
+                        } else {
+                            None
+                        }
+                    })
+                {
+                    return PatternValidationResult::IgnoredBySubstring { matched_term };
+                }
             }
         }
 
-        true
+        PatternValidationResult::Passed
     }
+}
+
+/// Result of validating [`PatternRequirements`] against a potential match.
+#[derive(Debug, PartialEq, Eq)]
+pub enum PatternValidationResult {
+    /// All requirements are satisfied and the match should be kept.
+    Passed,
+    /// Requirements were not satisfied.
+    Failed,
+    /// The match contains one of the `ignore_if_contains` substrings and should be skipped.
+    IgnoredBySubstring { matched_term: String },
 }
 
 /// Configuration for HTTP validation. This contains a request configuration
@@ -549,17 +573,17 @@ mod tests {
             min_lowercase: None,
             min_special_chars: None,
             special_chars: None,
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: has 3 digits
-        assert!(reqs.validate(b"abc123def"));
+        assert!(matches!(reqs.validate(b"abc123def", true), PatternValidationResult::Passed));
 
         // Should fail: only 1 digit
-        assert!(!reqs.validate(b"abc1def"));
+        assert!(matches!(reqs.validate(b"abc1def", true), PatternValidationResult::Failed));
 
         // Should fail: no digits
-        assert!(!reqs.validate(b"abcdef"));
+        assert!(matches!(reqs.validate(b"abcdef", true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -570,17 +594,17 @@ mod tests {
             min_lowercase: None,
             min_special_chars: None,
             special_chars: None,
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: has 3 uppercase
-        assert!(reqs.validate(b"ABCdef"));
+        assert!(matches!(reqs.validate(b"ABCdef", true), PatternValidationResult::Passed));
 
         // Should fail: only 1 uppercase
-        assert!(!reqs.validate(b"Adef"));
+        assert!(matches!(reqs.validate(b"Adef", true), PatternValidationResult::Failed));
 
         // Should fail: no uppercase
-        assert!(!reqs.validate(b"abcdef"));
+        assert!(matches!(reqs.validate(b"abcdef", true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -591,17 +615,17 @@ mod tests {
             min_lowercase: Some(2),
             min_special_chars: None,
             special_chars: None,
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: has 3 lowercase
-        assert!(reqs.validate(b"ABCdef"));
+        assert!(matches!(reqs.validate(b"ABCdef", true), PatternValidationResult::Passed));
 
         // Should fail: only 1 lowercase
-        assert!(!reqs.validate(b"ABCd"));
+        assert!(matches!(reqs.validate(b"ABCd", true), PatternValidationResult::Failed));
 
         // Should fail: no lowercase
-        assert!(!reqs.validate(b"ABC123"));
+        assert!(matches!(reqs.validate(b"ABC123", true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -612,17 +636,17 @@ mod tests {
             min_lowercase: None,
             min_special_chars: Some(2),
             special_chars: None, // uses default
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: has 2 special chars
-        assert!(reqs.validate(b"abc!@def"));
+        assert!(matches!(reqs.validate(b"abc!@def", true), PatternValidationResult::Passed));
 
         // Should fail: only 1 special char
-        assert!(!reqs.validate(b"abc!def"));
+        assert!(matches!(reqs.validate(b"abc!def", true), PatternValidationResult::Failed));
 
         // Should fail: no special chars
-        assert!(!reqs.validate(b"abcdef"));
+        assert!(matches!(reqs.validate(b"abcdef", true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -633,17 +657,17 @@ mod tests {
             min_lowercase: None,
             min_special_chars: Some(2),
             special_chars: Some("$%^".to_string()),
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: has 2 custom special chars
-        assert!(reqs.validate(b"abc$%def"));
+        assert!(matches!(reqs.validate(b"abc$%def", true), PatternValidationResult::Passed));
 
         // Should fail: has special chars but not the custom ones
-        assert!(!reqs.validate(b"abc!@def"));
+        assert!(matches!(reqs.validate(b"abc!@def", true), PatternValidationResult::Failed));
 
         // Should fail: only 1 custom special char
-        assert!(!reqs.validate(b"abc$def"));
+        assert!(matches!(reqs.validate(b"abc$def", true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -654,60 +678,90 @@ mod tests {
             min_lowercase: Some(1),
             min_special_chars: Some(1),
             special_chars: None,
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: has all requirements
-        assert!(reqs.validate(b"Abc1!"));
+        assert!(matches!(reqs.validate(b"Abc1!", true), PatternValidationResult::Passed));
 
         // Should fail: missing digit
-        assert!(!reqs.validate(b"Abc!"));
+        assert!(matches!(reqs.validate(b"Abc!", true), PatternValidationResult::Failed));
 
         // Should fail: missing uppercase
-        assert!(!reqs.validate(b"abc1!"));
+        assert!(matches!(reqs.validate(b"abc1!", true), PatternValidationResult::Failed));
 
         // Should fail: missing lowercase
-        assert!(!reqs.validate(b"ABC1!"));
+        assert!(matches!(reqs.validate(b"ABC1!", true), PatternValidationResult::Failed));
 
         // Should fail: missing special
-        assert!(!reqs.validate(b"Abc1"));
+        assert!(matches!(reqs.validate(b"Abc1", true), PatternValidationResult::Failed));
     }
 
     #[test]
-    fn test_pattern_requirements_exclude_words() {
+    fn test_pattern_requirements_ignore_if_contains() {
         let reqs = PatternRequirements {
             min_digits: None,
             min_uppercase: None,
             min_lowercase: None,
             min_special_chars: None,
             special_chars: None,
-            exclude_words: Some(vec!["test".to_string(), "Demo".to_string()]),
+            ignore_if_contains: Some(vec!["test".to_string(), "Demo".to_string()]),
         };
 
         // Should fail: contains "test" (case-insensitive)
-        assert!(!reqs.validate(b"MyTestToken"));
+        assert!(matches!(
+            reqs.validate(b"MyTestToken", true),
+            PatternValidationResult::IgnoredBySubstring { .. }
+        ));
 
         // Should fail: contains "demo" (case-insensitive)
-        assert!(!reqs.validate(b"example-demo-value"));
+        assert!(matches!(
+            reqs.validate(b"example-demo-value", true),
+            PatternValidationResult::IgnoredBySubstring { .. }
+        ));
 
         // Should pass: does not contain excluded words
-        assert!(reqs.validate(b"example-value"));
+        assert!(matches!(reqs.validate(b"example-value", true), PatternValidationResult::Passed));
     }
 
     #[test]
-    fn test_pattern_requirements_exclude_words_ignores_empty_entries() {
+    fn test_pattern_requirements_ignore_if_contains_ignores_empty_entries() {
         let reqs = PatternRequirements {
             min_digits: None,
             min_uppercase: None,
             min_lowercase: None,
             min_special_chars: None,
             special_chars: None,
-            exclude_words: Some(vec![" ".to_string(), "".to_string(), "BLOCK".to_string()]),
+            ignore_if_contains: Some(vec![" ".to_string(), "".to_string(), "BLOCK".to_string()]),
         };
 
         // Should fail only when non-empty exclusion matches
-        assert!(!reqs.validate(b"needs-blocking"));
-        assert!(reqs.validate(b"allowed"));
+        assert!(matches!(
+            reqs.validate(b"needs-blocking", true),
+            PatternValidationResult::IgnoredBySubstring { .. }
+        ));
+        assert!(matches!(reqs.validate(b"allowed", true), PatternValidationResult::Passed));
+    }
+
+    #[test]
+    fn test_pattern_requirements_ignore_if_contains_can_be_disabled() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: None,
+            min_lowercase: None,
+            min_special_chars: None,
+            special_chars: None,
+            ignore_if_contains: Some(vec!["ignoreme".to_string()]),
+        };
+
+        // With ignoring enabled, the match is skipped
+        assert!(matches!(
+            reqs.validate(b"value-ignoreme", true),
+            PatternValidationResult::IgnoredBySubstring { .. }
+        ));
+
+        // With ignoring disabled, the same input passes requirements
+        assert!(matches!(reqs.validate(b"value-ignoreme", false), PatternValidationResult::Passed));
     }
 
     #[test]
@@ -718,12 +772,12 @@ mod tests {
             min_lowercase: None,
             min_special_chars: None,
             special_chars: None,
-            exclude_words: None,
+            ignore_if_contains: None,
         };
 
         // Should pass: no requirements
-        assert!(reqs.validate(b"anything"));
-        assert!(reqs.validate(b"123"));
-        assert!(reqs.validate(b"!@#"));
+        assert!(matches!(reqs.validate(b"anything", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"123", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"!@#", true), PatternValidationResult::Passed));
     }
 }

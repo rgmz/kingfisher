@@ -50,7 +50,7 @@ rules:
     confidence: medium
     examples:
       - sntrys_eyJpYXQiOjE2OTA4ODAwMDAsInJlZ2lvbl91cmwiOiJodHRwczovL3NlbnRyeS5pby9vcmdzL215LW9yZy8ifQ==_abcdefghijklmnopqrstuvwx1234567890abcdefabc
-      - sntrys_eyJpYXQiOiIxNjkwODgwMDAwIiwicmVnaW9uX3VybCI6Imh0dHBzOi8vc2VudHJ5LmlvLyJ9_abcdABCD1234567890abcdABCD1234567890abcdABCD
+      - sntrys_eyJpYXQiOiIxNjkwODgwMDAwIiwicmVnaW9uX3VybCI6Imh0dHBzOi8vc2VudHJ5LmlvLyJ9_abcdABCD1234567890abcdABCD1234567890abcdABC
     references:
       - https://docs.sentry.io/api/auth/
     validation:

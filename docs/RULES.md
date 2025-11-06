@@ -44,7 +44,7 @@ rules:
       min_lowercase: 1              # require at least 1 lowercase letter
       min_special_chars: 1          # require at least 1 special character
       special_chars: "!@#$%^&*()"   # optional: custom special character set
-      exclude_words:                # optional: drop matches containing these words
+      ignore_if_contains:                # optional: drop matches containing these words
         - test
 
     validation:                     # (optional) live validation
@@ -266,14 +266,16 @@ pattern_requirements:
   min_lowercase: 1           # Require at least 1 lowercase letter (a-z)
   min_special_chars: 1       # Require at least 1 special character
   special_chars: "!@#$%^&*"  # Optional: define which characters are "special"
-  exclude_words:             # Optional: reject matches containing any of these (case-insensitive)
+  ignore_if_contains:             # Optional: reject matches containing any of these (case-insensitive)
     - test
     - demo
 ```
 
 All fields are optional. If `special_chars` is not specified, the default set includes: `!@#$%^&*()_+-=[]{}|;:'",.<>?/\`~`
 
-`exclude_words` performs a case-insensitive substring check. If any entry (after trimming whitespace) appears within the match, the match is discarded. This is helpful for dropping known dummy tokens such as "test" or "demo" that otherwise satisfy the regex.
+`ignore_if_contains` performs a case-insensitive substring check. If any entry (after trimming whitespace) appears within the match, the match is discarded. This is helpful for dropping known dummy tokens such as "test" or "demo" that otherwise satisfy the regex.
+
+When this filter removes a match it is logged at the `DEBUG` level so you can see exactly which substring caused the skip. If you need to keep every match even when one of these substrings appears, pass `--no-ignore-if-contains` to `kingfisher scan`. The flag disables this post-processing step without changing the rule definitions.
 
 ### Example: Secure API Key
 
@@ -295,7 +297,7 @@ rules:
       min_uppercase: 1        # Must contain at least 1 uppercase letter
       min_lowercase: 1        # Must contain at least 1 lowercase letter
       min_special_chars: 1    # Must contain at least 1 special character
-      exclude_words:
+      ignore_if_contains:
         - test
     examples:
       - api_key = "MyS3cur3K3y!2024"
@@ -307,7 +309,7 @@ In this example:
 - The `pattern_requirements` filters out matches that don't have at least one of each required type
 - A match like `"abcdefghijklmnopqrst"` would be rejected (no uppercase, no digit, no special)
 - A match like `"Abc123!SecureToken"` would be accepted (has all required types)
-- A match like `"Test123!SecureToken"` would be rejected because it contains the excluded word `test`
+- A match like `"Test123!SecureToken"` would be rejected because it contains the `ignore_if_contains` term `test`
 
 ### Example: Excluding Dummy Values
 
@@ -318,13 +320,13 @@ rules:
     pattern: |-
       (?i)token[:=]\s*([A-Za-z0-9]{12,})
     pattern_requirements:
-      exclude_words:
+      ignore_if_contains:
         - placeholder
         - sample
     examples:
       - token: "REALVALUE1234"
     negative_examples:
-      - token = "SAMPLETOKEN9999"  # dropped by exclude_words
+      - token = "SAMPLETOKEN9999"  # dropped by ignore_if_contains
 ```
 
 ### Example: Custom Special Characters

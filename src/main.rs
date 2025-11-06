@@ -446,6 +446,7 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         output_args: OutputArgs { output: None, format: ReportOutputFormat::Pretty },
         no_base64: false,
         no_inline_ignore: false,
+        no_ignore_if_contains: false,
     }
 }
 /// Run the rules check command

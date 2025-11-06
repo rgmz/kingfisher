@@ -168,6 +168,7 @@ rules:
         no_base64: false,
         extra_ignore_comments: Vec::new(),
         no_inline_ignore: false,
+        no_ignore_if_contains: false,
     };
 
     let global_args = GlobalArgs {

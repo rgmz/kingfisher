@@ -18,7 +18,7 @@ rules:
 
     examples:
       - "intercom_access_token: dG9rOvI0NmJlMTA5XzQwM2NfNDVlM184MjQzXzkwMDnmOTE1NGIyONoxOjA="
-      - ic_token = "g1ZsclJXTjNfc1pBSzJDemE0eFVDU0U5c25CeDN4Vm9hQ2Zac0hXemZHNGVDPQ=="
+      - ic_token = "g1ZsclJXTjNfc1pBSzJDemE0eFVDU0U5c25CeDN4Vm9hQ2Zac0hXemZHNPQ=="
 
     references:
       - https://developers.intercom.com/docs/build-an-integration/learn-more/rest-apis

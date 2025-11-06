@@ -144,6 +144,10 @@ pub struct ScanArgs {
     /// Disable inline ignore directives entirely
     #[arg(long = "no-ignore", default_value_t = false)]
     pub no_inline_ignore: bool,
+
+    /// Disable rule-level `ignore_if_contains` filtering for pattern requirements
+    #[arg(long = "no-ignore-if-contains", default_value_t = false)]
+    pub no_ignore_if_contains: bool,
 }
 
 /// Confidence levels for findings

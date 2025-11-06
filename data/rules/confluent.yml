@@ -32,12 +32,12 @@ rules:
       (
         [A-Z0-9\+/]{64}
       )
-      \b
+      (?:[^A-Za-z0-9/+=]|$)
     min_entropy: 3.3
     confidence: medium
     examples:
       - confluent secret=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ab
-      - kafka_token=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCD
+      - kafka_token=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzAB
     references:
       - https://docs.confluent.io/cloud/current/api.html#tag/API-Keys-(iamv2)/operation/getIamV2ApiKey
     validation:

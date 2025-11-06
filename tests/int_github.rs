@@ -155,6 +155,7 @@ fn test_github_remote_scan() -> Result<()> {
         no_base64: false,
         extra_ignore_comments: Vec::new(),
         no_inline_ignore: false,
+        no_ignore_if_contains: false,
     };
     // Create global arguments
     let global_args = GlobalArgs {

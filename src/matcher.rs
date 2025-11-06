@@ -29,7 +29,7 @@ use crate::{
     parser,
     parser::{Checker, Language},
     rule_profiling::{ConcurrentRuleProfiler, RuleStats, RuleTimer},
-    rules::rule::Rule,
+    rules::rule::{PatternValidationResult, Rule},
     rules_database::RulesDatabase,
     safe_list::{is_safe_match, is_user_match},
     scanner_pool::ScannerPool,
@@ -203,6 +203,9 @@ pub struct Matcher<'a> {
 
     /// Configuration that controls inline ignore directives
     inline_ignore_config: InlineIgnoreConfig,
+
+    /// Whether matches should honour `ignore_if_contains` requirements.
+    respect_ignore_if_contains: bool,
 }
 /// This `Drop` implementation updates the `global_stats` with the local stats
 impl<'a> Drop for Matcher<'a> {
@@ -232,6 +235,7 @@ impl<'a> Matcher<'a> {
         shared_profiler: Option<Arc<ConcurrentRuleProfiler>>,
         extra_ignore_directives: &[String],
         disable_inline_ignores: bool,
+        respect_ignore_if_contains: bool,
     ) -> Result<Self> {
         // Changed: removed `with_capacity(16384)` so we don't pre-allocate a large Vec
         let raw_matches_scratch = Vec::new();
@@ -258,6 +262,7 @@ impl<'a> Matcher<'a> {
             } else {
                 InlineIgnoreConfig::new(extra_ignore_directives)
             },
+            respect_ignore_if_contains,
         })
     }
 
@@ -414,6 +419,7 @@ impl<'a> Matcher<'a> {
                 redact,
                 &filename,
                 self.profiler.as_ref(),
+                self.respect_ignore_if_contains,
                 &self.inline_ignore_config,
             );
         }
@@ -439,6 +445,7 @@ impl<'a> Matcher<'a> {
                             redact,
                             &filename,
                             self.profiler.as_ref(),
+                            self.respect_ignore_if_contains,
                             &self.inline_ignore_config,
                         );
                     }
@@ -470,6 +477,7 @@ impl<'a> Matcher<'a> {
                         redact,
                         &filename,
                         self.profiler.as_ref(),
+                        self.respect_ignore_if_contains,
                         &self.inline_ignore_config,
                     );
                 }
@@ -574,6 +582,7 @@ fn filter_match<'b>(
     redact: bool,
     filename: &str,
     profiler: Option<&Arc<ConcurrentRuleProfiler>>,
+    respect_ignore_if_contains: bool,
     inline_ignore_config: &InlineIgnoreConfig,
 ) {
     let mut timer =
@@ -605,12 +614,22 @@ fn filter_match<'b>(
 
         // Check character requirements if specified
         if let Some(char_reqs) = rule.pattern_requirements() {
-            if !char_reqs.validate(mi_bytes) {
-                debug!(
-                    "Skipping match that does not meet character requirements for rule {}",
-                    rule.id()
-                );
-                continue;
+            match char_reqs.validate(mi_bytes, respect_ignore_if_contains) {
+                PatternValidationResult::Passed => {}
+                PatternValidationResult::Failed => {
+                    debug!(
+                        "Skipping match that does not meet character requirements for rule {}",
+                        rule.id()
+                    );
+                    continue;
+                }
+                PatternValidationResult::IgnoredBySubstring { matched_term } => {
+                    debug!(
+                        "Skipping match for rule {} because it contains ignored term {matched_term}",
+                        rule.id()
+                    );
+                    continue;
+                }
             }
         }
 
@@ -1056,6 +1075,7 @@ mod test {
                 None,
                 &[],
                 false,
+                true,
             )
             .unwrap();
 
@@ -1131,6 +1151,7 @@ mod test {
             None, // Pass the shared profiler
             &[],
             false,
+            true,
         )?;
         matcher.scan_bytes_raw(input.as_bytes(), "fname")?;
         assert_eq!(
@@ -1141,7 +1162,7 @@ mod test {
     }
 
     #[test]
-    fn test_pattern_requirements_exclude_words_filters_matches() -> Result<()> {
+    fn test_pattern_requirements_ignore_if_contains_filters_matches() -> Result<()> {
         let rules = vec![Rule::new(RuleSyntax {
             id: "test.exclude".to_string(),
             name: "exclude words".to_string(),
@@ -1160,7 +1181,7 @@ mod test {
                 min_lowercase: None,
                 min_special_chars: None,
                 special_chars: None,
-                exclude_words: Some(vec!["TEST".to_string()]),
+                ignore_if_contains: Some(vec!["TEST".to_string()]),
             }),
         })];
 
@@ -1168,8 +1189,17 @@ mod test {
         let input = b"prefixgood prefixtest";
         let seen_blobs: BlobIdMap<bool> = BlobIdMap::new();
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
-        let mut matcher =
-            Matcher::new(&rules_db, scanner_pool, &seen_blobs, None, false, None, &[], false)?;
+        let mut matcher = Matcher::new(
+            &rules_db,
+            scanner_pool,
+            &seen_blobs,
+            None,
+            false,
+            None,
+            &[],
+            false,
+            true,
+        )?;
 
         let blob = Blob::from_bytes(input.to_vec());
         let origin = OriginSet::from(Origin::from_file(PathBuf::from("exclude.txt")));
@@ -1184,16 +1214,75 @@ mod test {
             }
         };
 
-        assert_eq!(matches.len(), 1, "exclude_words should drop filtered matches");
+        assert_eq!(matches.len(), 1, "ignore_if_contains should drop filtered matches");
         assert_eq!(
-            matches[0].matching_input,
-            b"prefixgood",
+            matches[0].matching_input, b"prefixgood",
             "remaining match should be the non-excluded token",
         );
 
         Ok(())
     }
 
+    #[test]
+    fn test_pattern_requirements_ignore_if_contains_can_be_disabled_in_matcher() -> Result<()> {
+        let rules = vec![Rule::new(RuleSyntax {
+            id: "test.exclude".to_string(),
+            name: "exclude words".to_string(),
+            pattern: "(?P<token>prefix[A-Za-z]+)".to_string(),
+            confidence: crate::rules::rule::Confidence::Medium,
+            min_entropy: 0.0,
+            visible: true,
+            examples: vec![],
+            negative_examples: vec![],
+            references: vec![],
+            validation: None,
+            depends_on_rule: vec![],
+            pattern_requirements: Some(PatternRequirements {
+                min_digits: None,
+                min_uppercase: None,
+                min_lowercase: None,
+                min_special_chars: None,
+                special_chars: None,
+                ignore_if_contains: Some(vec!["TEST".to_string()]),
+            }),
+        })];
+
+        let rules_db = RulesDatabase::from_rules(rules)?;
+        let input = b"prefixgood prefixtest";
+        let seen_blobs: BlobIdMap<bool> = BlobIdMap::new();
+        let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
+        let mut matcher = Matcher::new(
+            &rules_db,
+            scanner_pool,
+            &seen_blobs,
+            None,
+            false,
+            None,
+            &[],
+            false,
+            false,
+        )?;
+
+        let blob = Blob::from_bytes(input.to_vec());
+        let origin = OriginSet::from(Origin::from_file(PathBuf::from("exclude-disabled.txt")));
+
+        let matches = match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
+            ScanResult::New(matches) => matches,
+            ScanResult::SeenWithMatches => {
+                panic!(
+                    "unexpected scan result: blob should not be considered previously seen with matches"
+                )
+            }
+            ScanResult::SeenSansMatches => {
+                panic!(
+                    "unexpected scan result: blob should not be considered previously seen without matches"
+                )
+            }
+        };
+
+        assert_eq!(matches.len(), 2, "disabling ignore_if_contains should keep all matches");
+        Ok(())
+    }
 
     // ---------------------------------------------------------------------
     // additional deterministic unit-tests
@@ -1274,7 +1363,8 @@ mod test {
         let rules_db = RulesDatabase::from_rules(vec![rule])?;
         let seen = BlobIdMap::new();
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
-        let mut m = Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+        let mut m =
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false, true)?;
 
         let buf = b"dup dup"; // two literal hits, same rule
 
@@ -1312,7 +1402,7 @@ mod test {
         let seen = BlobIdMap::new();
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
         let mut matcher =
-            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false, true)?;
 
         let blob = Blob::from_bytes(b"let key = \"secret_token\" # kingfisher:ignore".to_vec());
         let origin = OriginSet::from(Origin::from_file(PathBuf::from("inline.txt")));
@@ -1345,7 +1435,7 @@ mod test {
         let seen = BlobIdMap::new();
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
         let mut matcher =
-            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false, true)?;
 
         let blob = Blob::from_bytes(
             br#"let data = """
@@ -1390,7 +1480,7 @@ line2
         let seen = BlobIdMap::new();
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
         let mut matcher =
-            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false)?;
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &[], false, true)?;
         let matches_without_compat =
             match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
                 ScanResult::New(matches) => matches.len(),
@@ -1402,7 +1492,7 @@ line2
         let scanner_pool = Arc::new(ScannerPool::new(Arc::new(rules_db.vsdb.clone())));
         let extra = vec![String::from("gitleaks:allow")];
         let mut matcher =
-            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &extra, false)?;
+            Matcher::new(&rules_db, scanner_pool, &seen, None, false, None, &extra, false, true)?;
         match matcher.scan_blob(&blob, &origin, None, false, false, false)? {
             ScanResult::New(matches) => assert!(matches.is_empty()),
             _ => panic!("unexpected scan result"),

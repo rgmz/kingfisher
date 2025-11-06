@@ -3,7 +3,6 @@ rules:
     id: kingfisher.twitch.1
     pattern: |
       (?xi)
-      \b
       twitch
       (?:.|[\n\r]){0,32}?
       \b
@@ -19,7 +18,7 @@ rules:
     confidence: medium
     examples:
       - TWITCH_TOKEN=abcdefghijklmnopqrstuvwx123456
-      - "twitch_api_token: '0123456789abcdefghijklmnopqrstuv'"
+      - "twitch_api_token: '0123456789abcdefghijklmnopqrst'"
     references:
       - https://dev.twitch.tv/docs/authentication/validate-tokens/
     validation:

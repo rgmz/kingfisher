@@ -3,7 +3,6 @@ rules:
     id: kingfisher.coze.1
     pattern: |
       (?xi)
-      \b
       coze
       (?:.|[\n\r]){0,32}?
       \b
@@ -37,6 +36,6 @@ rules:
       - https://www.coze.com/docs/developer_guides/coze_api_overview
       - https://www.coze.com/docs/developer_guides/retrieve_files
     examples:
-      - "pat_DlOG7fNcVfmw8cYhPWNcdfwrjjzwDr9EkV8EBjzHdgRWU2DzqHC1pPe0x590NN5f"
-      - "pat_93QiTdIvZGuRCFcfGTQJJ1VIYZ9dNHanX88wKoMojwMk3tX5tKqfFtxUp0ux8CjI"
-      - "pat_WvUTLYq5yZyaqegkyLSxXJMjXAJotjYEuC1sqT8daFlfwM3BiaRVJIZsER42DnhV"
+      - "key_coze = pat_DlOG7fNcVfmw8cYhPWNcdfwrjjzwDr9EkV8EBjzHdgRWU2DzqHC1pPe0x590NN5f"
+      - "coze_token = pat_93QiTdIvZGuRCFcfGTQJJ1VIYZ9dNHanX88wKoMojwMk3tX5tKqfFtxUp0ux8CjI"
+      - "coze-key: pat_WvUTLYq5yZyaqegkyLSxXJMjXAJotjYEuC1sqT8daFlfwM3BiaRVJIZsER42DnhV"
