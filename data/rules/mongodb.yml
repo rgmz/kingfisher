@@ -82,7 +82,7 @@ rules:
       )
       \b
     pattern_requirements:
-      exclude_words:
+      ignore_if_contains:
         - "@localhost"
         - "@127.0.0.1"
     min_entropy: 3

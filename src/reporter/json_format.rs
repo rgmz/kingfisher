@@ -180,6 +180,7 @@ mod tests {
             skip_aws_account_file: None,
             no_base64: false,
             no_inline_ignore: false,
+            no_ignore_if_contains: false,
         }
     }
 

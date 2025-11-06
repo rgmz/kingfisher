@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 - Added `pattern_requirements` for rules. Enables post-regex character-class checks (digits, uppercase, lowercase, specials) to reduce false positives without lookarounds. Provides lightweight, in-memory validation after matches, keeping patterns fast and readable.
-- Added an optional `exclude_words` list to `PatternRequirements` so matches containing case-insensitive placeholder words are filtered out, with accompanying tests to cover the new behavior.
+- Added an optional `ignore_if_contains` list to `PatternRequirements` within the Rules structure, so matches containing case-insensitive placeholder words are filtered out, with accompanying tests to cover the new behavior.
 - Updated many rules with `pattern_requirements`
 - Automatically set `--no-dedup` whenever `--manage-baseline` is supplied so baseline management retains every occurrence of a finding
 

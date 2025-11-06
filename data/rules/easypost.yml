@@ -6,7 +6,7 @@ rules:
       \b
       (
         EZ[AT]K
-        [A-Z0-9]{54}
+        [A-Za-z0-9]{54}
       )
       \b
     pattern_requirements:

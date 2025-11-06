@@ -51,7 +51,7 @@ rules:
     confidence: medium
     examples:
       - bitbucket_key=HedmnK9h6KD_eh9KK8FlI9ahUc8WfaNZ4gulbrtN2ouV
-      - bitbucket_secret=kd8j2h4jf9s8mf6l4k9j2h4jf9s8mf6l4k9j2h4jf9s8mf6l
+      - bitbucket_secret=kd8j2h4jf9s8mf6l4k9j2h4jf9s8mf6l4k9j2h4jf9s8
     validation:
       type: Http
       content:

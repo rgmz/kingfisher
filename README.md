@@ -323,6 +323,21 @@ However, you may want to add your own custom rules, or modify a detection to bet
 
 First, review [docs/RULES.md](/docs/RULES.md) to learn how to create custom Kingfisher rules.
 
+### Pattern requirements and placeholder filtering
+
+Every rule can declare optional `pattern_requirements` to enforce additional character checks after a regex matches. Each field
+is independent:
+
+- `min_digits`, `min_uppercase`, `min_lowercase`, and `min_special_chars` enforce complexity thresholds.
+- `special_chars` lets you override the set of characters counted as "special" when `min_special_chars` is used.
+- `ignore_if_contains` lists case-insensitive substrings that should cause a match to be discarded (for example, to drop
+  `test`, `demo`, or `localhost` values). Kingfisher still accepts the legacy `exclude_words` key as an alias when loading
+  existing rule files.
+
+When a match is skipped because of `ignore_if_contains`, Kingfisher logs the event at the `DEBUG` level alongside the rule that
+was evaluated. If you need to keep those matches for a particular scan, pass `--no-ignore-if-contains` to `kingfisher scan` to
+disable the substring filter without editing any rule files.
+
 Once you've done that, you can provide your custom rules (defined in a YAML file) and provide it to Kingfisher at runtime --- no recompiling required!
 
 # 🎉 Usage
@@ -1168,6 +1183,8 @@ leaves the default unchanged.
 - `--skip-aws-account-file <FILE>`: Load AWS account numbers to skip from a file (one account per line; `#` comments allowed)
 - `--ignore-comment <DIRECTIVE>`: Honor additional inline directives from other scanners (repeatable; e.g. `--ignore-comment "gitleaks:allow"`)
 - `--no-ignore`: Disable inline directives entirely so every match is reported
+- `--no-ignore-if-contains`: Ignore the `ignore_if_contains` filter in rules so placeholder words still produce findings
+
 ## Understanding `--confidence`
 
 The `--confidence` flag sets a minimum confidence threshold, not an exact match.
