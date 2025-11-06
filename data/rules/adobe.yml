@@ -62,7 +62,7 @@ rules:
       (
         p8e-[A-Z0-9-]{32}
       )
-      (?:[^A-Z0-9-]|$)
+      (?:[^A-Z0-9-])
     min_entropy: 3.5
     examples:
       - |

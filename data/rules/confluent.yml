@@ -32,7 +32,7 @@ rules:
       (
         [A-Z0-9\+/]{64}
       )
-      (?:[^A-Za-z0-9/+=]|$)
+      (?:[^A-Za-z0-9/+=])
     min_entropy: 3.3
     confidence: medium
     examples:

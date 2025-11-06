@@ -176,12 +176,14 @@ rules:
     pattern: |
       (?xi)
       github
-      .?
-      (?: api | app | application | client | consumer | customer | secret | key )
-      .?
-      (?: key | oauth | sec | secret )?
-      .{0,2} \s{0,20} .{0,2} \s{0,20} .{0,2}
-      \b ([a-z0-9]{40}) \b
+      (?:.|[\n\r]){0,32}?
+      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
+      (?:.|[\n\r]){0,32}?
+      (?:[^A-Za-z0-9/+=])
+      (
+          [a-z0-9]{40}
+      )
+      (?:[^A-Za-z0-9/+=])
     depends_on_rule:
       - rule_id: "kingfisher.github.5"
         variable: GITHUB_CLIENT_ID

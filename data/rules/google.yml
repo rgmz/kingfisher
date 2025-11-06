@@ -51,7 +51,7 @@ rules:
     pattern: |
       (?xi)
       (ya29\.[0-9A-Z_-]{20,1024})
-      (?: [^0-9A-Z_-]|$)
+      (?: [^0-9A-Z_-])
     pattern_requirements:
       min_digits: 2
       min_uppercase: 1

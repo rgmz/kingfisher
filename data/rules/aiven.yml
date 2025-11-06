@@ -9,7 +9,7 @@ rules:
       (
         [a-z0-9/+=]{372}      
       )
-      (?:[^A-Za-z0-9/+=]|$)
+      (?:[^A-Za-z0-9/+=])
     pattern_requirements:
       min_digits: 2
       min_uppercase: 1

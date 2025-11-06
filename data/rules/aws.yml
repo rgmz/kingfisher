@@ -22,22 +22,23 @@ rules:
     pattern: |
       (?xi)
       (?:
-        \b
+        (?:[^A-Za-z0-9/+=])
         (?:AWS|AMAZON|AMZN|A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
         (?:.|[\n\r]){0,64}?
-        \b
-        ([A-Za-z0-9/+]{40})
-        \b
+        (?:[^A-Za-z0-9/+=])
+        ([A-Za-z0-9+]{40})
+        (?:[^A-Za-z0-9/+=])
       |
-        \b(?:AWS|AMAZON|AMZN|A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
+        (?:[^A-Za-z0-9/+=])
+        (?:AWS|AMAZON|AMZN|A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)
         (?:.|[\n\r]){0,96}?
         (?:SECRET|PRIVATE|ACCESS)
         (?:.|[\n\r]){0,16}?
         (?:KEY|TOKEN)
         (?:.|[\n\r]){0,64}?
         \b
-        ([A-Za-z0-9/+]{40})
-        \b
+        ([A-Za-z0-9+]{40})
+        (?:[^A-Za-z0-9/+=])
       )
     pattern_requirements:
       min_digits: 2

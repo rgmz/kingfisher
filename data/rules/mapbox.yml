@@ -1,7 +1,7 @@
 rules:
   - name: Mapbox Public Access Token
     id: kingfisher.mapbox.1
-    pattern: '(?i)(?s)mapbox.{0,30}(pk\.[a-z0-9\-+/=]{32,128}\.[a-z0-9\-+/=]{20,30})(?:[^a-z0-9\-+/=]|$)'
+    pattern: '(?i)(?s)mapbox.{0,30}(pk\.[a-z0-9\-+/=]{32,128}\.[a-z0-9\-+/=]{20,30})(?:[^a-z0-9\-+/=])'
     pattern_requirements:
       min_digits: 2
     min_entropy: 3.3
@@ -28,7 +28,7 @@ rules:
 
   - name: Mapbox Secret Access Token
     id: kingfisher.mapbox.2
-    pattern: '(?i)(?s)mapbox.{0,30}(sk\.[a-z0-9\-+/=]{32,128}\.[a-z0-9\-+/=]{20,30})(?:[^a-z0-9\-+/=]|$)'
+    pattern: '(?i)(?s)mapbox.{0,30}(sk\.[a-z0-9\-+/=]{32,128}\.[a-z0-9\-+/=]{20,30})(?:[^a-z0-9\-+/=])'
     pattern_requirements:
       min_digits: 2
     min_entropy: 3.3
@@ -54,7 +54,7 @@ rules:
 
   - name: Mapbox Temporary Access Token
     id: kingfisher.mapbox.3
-    pattern: '(?i)(?s)mapbox.{0,30}(tk\.[a-z0-9\-+/=]{32,128}\.[a-z0-9\-+/=]{20,30})(?:[^a-z0-9\-+/=]|$)'
+    pattern: '(?i)(?s)mapbox.{0,30}(tk\.[a-z0-9\-+/=]{32,128}\.[a-z0-9\-+/=]{20,30})(?:[^a-z0-9\-+/=])'
     pattern_requirements:
       min_digits: 2
     min_entropy: 3.3

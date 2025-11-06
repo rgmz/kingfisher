@@ -9,7 +9,7 @@ rules:
       (
         6l[c-f][a-z0-9_-].{36}
       )
-      (?:[^A-Za-z0-9/]|$)
+      (?:[^A-Za-z0-9/])
     pattern_requirements:
       min_digits: 3
     min_entropy: 3
