@@ -996,14 +996,8 @@ mod tests {
         let mut globals = Object::new();
         populate_globals_from_captures(&mut globals, &captured_values);
 
-        assert_eq!(
-            globals.get("TOKEN"),
-            Some(Value::scalar("longervalue")).as_ref()
-        );
-        assert_eq!(
-            globals.get("BODY"),
-            Some(Value::scalar("body")).as_ref()
-        );
+        assert_eq!(globals.get("TOKEN"), Some(Value::scalar("longervalue")).as_ref());
+        assert_eq!(globals.get("BODY"), Some(Value::scalar("body")).as_ref());
     }
 
     #[test]
@@ -1014,10 +1008,7 @@ mod tests {
         populate_globals_from_captures(&mut globals, &captured_values);
 
         assert!(globals.get("TOKEN").is_none());
-        assert_eq!(
-            globals.get("CHECKSUM"),
-            Some(Value::scalar("123456")).as_ref()
-        );
+        assert_eq!(globals.get("CHECKSUM"), Some(Value::scalar("123456")).as_ref());
     }
 }
 
