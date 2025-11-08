@@ -11,6 +11,8 @@
 custom.py
 logs/*
 *.patch
+*.orig
+*.rej
 
 ### macOS ###
 # General
