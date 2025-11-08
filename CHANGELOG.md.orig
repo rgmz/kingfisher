@@ -7,8 +7,6 @@ All notable changes to this project will be documented in this file.
 - Added `pattern_requirements` checks to rules, providing lightweight post-regex character-class validation without lookarounds.
 - Added an `ignore_if_contains` option to `PatternRequirements` to drop matches containing case-insensitive placeholder words, with tests covering the new behavior.
 - Updated rules to adopt the new `pattern_requirements` support.
-- Added checksum comparisons to `pattern_requirements`, new `suffix`, `crc32`, and `base62` Liquid filters, and verbose logging so mismatched checksums are skipped with context rather than reported as findings.
-- Split GitHub token detections into fine-grained/fixed-format variants and enforce checksum validation for modern GitHub token families (PAT, OAuth, App, refresh) while preserving legacy coverage.
 - Automatically enable `--no-dedup` when `--manage-baseline` is supplied so baseline management keeps every finding.
 
 

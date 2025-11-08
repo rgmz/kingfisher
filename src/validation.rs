@@ -332,9 +332,7 @@ async fn timed_validate_single_match<'a>(
     }
 
     let mut globals = Object::new();
-    for (k, v, ..) in &captured_values {
-        globals.insert(k.to_uppercase().into(), Value::scalar(v.clone()));
-    }
+    populate_globals_from_captures(&mut globals, &captured_values);
 
     let rule_syntax = m.rule.syntax();
 
@@ -959,6 +957,59 @@ async fn timed_validate_single_match<'a>(
 
     // 5. persist result for success path
     commit_and_return(m);
+}
+
+fn populate_globals_from_captures(
+    globals: &mut Object,
+    captured_values: &[(String, String, usize, usize)],
+) {
+    let mut best_token: Option<(usize, String)> = None;
+
+    for (k, v, ..) in captured_values {
+        let key = k.to_uppercase();
+        if key == "TOKEN" {
+            if best_token.as_ref().map_or(true, |(len, _)| v.len() >= *len) {
+                best_token = Some((v.len(), v.clone()));
+            }
+        } else {
+            globals.insert(key.into(), Value::scalar(v.clone()));
+        }
+    }
+
+    if let Some((_, token)) = best_token {
+        globals.insert("TOKEN".into(), Value::scalar(token));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn populate_globals_prefers_longest_token() {
+        let captured_values = vec![
+            ("TOKEN".to_string(), "short".to_string(), 0usize, 5usize),
+            ("BODY".to_string(), "body".to_string(), 0usize, 4usize),
+            ("TOKEN".to_string(), "longervalue".to_string(), 0usize, 11usize),
+        ];
+
+        let mut globals = Object::new();
+        populate_globals_from_captures(&mut globals, &captured_values);
+
+        assert_eq!(globals.get("TOKEN").map(|v| v.to_string()), Some("longervalue".to_string()));
+        assert_eq!(globals.get("BODY").map(|v| v.to_string()), Some("body".to_string()));
+    }
+
+    #[test]
+    fn populate_globals_handles_missing_token() {
+        let captured_values = vec![("CHECKSUM".to_string(), "123456".to_string(), 0usize, 6usize)];
+
+        let mut globals = Object::new();
+        populate_globals_from_captures(&mut globals, &captured_values);
+
+        assert!(globals.get("TOKEN").is_none());
+        assert_eq!(globals.get("CHECKSUM").map(|v| v.to_string()), Some("123456".to_string()));
+    }
 }
 
 // #[cfg(test)]

@@ -29,7 +29,7 @@ use crate::{
     parser,
     parser::{Checker, Language},
     rule_profiling::{ConcurrentRuleProfiler, RuleStats, RuleTimer},
-    rules::rule::{PatternValidationResult, Rule},
+    rules::rule::{PatternRequirementContext, PatternValidationResult, Rule},
     rules_database::RulesDatabase,
     safe_list::{is_safe_match, is_user_match},
     scanner_pool::ScannerPool,
@@ -614,12 +614,26 @@ fn filter_match<'b>(
 
         // Check character requirements if specified
         if let Some(char_reqs) = rule.pattern_requirements() {
-            match char_reqs.validate(mi_bytes, respect_ignore_if_contains) {
+            let context = PatternRequirementContext {
+                regex: re,
+                captures: &captures,
+                full_match: full_bytes,
+            };
+            match char_reqs.validate(mi_bytes, Some(context), respect_ignore_if_contains) {
                 PatternValidationResult::Passed => {}
                 PatternValidationResult::Failed => {
                     debug!(
                         "Skipping match that does not meet character requirements for rule {}",
                         rule.id()
+                    );
+                    continue;
+                }
+                PatternValidationResult::FailedChecksum { actual_len, expected_len } => {
+                    debug!(
+                        "Skipping match for rule {} due to checksum mismatch (actual_len={}, expected_len={})",
+                        rule.id(),
+                        actual_len,
+                        expected_len
                     );
                     continue;
                 }
@@ -790,40 +804,31 @@ impl SerializableCaptures {
         redact: bool,
     ) -> Self {
         let mut serialized_captures: SmallVec<[SerializableCapture; 2]> = SmallVec::new();
-        // Process named captures
-        for name in re.capture_names().flatten() {
-            if let Some(capture) = captures.name(name) {
-                let value = if redact {
-                    redact_value(&String::from_utf8_lossy(capture.as_bytes()))
-                } else {
-                    String::from_utf8_lossy(capture.as_bytes()).to_string()
-                };
-                serialized_captures.push(SerializableCapture {
-                    name: Some(name.to_string()),
-                    match_number: -1,
-                    start: capture.start(),
-                    end: capture.end(),
-                    value: intern(&value),
-                });
-            }
-        }
-        // Process unnamed captures (numbered groups)
+
+        let capture_names: SmallVec<[Option<String>; 4]> =
+            re.capture_names().map(|name| name.map(str::to_string)).collect();
+
         for i in 0..captures.len() {
-            if let Some(capture) = captures.get(i) {
+            if let Some(cap) = captures.get(i) {
                 let value = if redact {
-                    redact_value(&String::from_utf8_lossy(capture.as_bytes()))
+                    redact_value(&String::from_utf8_lossy(cap.as_bytes()))
                 } else {
-                    String::from_utf8_lossy(capture.as_bytes()).to_string()
+                    String::from_utf8_lossy(cap.as_bytes()).to_string()
                 };
+                let interned = intern(&value);
+
+                let name = capture_names.get(i).and_then(|opt| opt.as_ref()).cloned();
+
                 serialized_captures.push(SerializableCapture {
-                    name: None,
+                    name,
                     match_number: i32::try_from(i).unwrap_or(0),
-                    start: capture.start(),
-                    end: capture.end(),
-                    value: intern(&value),
+                    start: cap.start(),
+                    end: cap.end(),
+                    value: interned,
                 });
             }
         }
+
         SerializableCaptures { captures: serialized_captures }
     }
 }
@@ -1182,6 +1187,7 @@ mod test {
                 min_special_chars: None,
                 special_chars: None,
                 ignore_if_contains: Some(vec!["TEST".to_string()]),
+                checksum: None,
             }),
         })];
 
@@ -1244,6 +1250,7 @@ mod test {
                 min_special_chars: None,
                 special_chars: None,
                 ignore_if_contains: Some(vec!["TEST".to_string()]),
+                checksum: None,
             }),
         })];
 
@@ -1499,5 +1506,25 @@ line2
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn serializes_captures_in_numeric_order() {
+        let re =
+            Regex::new(r"(?xi)\b(ghp_(?P<body>[A-Z0-9]{3})(?P<checksum>[A-Z0-9]{2}))").unwrap();
+        let caps = re.captures(b"ghp_ABC12").expect("expected captures");
+
+        let serialized = SerializableCaptures::from_captures(&caps, b"", &re, false);
+        let entries: Vec<(Option<&str>, i32, &str)> = serialized
+            .captures
+            .iter()
+            .map(|cap| (cap.name.as_deref(), cap.match_number, cap.value))
+            .collect();
+
+        assert_eq!(entries.len(), 4);
+        assert_eq!(entries[0], (None, 0, "ghp_ABC12"));
+        assert_eq!(entries[1], (None, 1, "ghp_ABC12"));
+        assert_eq!(entries[2], (Some("body"), 2, "ABC"));
+        assert_eq!(entries[3], (Some("checksum"), 3, "12"));
     }
 }

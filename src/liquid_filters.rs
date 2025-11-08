@@ -1,6 +1,7 @@
 //! Collection of small Liquid filters that make HTTP validations & API-signing templates easy
 
 use base64::{engine::general_purpose, Engine};
+use crc32fast::Hasher;
 use hmac::{Hmac, Mac};
 use liquid_core::{
     Display_filter, Error as LiquidError, Expression, Filter, FilterParameters, FilterReflection,
@@ -223,22 +224,90 @@ impl Filter for HmacSha384Filter {
 }
 
 // ── random_string ────────────────────────────────
-static_filter!(
-    /// Random alphanumeric string (default 32 chars).
-    RandomStringFilter { len: Option<usize> },
-    "random_string",
-    |s: &RandomStringFilter, input: &dyn ValueView| -> String {
-        let n = s.len                                   // explicit argument?
-            .or_else(|| input.to_kstr().parse().ok())   // else parse input
-            .unwrap_or(32);                             // else default
+#[derive(Debug, FilterParameters)]
+struct RandomStringArgs {
+    #[parameter(description = "Desired output length", arg_type = "integer")]
+    len: Option<Expression>,
+}
 
-        rand::rng()
-            .sample_iter(&Alphanumeric)
-            .take(n)
-            .map(char::from)
-            .collect()
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "random_string",
+    description = "Random alphanumeric string (default 32 chars).",
+    parameters(RandomStringArgs),
+    parsed(RandomString)
+)]
+pub struct RandomStringFilter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "random_string"]
+struct RandomString {
+    #[parameters]
+    args: RandomStringArgs,
+}
+
+impl Filter for RandomString {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let n = args
+            .len
+            .and_then(|value| {
+                let scalar = Value::scalar(value);
+                value_to_usize(&scalar)
+            })
+            .or_else(|| input.to_kstr().parse().ok())
+            .unwrap_or(32);
+
+        let value: String =
+            rand::rng().sample_iter(&Alphanumeric).take(n).map(char::from).collect();
+
+        Ok(Value::scalar(value))
     }
-);
+}
+
+#[derive(Debug, FilterParameters)]
+struct SuffixArgs {
+    #[parameter(description = "Number of trailing characters to keep", arg_type = "integer")]
+    len: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "suffix",
+    description = "Return the suffix (last N characters) of the provided string.",
+    parameters(SuffixArgs),
+    parsed(Suffix)
+)]
+pub struct SuffixFilter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "suffix"]
+struct Suffix {
+    #[parameters]
+    args: SuffixArgs,
+}
+
+impl Filter for Suffix {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let text = input.to_kstr();
+        let requested = args
+            .len
+            .and_then(|value| {
+                let scalar = Value::scalar(value);
+                value_to_usize(&scalar)
+            })
+            .unwrap_or_else(|| text.len());
+        if requested == 0 {
+            return Ok(Value::scalar(String::new()));
+        }
+
+        let mut chars: Vec<char> = text.chars().collect();
+        let keep = requested.min(chars.len());
+        chars.drain(0..chars.len().saturating_sub(keep));
+        Ok(Value::scalar(chars.into_iter().collect::<String>()))
+    }
+}
 
 #[derive(Debug, Clone, Default, FilterReflection, ParseFilter)]
 #[filter(
@@ -306,6 +375,111 @@ static_filter!(
         format!("{:x}", h.finalize())
     }
 );
+
+static_filter!(
+    /// Compute the CRC32 of the input and return it as a decimal number.
+    Crc32Filter,
+    "crc32",
+    |input: &dyn ValueView| -> i64 {
+        let mut hasher = Hasher::new();
+        hasher.update(input.to_kstr().as_bytes());
+        i64::from(hasher.finalize())
+    }
+);
+
+#[derive(Debug, FilterParameters)]
+struct Base62Args {
+    #[parameter(
+        description = "Pad the encoded value to at least this width",
+        arg_type = "integer"
+    )]
+    width: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "base62",
+    description = "Encode the provided integer value using Base62.",
+    parameters(Base62Args),
+    parsed(Base62)
+)]
+pub struct Base62Filter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "base62"]
+struct Base62 {
+    #[parameters]
+    args: Base62Args,
+}
+
+impl Filter for Base62 {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let value = input
+            .as_scalar()
+            .and_then(|scalar| {
+                if let Some(int) = scalar.to_integer() {
+                    Some(if int < 0 { 0 } else { int as u64 })
+                } else if let Some(float) = scalar.to_float() {
+                    Some(if float.is_sign_negative() { 0 } else { float.floor() as u64 })
+                } else if let Some(boolean) = scalar.to_bool() {
+                    Some(u64::from(boolean))
+                } else {
+                    scalar.to_kstr().to_string().parse::<u64>().ok()
+                }
+            })
+            .or_else(|| input.to_kstr().to_string().parse::<u64>().ok())
+            .unwrap_or(0);
+
+        let mut encoded = encode_base62(value);
+        if let Some(width) = args.width.and_then(|value| {
+            let scalar = Value::scalar(value);
+            value_to_usize(&scalar)
+        }) {
+            if encoded.len() < width {
+                let mut padded = String::with_capacity(width);
+                for _ in 0..(width - encoded.len()) {
+                    padded.push('0');
+                }
+                padded.push_str(&encoded);
+                encoded = padded;
+            }
+        }
+
+        Ok(Value::scalar(encoded))
+    }
+}
+
+fn encode_base62(mut value: u64) -> String {
+    const ALPHABET: &[u8; 62] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    if value == 0 {
+        return "0".to_string();
+    }
+    let mut buf = Vec::new();
+    while value > 0 {
+        let rem = (value % 62) as usize;
+        buf.push(ALPHABET[rem] as char);
+        value /= 62;
+    }
+    buf.iter().rev().collect()
+}
+
+fn value_to_usize(value: &Value) -> Option<usize> {
+    let view = value.as_view();
+    view.as_scalar()
+        .and_then(|scalar| {
+            if let Some(int) = scalar.to_integer() {
+                Some(if int < 0 { 0 } else { int as usize })
+            } else if let Some(float) = scalar.to_float() {
+                Some(if float.is_sign_negative() { 0 } else { float.floor() as usize })
+            } else if let Some(boolean) = scalar.to_bool() {
+                Some(if boolean { 1 } else { 0 })
+            } else {
+                scalar.to_kstr().parse::<usize>().ok()
+            }
+        })
+        .or_else(|| view.to_kstr().parse::<usize>().ok())
+}
 
 // {{ value | b64url_enc }} – URL-safe base64 w/o padding
 static_filter!(
@@ -415,6 +589,9 @@ pub fn register_all(builder: liquid::ParserBuilder) -> liquid::ParserBuilder {
         .filter(B64EncFilter::default())
         .filter(B64DecFilter::default())
         .filter(RandomStringFilter::default())
+        .filter(SuffixFilter::default())
+        .filter(Crc32Filter::default())
+        .filter(Base62Filter::default())
         .filter(HmacSha256::default())
         .filter(HmacSha1::default())
         .filter(HmacSha384::default())
@@ -459,6 +636,20 @@ mod tests {
     fn sha256_filter() {
         let expect = format!("{:x}", Sha256::digest(b"hello"));
         assert_eq!(render(r#"{{ "hello" | sha256 }}"#), expect);
+    }
+
+    #[test]
+    fn suffix_filter() {
+        assert_eq!(render(r#"{{ "abcdef" | suffix: 3 }}"#), "def");
+        assert_eq!(render(r#"{{ "short" | suffix: 10 }}"#), "short");
+        assert_eq!(render(r#"{{ "value" | suffix: 0 }}"#), "");
+    }
+
+    #[test]
+    fn crc32_and_base62_filters() {
+        assert_eq!(render(r#"{{ "hello" | crc32 }}"#), "907060870");
+        assert_eq!(render(r#"{{ "hello" | crc32 | base62 }}"#), "zNvy2");
+        assert_eq!(render(r#"{{ "hello" | crc32 | base62: 6 }}"#), "0zNvy2");
     }
 
     #[test]

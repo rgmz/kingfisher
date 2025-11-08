@@ -5,26 +5,26 @@
 //   * Fallback - system allocator     (`system-alloc` feature)
 // ────────────────────────────────────────────────────────────
 
-// --- jemalloc (opt-in) ---
-#[cfg(feature = "use-jemalloc")]
-#[global_allocator]
-static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+// // --- jemalloc (opt-in) ---
+// #[cfg(feature = "use-jemalloc")]
+// #[global_allocator]
+// static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-// --- mimalloc (default) ---
-#[cfg(all(not(feature = "use-jemalloc"), not(feature = "system-alloc")))]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+// // --- mimalloc (default) ---
+// #[cfg(all(not(feature = "use-jemalloc"), not(feature = "system-alloc")))]
+// #[global_allocator]
+// static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-// --- system allocator (explicit opt-out) ---
-#[cfg(feature = "system-alloc")]
-use std::alloc::System;
-#[cfg(feature = "system-alloc")]
-#[global_allocator]
-static GLOBAL: System = System;
-
+// // --- system allocator (explicit opt-out) ---
+// #[cfg(feature = "system-alloc")]
 // use std::alloc::System;
+// #[cfg(feature = "system-alloc")]
 // #[global_allocator]
 // static GLOBAL: System = System;
+
+use std::alloc::System;
+#[global_allocator]
+static GLOBAL: System = System;
 
 use std::{
     io::{IsTerminal, Read},

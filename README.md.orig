@@ -333,13 +333,10 @@ is independent:
 - `special_chars` lets you override the set of characters counted as "special" when `min_special_chars` is used.
 - `ignore_if_contains` lists case-insensitive substrings that should cause a match to be discarded (for example, to drop
   `test`, `demo`, or `localhost` values).
-- `checksum` lets you compare an extracted portion of the match against a Liquid-rendered expectation. Provide `actual.template`
-  and `expected` Liquid snippets (with access to `{{ MATCH }}`, `{{ FULL_MATCH }}`, and any named capture as both its original
-  case and uppercase alias) and Kingfisher will skip the finding when the rendered values differ. Optional keys such as
-  `requires_capture` and `skip_if_missing` help you guard against legacy formats while onboarding the checksum-aware variant.
 
-When a match is skipped because of `ignore_if_contains` or a checksum mismatch, Kingfisher logs the event at the `DEBUG` level alongside the rule that was evaluated. If you need to keep those matches for a particular scan, pass `--no-ignore-if-contains` to `kingfisher scan` to disable the substring filter without editing any rule files. Verbose mode (`-v`) will also show you the
-checksum mismatch lengths so you can confirm why a finding was suppressed.
+When a match is skipped because of `ignore_if_contains`, Kingfisher logs the event at the `DEBUG` level alongside the rule that
+was evaluated. If you need to keep those matches for a particular scan, pass `--no-ignore-if-contains` to `kingfisher scan` to
+disable the substring filter without editing any rule files.
 
 Once you've done that, you can provide your custom rules (defined in a YAML file) and provide it to Kingfisher at runtime --- no recompiling required!
 

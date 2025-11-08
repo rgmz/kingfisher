@@ -147,12 +147,23 @@ impl FindingsStore {
             │ 1. Optional duplicate filter (unchanged)                      │
             └───────────────────────────────────────────────────────────────*/
             if dedup {
+                // Prefer the full unnamed match (index 0). Fall back to a named TOKEN capture
+                // before using whatever capture is available.
                 let snippet = m
                     .groups
                     .captures
-                    .get(1)
-                    .or_else(|| m.groups.captures.get(0))
-                    .map_or("", |c| c.value);
+                    .iter()
+                    .find(|c| c.name.is_none() && c.match_number == 0)
+                    .map(|c| c.value)
+                    .or_else(|| {
+                        m.groups
+                            .captures
+                            .iter()
+                            .find(|c| matches!(c.name.as_deref(), Some("TOKEN")))
+                            .map(|c| c.value)
+                    })
+                    .or_else(|| m.groups.captures.get(0).map(|c| c.value))
+                    .unwrap_or("");
 
                 let origin_kind = match origin.first() {
                     Origin::GitRepo(_) => "git",
