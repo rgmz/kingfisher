@@ -5,11 +5,17 @@ rules:
       (?xi)
       \b
       (
-        npm_[A-Z0-9]{36}
+        npm_(?P<body>[A-Za-z0-9]{30})(?P<checksum>[A-Za-z0-9]{6})
       )
       \b
     pattern_requirements:
       min_digits: 2
+      checksum:
+        actual:
+          template: "{{ MATCH | suffix: 6 }}"
+          requires_capture: checksum
+        expected: "{{ BODY | crc32 | base62: 6 }}"
+        skip_if_missing: true
     references:
       - https://docs.npmjs.com/about-access-tokens
       - https://github.com/github/roadmap/issues/557
