@@ -7,7 +7,7 @@ fn smoke_scan_tar_gz_archive() -> anyhow::Result<()> {
 
     let dir = tempfile::tempdir()?;
     let tar_gz = dir.path().join("payload.tar.gz");
-    let github_pat = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
+    let github_pat = "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";
 
     // --- build a payload.tar.gz -------------------------------------------------
     {

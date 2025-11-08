@@ -5,7 +5,7 @@ use clap::Parser;
 use predicates::prelude::*;
 use tempfile::tempdir;
 
-const GH_PAT: &str = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
+const GH_PAT: &str = "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";
 
 #[test]
 fn manage_baseline_enables_no_dedup() -> anyhow::Result<()> {
