@@ -6,19 +6,11 @@ use crate::validation::SerializableCaptures;
 /// Return (NAME, value, start, end) for every capture we care about.
 ///
 /// * If a capture has a name, use that (upper-cased)  
-/// * If it’s unnamed, fall back to `"TOKEN"`  
-/// * Skip the unnamed “whole-match” capture **only when** there are
-///   additional captures to return.
+/// * If it’s unnamed, fall back to `"TOKEN"`
 pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String, usize, usize)> {
-    let multiple = captures.captures.len() > 1;
-
     captures
         .captures
         .iter()
-        // Skip the whole-match capture (match_number == 0) only when there
-        // are additional captures. All other captures – named or unnamed –
-        // should be preserved.
-        .filter(|cap| !multiple || cap.match_number != 0)
         .map(|cap| {
             let name =
                 cap.name.as_ref().map(|n| n.to_uppercase()).unwrap_or_else(|| "TOKEN".to_string());
@@ -140,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn skips_whole_match_when_multiple() {
+    fn includes_whole_match_when_multiple() {
         let captures = SerializableCaptures {
             captures: smallvec![
                 SerializableCapture {
@@ -160,11 +152,17 @@ mod tests {
             ],
         };
         let result = process_captures(&captures);
-        assert_eq!(result, vec![("FOO".to_string(), "bcd".to_string(), 1usize, 4usize)]);
+        assert_eq!(
+            result,
+            vec![
+                ("TOKEN".to_string(), "abcde".to_string(), 0usize, 5usize),
+                ("FOO".to_string(), "bcd".to_string(), 1usize, 4usize),
+            ]
+        );
     }
 
     #[test]
-    fn includes_unnamed_groups_but_skips_whole_match() {
+    fn includes_whole_match_and_unnamed_groups() {
         let captures = SerializableCaptures {
             captures: smallvec![
                 SerializableCapture {
@@ -188,6 +186,7 @@ mod tests {
         assert_eq!(
             result,
             vec![
+                ("TOKEN".to_string(), "aabbcc".to_string(), 0usize, 6usize),
                 ("FOO".to_string(), "aa".to_string(), 0usize, 2usize),
                 ("TOKEN".to_string(), "cc".to_string(), 4usize, 6usize),
             ]

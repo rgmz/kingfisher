@@ -10,6 +10,10 @@ use std::{
 
 use anyhow::{anyhow, Context, Result};
 use lazy_static::lazy_static;
+use liquid::{
+    model::{KString, Value},
+    object, Parser, ParserBuilder,
+};
 use regex::Regex;
 use schemars::{
     gen::SchemaGenerator,
@@ -17,8 +21,11 @@ use schemars::{
     JsonSchema,
 };
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 // use sha1::{Digest, Sha1};
 use xxhash_rust::xxh3::xxh3_64;
+
+use crate::liquid_filters;
 
 /// Returns false as the default value.
 fn default_false() -> bool {
@@ -73,6 +80,42 @@ pub struct PatternRequirements {
     /// Words that should cause the match to be excluded when present (case-insensitive)
     #[serde(default)]
     pub ignore_if_contains: Option<Vec<String>>,
+    /// Optional checksum validation configuration.
+    #[serde(default)]
+    pub checksum: Option<ChecksumRequirement>,
+}
+
+/// Defines a checksum validation strategy for a matched pattern.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ChecksumRequirement {
+    /// Template describing how to extract the checksum from the match.
+    pub actual: ChecksumActual,
+    /// Template describing how to compute the expected checksum.
+    pub expected: String,
+    /// When true, checksum evaluation is skipped if the required capture is missing.
+    #[serde(default)]
+    pub skip_if_missing: bool,
+}
+
+/// Describes how to extract the checksum value from a match.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ChecksumActual {
+    /// Liquid template used to compute the checksum from the match.
+    pub template: String,
+    /// Optional capture group that must be present before evaluating the checksum.
+    #[serde(default)]
+    pub requires_capture: Option<String>,
+}
+
+/// Contextual information available when validating pattern requirements.
+#[derive(Clone, Copy)]
+pub struct PatternRequirementContext<'a> {
+    /// Compiled regex associated with the rule.
+    pub regex: &'a regex::bytes::Regex,
+    /// Captures for the current match.
+    pub captures: &'a regex::bytes::Captures<'a>,
+    /// Full bytes matched by the rule (capture group 0).
+    pub full_match: &'a [u8],
 }
 
 impl PatternRequirements {
@@ -85,6 +128,7 @@ impl PatternRequirements {
     pub fn validate(
         &self,
         input: &[u8],
+        context: Option<PatternRequirementContext<'_>>,
         respect_ignore_if_contains: bool,
     ) -> PatternValidationResult {
         // Convert to string (lossy for non-UTF8)
@@ -151,8 +195,82 @@ impl PatternRequirements {
             }
         }
 
+        if let Some(checksum) = &self.checksum {
+            let Some(ctx) = context else {
+                return if checksum.skip_if_missing {
+                    PatternValidationResult::Passed
+                } else {
+                    PatternValidationResult::Failed
+                };
+            };
+
+            if let Some(required) = checksum.actual.requires_capture.as_deref() {
+                if ctx.captures.name(required).is_none() {
+                    return if checksum.skip_if_missing {
+                        PatternValidationResult::Passed
+                    } else {
+                        PatternValidationResult::Failed
+                    };
+                }
+            }
+
+            let mut globals = object!({
+                "MATCH": s.to_string(),
+                "FULL_MATCH": String::from_utf8_lossy(ctx.full_match).to_string(),
+            });
+
+            for name in ctx.regex.capture_names().flatten() {
+                if let Some(capture) = ctx.captures.name(name) {
+                    let value = String::from_utf8_lossy(capture.as_bytes()).to_string();
+                    globals.insert(KString::from_ref(name), Value::scalar(value.clone()));
+                    globals.insert(
+                        KString::from_string(name.to_ascii_uppercase()),
+                        Value::scalar(value),
+                    );
+                }
+            }
+
+            let actual =
+                match render_pattern_requirement_template(&checksum.actual.template, &globals) {
+                    Ok(rendered) => rendered,
+                    Err(err) => {
+                        debug!(
+                            "Failed to render checksum actual template '{}': {}",
+                            checksum.actual.template, err
+                        );
+                        return PatternValidationResult::Failed;
+                    }
+                };
+            let expected = match render_pattern_requirement_template(&checksum.expected, &globals) {
+                Ok(rendered) => rendered,
+                Err(err) => {
+                    debug!(
+                        "Failed to render checksum expected template '{}': {}",
+                        checksum.expected, err
+                    );
+                    return PatternValidationResult::Failed;
+                }
+            };
+
+            if actual != expected {
+                let actual_len = actual.chars().count();
+                let expected_len = expected.chars().count();
+                return PatternValidationResult::FailedChecksum { actual_len, expected_len };
+            }
+        }
+
         PatternValidationResult::Passed
     }
+}
+
+fn render_pattern_requirement_template(
+    template: &str,
+    globals: &liquid::Object,
+) -> Result<String, String> {
+    PATTERN_REQUIREMENTS_TEMPLATE_PARSER
+        .parse(template)
+        .map_err(|e| e.to_string())
+        .and_then(|parsed| parsed.render(globals).map_err(|e| e.to_string()))
 }
 
 /// Result of validating [`PatternRequirements`] against a potential match.
@@ -162,6 +280,8 @@ pub enum PatternValidationResult {
     Passed,
     /// Requirements were not satisfied.
     Failed,
+    /// Checksum requirements were not satisfied; captures basic mismatch details for debugging.
+    FailedChecksum { actual_len: usize, expected_len: usize },
     /// The match contains one of the `ignore_if_contains` substrings and should be skipped.
     IgnoredBySubstring { matched_term: String },
 }
@@ -407,6 +527,10 @@ lazy_static! {
     pub static ref RULE_COMMENTS_PATTERN: Regex = Regex::new(
         r"(?m)(\(\?#[^)]*\))|(\s\#[\sa-zA-Z]*$)"
     ).expect("comment-stripping regex should compile");
+    static ref PATTERN_REQUIREMENTS_TEMPLATE_PARSER: liquid::Parser =
+        liquid_filters::register_all(ParserBuilder::with_stdlib())
+            .build()
+            .expect("pattern requirement template parser should compile");
 }
 
 impl RuleSyntax {
@@ -564,6 +688,7 @@ impl Rule {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use regex::bytes::Regex as BytesRegex;
 
     #[test]
     fn test_pattern_requirements_digits() {
@@ -574,16 +699,75 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: has 3 digits
-        assert!(matches!(reqs.validate(b"abc123def", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"abc123def", None, true), PatternValidationResult::Passed));
 
         // Should fail: only 1 digit
-        assert!(matches!(reqs.validate(b"abc1def", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abc1def", None, true), PatternValidationResult::Failed));
 
         // Should fail: no digits
-        assert!(matches!(reqs.validate(b"abcdef", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abcdef", None, true), PatternValidationResult::Failed));
+    }
+
+    #[test]
+    fn test_pattern_requirements_checksum() {
+        let reqs = PatternRequirements {
+            min_digits: None,
+            min_uppercase: None,
+            min_lowercase: None,
+            min_special_chars: None,
+            special_chars: None,
+            ignore_if_contains: None,
+            checksum: Some(ChecksumRequirement {
+                actual: ChecksumActual {
+                    template: "{{ MATCH | suffix: 6 }}".to_string(),
+                    requires_capture: Some("checksum".to_string()),
+                },
+                expected: "{{ BODY | crc32 | base62: 6 }}".to_string(),
+                skip_if_missing: true,
+            }),
+        };
+
+        let token = b"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";
+        let regex =
+            BytesRegex::new(r"(?x) ghp_(?P<body>[A-Za-z0-9]{30})(?P<checksum>[A-Za-z0-9]{6})")
+                .unwrap();
+        let captures = regex.captures(token).expect("token should match");
+        assert!(matches!(
+            reqs.validate(
+                token,
+                Some(PatternRequirementContext {
+                    regex: &regex,
+                    captures: &captures,
+                    full_match: token
+                }),
+                true
+            ),
+            PatternValidationResult::Passed
+        ));
+
+        let mut invalid = token.to_vec();
+        *invalid.last_mut().unwrap() = b'0';
+        let captures_invalid =
+            regex.captures(&invalid).expect("invalid token should still match pattern");
+        assert!(matches!(
+            reqs.validate(
+                &invalid,
+                Some(PatternRequirementContext {
+                    regex: &regex,
+                    captures: &captures_invalid,
+                    full_match: &invalid,
+                }),
+                true
+            ),
+            PatternValidationResult::FailedChecksum { .. }
+        ));
+
+        let legacy = b"ghp_legacy_token";
+        assert!(matches!(reqs.validate(legacy, None, true), PatternValidationResult::Passed));
     }
 
     #[test]
@@ -595,16 +779,17 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: has 3 uppercase
-        assert!(matches!(reqs.validate(b"ABCdef", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"ABCdef", None, true), PatternValidationResult::Passed));
 
         // Should fail: only 1 uppercase
-        assert!(matches!(reqs.validate(b"Adef", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"Adef", None, true), PatternValidationResult::Failed));
 
         // Should fail: no uppercase
-        assert!(matches!(reqs.validate(b"abcdef", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abcdef", None, true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -616,16 +801,17 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: has 3 lowercase
-        assert!(matches!(reqs.validate(b"ABCdef", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"ABCdef", None, true), PatternValidationResult::Passed));
 
         // Should fail: only 1 lowercase
-        assert!(matches!(reqs.validate(b"ABCd", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"ABCd", None, true), PatternValidationResult::Failed));
 
         // Should fail: no lowercase
-        assert!(matches!(reqs.validate(b"ABC123", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"ABC123", None, true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -637,16 +823,17 @@ mod tests {
             min_special_chars: Some(2),
             special_chars: None, // uses default
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: has 2 special chars
-        assert!(matches!(reqs.validate(b"abc!@def", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"abc!@def", None, true), PatternValidationResult::Passed));
 
         // Should fail: only 1 special char
-        assert!(matches!(reqs.validate(b"abc!def", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abc!def", None, true), PatternValidationResult::Failed));
 
         // Should fail: no special chars
-        assert!(matches!(reqs.validate(b"abcdef", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abcdef", None, true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -658,16 +845,17 @@ mod tests {
             min_special_chars: Some(2),
             special_chars: Some("$%^".to_string()),
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: has 2 custom special chars
-        assert!(matches!(reqs.validate(b"abc$%def", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"abc$%def", None, true), PatternValidationResult::Passed));
 
         // Should fail: has special chars but not the custom ones
-        assert!(matches!(reqs.validate(b"abc!@def", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abc!@def", None, true), PatternValidationResult::Failed));
 
         // Should fail: only 1 custom special char
-        assert!(matches!(reqs.validate(b"abc$def", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abc$def", None, true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -679,22 +867,23 @@ mod tests {
             min_special_chars: Some(1),
             special_chars: None,
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: has all requirements
-        assert!(matches!(reqs.validate(b"Abc1!", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"Abc1!", None, true), PatternValidationResult::Passed));
 
         // Should fail: missing digit
-        assert!(matches!(reqs.validate(b"Abc!", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"Abc!", None, true), PatternValidationResult::Failed));
 
         // Should fail: missing uppercase
-        assert!(matches!(reqs.validate(b"abc1!", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"abc1!", None, true), PatternValidationResult::Failed));
 
         // Should fail: missing lowercase
-        assert!(matches!(reqs.validate(b"ABC1!", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"ABC1!", None, true), PatternValidationResult::Failed));
 
         // Should fail: missing special
-        assert!(matches!(reqs.validate(b"Abc1", true), PatternValidationResult::Failed));
+        assert!(matches!(reqs.validate(b"Abc1", None, true), PatternValidationResult::Failed));
     }
 
     #[test]
@@ -706,22 +895,26 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: Some(vec!["test".to_string(), "Demo".to_string()]),
+            checksum: None,
         };
 
         // Should fail: contains "test" (case-insensitive)
         assert!(matches!(
-            reqs.validate(b"MyTestToken", true),
+            reqs.validate(b"MyTestToken", None, true),
             PatternValidationResult::IgnoredBySubstring { .. }
         ));
 
         // Should fail: contains "demo" (case-insensitive)
         assert!(matches!(
-            reqs.validate(b"example-demo-value", true),
+            reqs.validate(b"example-demo-value", None, true),
             PatternValidationResult::IgnoredBySubstring { .. }
         ));
 
         // Should pass: does not contain excluded words
-        assert!(matches!(reqs.validate(b"example-value", true), PatternValidationResult::Passed));
+        assert!(matches!(
+            reqs.validate(b"example-value", None, true),
+            PatternValidationResult::Passed
+        ));
     }
 
     #[test]
@@ -733,14 +926,15 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: Some(vec![" ".to_string(), "".to_string(), "BLOCK".to_string()]),
+            checksum: None,
         };
 
         // Should fail only when non-empty exclusion matches
         assert!(matches!(
-            reqs.validate(b"needs-blocking", true),
+            reqs.validate(b"needs-blocking", None, true),
             PatternValidationResult::IgnoredBySubstring { .. }
         ));
-        assert!(matches!(reqs.validate(b"allowed", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"allowed", None, true), PatternValidationResult::Passed));
     }
 
     #[test]
@@ -752,16 +946,20 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: Some(vec!["ignoreme".to_string()]),
+            checksum: None,
         };
 
         // With ignoring enabled, the match is skipped
         assert!(matches!(
-            reqs.validate(b"value-ignoreme", true),
+            reqs.validate(b"value-ignoreme", None, true),
             PatternValidationResult::IgnoredBySubstring { .. }
         ));
 
         // With ignoring disabled, the same input passes requirements
-        assert!(matches!(reqs.validate(b"value-ignoreme", false), PatternValidationResult::Passed));
+        assert!(matches!(
+            reqs.validate(b"value-ignoreme", None, false),
+            PatternValidationResult::Passed
+        ));
     }
 
     #[test]
@@ -773,11 +971,12 @@ mod tests {
             min_special_chars: None,
             special_chars: None,
             ignore_if_contains: None,
+            checksum: None,
         };
 
         // Should pass: no requirements
-        assert!(matches!(reqs.validate(b"anything", true), PatternValidationResult::Passed));
-        assert!(matches!(reqs.validate(b"123", true), PatternValidationResult::Passed));
-        assert!(matches!(reqs.validate(b"!@#", true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"anything", None, true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"123", None, true), PatternValidationResult::Passed));
+        assert!(matches!(reqs.validate(b"!@#", None, true), PatternValidationResult::Passed));
     }
 }

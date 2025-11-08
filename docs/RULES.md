@@ -117,12 +117,15 @@ Below is the complete list of Liquid filters available in Kingfisher, along with
 | --------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `b64enc`              | –                                            | Base64-encodes the input using the standard alphabet.                                                          | `{{ TOKEN \| b64enc }}`                                              |
 | `b64url_enc`          | –                                            | URL-safe Base64 (no padding). Useful for JWT headers & payloads.                                               | `{{ TOKEN \| b64url_enc }}`                                          |
-| `b64dec`              | –                                            | Decodes a Base64 string.                                                                                       | `{{ "aGVsbG8=" \| b64dec }}`                                          |
+| `b64dec`              | –                                            | Decodes a Base64 string.                                                                                        | `{{ "aGVsbG8=" \| b64dec }}`                                         |
 | `sha256`              | –                                            | Computes the SHA-256 hex digest of the input.                                                                  | `{{ TOKEN \| sha256 }}`                                              |
+| `crc32`               | –                                            | Computes the CRC32 checksum of the input and returns a decimal value.                                         | `{{ TOKEN \| crc32 }}`                                               |
 | `hmac_sha1`           | `key` (string)                               | Computes HMAC-SHA1 over the input, returns Base64-encoded result.                                              | `{{ TOKEN \| hmac_sha1: "secret-key" }}`                             |
 | `hmac_sha256`         | `key` (string)                               | Computes HMAC-SHA256 over the input, returns Base64-encoded result.                                            | `{{ TOKEN \| hmac_sha256: "secret-key" }}`                           |
 | `hmac_sha384`         | `key` (string)                               | Computes HMAC-SHA384 over the input, returns Base64-encoded result.                                            | `{{ TOKEN \| hmac_sha384: "secret-key" }}`                           |
 | `random_string`       | `len` (integer, optional)                    | Generates a cryptographically-secure random alphanumeric string of the specified length (default: 32).        | `{{ "" \| random_string: 16 }}`                                      |
+| `suffix`              | `len` (integer, optional)                    | Returns the last `len` characters from the string (default: full).                                             | `{{ TOKEN \| suffix: 6 }}`                                           |
+| `base62`              | `width` (integer, optional)                  | Encodes the input number as Base62, left-padding with zeros as needed.                                         | `{{ TOKEN \| crc32 \| base62: 6 }}`                                  |
 | `url_encode`          | –                                            | Percent-encodes the input according to RFC 3986.                                                                | `{{ TOKEN \| url_encode }}`                                          |
 | `json_escape`         | –                                            | Escapes special characters so a string can be safely injected into JSON contexts.                              | `{{ TOKEN \| json_escape }}`                                         |
 | `unix_timestamp`      | –                                            | Returns the current Unix epoch time in seconds (UTC).                                                          | `{{ "" \| unix_timestamp }}`                                         |
@@ -269,13 +272,21 @@ pattern_requirements:
   ignore_if_contains:             # Optional: reject matches containing any of these (case-insensitive)
     - test
     - demo
+  checksum:                      # Optional: compare rendered values to drop mismatched formats
+    actual:
+      template: "{{ MATCH | suffix: 6 }}"   # Liquid template for the observed checksum
+      requires_capture: checksum            # (optional) skip unless this capture is present
+    expected: "{{ BODY | crc32 | base62: 6 }}"  # Liquid template to render the expected checksum
+    skip_if_missing: true                   # (optional) treat missing captures as legacy tokens
 ```
 
 All fields are optional. If `special_chars` is not specified, the default set includes: `!@#$%^&*()_+-=[]{}|;:'",.<>?/\`~`
 
 `ignore_if_contains` performs a case-insensitive substring check. If any entry (after trimming whitespace) appears within the match, the match is discarded. This is helpful for dropping known dummy tokens such as "test" or "demo" that otherwise satisfy the regex.
 
-When this filter removes a match it is logged at the `DEBUG` level so you can see exactly which substring caused the skip. If you need to keep every match even when one of these substrings appears, pass `--no-ignore-if-contains` to `kingfisher scan`. The flag disables this post-processing step without changing the rule definitions.
+The optional `checksum` block renders Liquid templates against the match to determine whether the captured checksum matches your expectation. Both templates gain access to `{{ MATCH }}`, `{{ FULL_MATCH }}`, and every named capture in two forms: the original capture name and its uppercase alias (e.g. `{{ body }}` and `{{ BODY }}`). Use helper filters like `suffix`, `crc32`, and `base62` to mirror provider-specific checksum pipelines. If a required capture is missing or the rendered values differ, Kingfisher skips the finding—logging the reason, including checksum lengths, at the `DEBUG` level. Set `skip_if_missing` to `true` to treat absent captures as legacy matches.
+
+When any of these filters remove a match it is logged at the `DEBUG` level so you can see exactly why the skip occurred. If you need to keep every match even when one of these substrings appears, pass `--no-ignore-if-contains` to `kingfisher scan`. The flag disables this post-processing step without changing the rule definitions.
 
 ### Example: Secure API Key
 

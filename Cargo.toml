@@ -75,9 +75,9 @@ include_dir = { version = "0.7", features = ["glob"] }
 strum = { version = "0.26", features = ["derive"] }
 sysinfo = "0.31.4"
 reqwest = { version = "0.12", default-features = false, features = [
-    "json", 
-    "gzip", 
-    "brotli", 
+    "json",
+    "gzip",
+    "brotli",
     "deflate", 
     "stream",
     "rustls-tls",
@@ -196,6 +196,7 @@ gcloud-storage = { version = "1.1.1", default-features = false, features = [
     "auth",
 ] }
 tokei = "12.1.2"
+crc32fast = "1.4.0"
 
 [target.'cfg(not(windows))'.dependencies]
 sha1 = { version = "0.10.6", features = ["asm"] }
