@@ -86,11 +86,10 @@ rules:
     id: kingfisher.gitlab.3
     pattern: |
       (?xi)
-      (?:[^A-Za-z0-9/+=]|\r\n|\\n)
+      \b
       (
         glptt-[0-9a-f]{40}
       )
-      \b
     pattern_requirements:
       min_digits: 2
     examples:

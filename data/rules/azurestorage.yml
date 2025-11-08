@@ -28,7 +28,7 @@ rules:
     id: kingfisher.azurestorage.2
     pattern: |
       (?xi)
-      (?:[^A-Za-z0-9/+=])
+      \b
       azure
       (?:.|[\n\r]){0,128}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
@@ -51,7 +51,7 @@ rules:
     confidence: medium
     examples:
       - Azure AccountKey=Xy9aB8cD7eF6gH5iJ4kL3mN2oP1qR0sT9uV8wX7yZ6aB5cD4eF3gH2iJ1kL0mN9oP8qR7sT6uV5wX4yZ3aB2cD1q
-      - Azure AccountKey=Xy9aB8cD7eF6gH5iJ4kL3mN2oP1qR0sT9uV8wX7yZ6aB5cD4eF3gH2iJ1kL0mN9oP8qR7sT6uV5wX4yZ3aB2cD1g==\
+      - Azure AccountKey=Ky7aC1cD7eF6gH5iJ4kL3mN2oP1qR0sT9uV8wX7yZ6aB5cD4eF3gH2iJ1kL0mN9oP8qR7sT6uV5wX4yZ3aB2cD1g==\
     validation:
       type: AzureStorage
     depends_on_rule:

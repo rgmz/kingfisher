@@ -5,7 +5,7 @@ use assert_cmd::prelude::*;
 use predicates::prelude::*;
 use tempfile::tempdir;
 
-const GITHUB_PAT: &str = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
+const GITHUB_PAT: &str = "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";
 
 #[test]
 fn smoke_scan_filesystem_text_and_binary() -> anyhow::Result<()> {

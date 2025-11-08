@@ -23,7 +23,7 @@ rules:
     min_entropy: 3.3
     confidence: medium
     examples:
-      - 'npm_TCllNwh2WLQlMWVhybM1iQrsTj6rMQ0BOh6d'
+      - "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"
     validation:
       type: Http
       content:

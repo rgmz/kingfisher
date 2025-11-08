@@ -3,7 +3,7 @@ rules:
     id: kingfisher.ibm.1
     pattern: |
       (?xi)
-      (?:[^A-Za-z0-9/+=])
+      \b
       (?:ibm(?:cloud)?|bx)
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)

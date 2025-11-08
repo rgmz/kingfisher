@@ -11,7 +11,7 @@ rules:
           :
           [A-Z0-9_-]{35}
       )
-      (?:[^A-Za-z0-9/+=])
+      \b
     pattern_requirements:
       min_digits: 2
     confidence: medium

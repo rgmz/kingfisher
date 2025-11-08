@@ -340,7 +340,7 @@ mod tests {
     fn smoke_decompress_tar_gz_archive() -> anyhow::Result<()> {
         let dir = tempdir()?;
         let tar_gz = dir.path().join("payload.tar.gz");
-        let github_pat = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa"; // this is not a real secret
+        let github_pat = "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"; // this is not a real secret
 
         // build payload.tar.gz containing secret.txt
         {
@@ -393,7 +393,7 @@ mod tests {
     fn smoke_decompress_without_extract_archives() -> anyhow::Result<()> {
         let dir = tempdir()?;
         let tar_gz = dir.path().join("payload.tar.gz");
-        let github_pat = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
+        let github_pat = "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";
 
         // ── build payload.tar.gz containing secret.txt ──────────────────────────────
         {

@@ -4,15 +4,16 @@ rules:
     pattern: |
       (?xi)                 
       (                        
-        github_pat
-        [A-Z0-9]{80,84}
+        github_pat_
+        [A-Z0-9_+]{82,84}
       )
+      \b
     pattern_requirements:
       min_digits: 2
       min_lowercase: 2
     min_entropy: 3.5
     examples:
-      - "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"
+      - "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"
     references:
       - https://docs.github.com/en/rest/users?apiVersion=2022-11-28
     validation:
@@ -247,11 +248,11 @@ rules:
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
-      (?:[^A-Za-z0-9/+=])
+      \b
       (
           [a-z0-9]{40}
       )
-      (?:[^A-Za-z0-9/+=])
+      \b
     depends_on_rule:
       - rule_id: "kingfisher.github.5"
         variable: GITHUB_CLIENT_ID

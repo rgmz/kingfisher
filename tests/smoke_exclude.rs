@@ -4,7 +4,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 use tempfile::tempdir;
 
-const SECRET: &str = "ghp_1wuHFikBKQtCcH3EB2FBUkyn8krXhP2qLqPa";
+const SECRET: &str = "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";
 
 #[test]
 fn exclude_pattern_hides_matches() -> anyhow::Result<()> {
