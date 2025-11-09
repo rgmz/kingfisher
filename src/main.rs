@@ -20,11 +20,12 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use std::alloc::System;
 #[cfg(feature = "system-alloc")]
 #[global_allocator]
-// static GLOBAL: System = System;
+static GLOBAL: System = System;
 
 // use std::alloc::System;
 // #[global_allocator]
 // static GLOBAL: System = System;
+
 use std::{
     io::{IsTerminal, Read},
     sync::{Arc, Mutex},
