@@ -292,6 +292,19 @@ The optional `checksum` block renders Liquid templates against the match to dete
 
 When any of these filters remove a match it is logged at the `DEBUG` level so you can see exactly why the skip occurred. If you need to keep every match even when one of these substrings appears, pass `--no-ignore-if-contains` to `kingfisher scan`. The flag disables this post-processing step without changing the rule definitions.
 
+### Are `requires_capture` and `skip_if_missing` equivalent?
+
+`requires_capture`
+ - Optional field that names a specific regex capture that must be present before the checksum templates are evaluated.
+ - In the engine, Kingfisher checks whether that capture exists in the match context. If it’s missing, the behavior falls back to whatever `skip_if_missing` dictates (fail or treat as a legacy match).
+
+`skip_if_missing`
+ - Boolean switch that controls what happens when Kingfisher can’t render the checksum—because there’s no match context or a required capture is absent.
+  - `true`: silently skip (pass) the match so legacy, non-checksum tokens are still accepted.
+  -  `false`: treat the situation as a validation failure.
+
+In short, `requires_capture` identifies which capture must exist, while `skip_if_missing` determines whether missing data is a hard failure or an allowed legacy case.
+
 ### Example: Secure API Key
 
 ```yaml
@@ -316,7 +329,7 @@ rules:
         - test
     examples:
       - api_key = "MyS3cur3K3y!2024"
-      - api-key: "Abc123!@#Token"
+      - 'api-key: "Abc123!@#Token"'
 ```
 
 In this example:

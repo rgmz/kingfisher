@@ -963,21 +963,20 @@ fn populate_globals_from_captures(
     globals: &mut Object,
     captured_values: &[(String, String, usize, usize)],
 ) {
-    let mut best_token: Option<(usize, String)> = None;
+    let mut best_token: Option<&String> = None;
 
     for (k, v, ..) in captured_values {
-        let key = k.to_uppercase();
-        if key == "TOKEN" {
-            if best_token.as_ref().map_or(true, |(len, _)| v.len() >= *len) {
-                best_token = Some((v.len(), v.clone()));
+        if k.eq_ignore_ascii_case("TOKEN") {
+            if best_token.map_or(true, |best| v.len() >= best.len()) {
+                best_token = Some(v);
             }
         } else {
-            globals.insert(key.into(), Value::scalar(v.clone()));
+            globals.insert(k.to_uppercase().into(), Value::scalar(v.clone()));
         }
     }
 
-    if let Some((_, token)) = best_token {
-        globals.insert("TOKEN".into(), Value::scalar(token));
+    if let Some(token) = best_token {
+        globals.insert("TOKEN".into(), Value::scalar(token.clone()));
     }
 }
 

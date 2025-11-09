@@ -12,7 +12,7 @@ use anyhow::{anyhow, Context, Result};
 use lazy_static::lazy_static;
 use liquid::{
     model::{KString, Value},
-    object, Parser, ParserBuilder,
+    object, ParserBuilder,
 };
 use regex::Regex;
 use schemars::{
