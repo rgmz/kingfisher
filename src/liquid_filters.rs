@@ -309,6 +309,49 @@ impl Filter for Suffix {
     }
 }
 
+#[derive(Debug, FilterParameters)]
+struct PrefixArgs {
+    #[parameter(description = "Number of leading characters to keep", arg_type = "integer")]
+    len: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "prefix",
+    description = "Return the prefix (first N characters) of the provided string.",
+    parameters(PrefixArgs),
+    parsed(Prefix)
+)]
+pub struct PrefixFilter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "prefix"]
+struct Prefix {
+    #[parameters]
+    args: PrefixArgs,
+}
+
+impl Filter for Prefix {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let text = input.to_kstr();
+        let requested = args
+            .len
+            .and_then(|value| {
+                let scalar = Value::scalar(value);
+                value_to_usize(&scalar)
+            })
+            .unwrap_or_else(|| text.len());
+        if requested == 0 {
+            return Ok(Value::scalar(String::new()));
+        }
+
+        let mut chars: Vec<char> = text.chars().collect();
+        chars.truncate(requested.min(chars.len()));
+        Ok(Value::scalar(chars.into_iter().collect::<String>()))
+    }
+}
+
 #[derive(Debug, Clone, Default, FilterReflection, ParseFilter)]
 #[filter(
     name = "b64enc",
@@ -386,6 +429,175 @@ static_filter!(
         i64::from(hasher.finalize())
     }
 );
+
+#[derive(Debug, FilterParameters)]
+struct Crc32DecArgs {
+    #[parameter(
+        description = "Number of trailing decimal digits to return (zero padded)",
+        arg_type = "integer"
+    )]
+    digits: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "crc32_dec",
+    description = "Compute the CRC32 and optionally return the last N decimal digits.",
+    parameters(Crc32DecArgs),
+    parsed(Crc32Dec)
+)]
+pub struct Crc32DecFilter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "crc32_dec"]
+struct Crc32Dec {
+    #[parameters]
+    args: Crc32DecArgs,
+}
+
+impl Filter for Crc32Dec {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let mut hasher = Hasher::new();
+        hasher.update(input.to_kstr().as_bytes());
+        let checksum = u128::from(hasher.finalize());
+
+        let digits = args
+            .digits
+            .and_then(|value| {
+                let scalar = Value::scalar(value);
+                value_to_usize(&scalar)
+            })
+            .unwrap_or(0);
+
+        if digits == 0 {
+            return Ok(Value::scalar(checksum.to_string()));
+        }
+
+        let clamped_digits = digits.min(38); // 10^38 fits within u128
+        let modulus = 10u128.pow(clamped_digits as u32);
+        let truncated = checksum % modulus;
+        let mut value = truncated.to_string();
+        if clamped_digits > value.len() {
+            let mut padded = String::with_capacity(clamped_digits);
+            for _ in 0..(clamped_digits - value.len()) {
+                padded.push('0');
+            }
+            padded.push_str(&value);
+            value = padded;
+        }
+
+        Ok(Value::scalar(value))
+    }
+}
+
+#[derive(Debug, FilterParameters)]
+struct Crc32HexArgs {
+    #[parameter(
+        description = "Number of trailing hexadecimal digits to return (zero padded)",
+        arg_type = "integer"
+    )]
+    digits: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "crc32_hex",
+    description = "Compute the CRC32 and optionally return the last N hexadecimal digits.",
+    parameters(Crc32HexArgs),
+    parsed(Crc32Hex)
+)]
+pub struct Crc32HexFilter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "crc32_hex"]
+struct Crc32Hex {
+    #[parameters]
+    args: Crc32HexArgs,
+}
+
+impl Filter for Crc32Hex {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let mut hasher = Hasher::new();
+        hasher.update(input.to_kstr().as_bytes());
+        let checksum = hasher.finalize();
+        let mut hex = format!("{checksum:08x}");
+
+        let digits = args
+            .digits
+            .and_then(|value| {
+                let scalar = Value::scalar(value);
+                value_to_usize(&scalar)
+            })
+            .unwrap_or(0);
+
+        if digits == 0 {
+            return Ok(Value::scalar(hex));
+        }
+
+        let clamped = digits.min(32);
+        if clamped > hex.len() {
+            let mut padded = String::with_capacity(clamped);
+            for _ in 0..(clamped - hex.len()) {
+                padded.push('0');
+            }
+            padded.push_str(&hex);
+            hex = padded;
+        } else {
+            let start = hex.len() - clamped;
+            hex = hex[start..].to_string();
+        }
+
+        Ok(Value::scalar(hex))
+    }
+}
+
+#[derive(Debug, FilterParameters)]
+struct Crc32LeB64Args {
+    #[parameter(
+        description = "Number of leading characters from the Base64 string to keep",
+        arg_type = "integer"
+    )]
+    len: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "crc32_le_b64",
+    description = "Compute the CRC32, encode little-endian bytes as Base64, optionally truncating.",
+    parameters(Crc32LeB64Args),
+    parsed(Crc32LeB64)
+)]
+pub struct Crc32LeB64Filter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "crc32_le_b64"]
+struct Crc32LeB64 {
+    #[parameters]
+    args: Crc32LeB64Args,
+}
+
+impl Filter for Crc32LeB64 {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let mut hasher = Hasher::new();
+        hasher.update(input.to_kstr().as_bytes());
+        let checksum = hasher.finalize();
+        let encoded = general_purpose::STANDARD.encode(checksum.to_le_bytes());
+
+        let output = if let Some(len) = args.len.and_then(|value| {
+            let scalar = Value::scalar(value);
+            value_to_usize(&scalar)
+        }) {
+            encoded.chars().take(len).collect::<String>()
+        } else {
+            encoded
+        };
+
+        Ok(Value::scalar(output))
+    }
+}
 
 #[derive(Debug, FilterParameters)]
 struct Base62Args {
@@ -590,7 +802,11 @@ pub fn register_all(builder: liquid::ParserBuilder) -> liquid::ParserBuilder {
         .filter(B64DecFilter::default())
         .filter(RandomStringFilter::default())
         .filter(SuffixFilter::default())
+        .filter(PrefixFilter::default())
         .filter(Crc32Filter::default())
+        .filter(Crc32DecFilter::default())
+        .filter(Crc32HexFilter::default())
+        .filter(Crc32LeB64Filter::default())
         .filter(Base62Filter::default())
         .filter(HmacSha256::default())
         .filter(HmacSha1::default())
@@ -646,10 +862,36 @@ mod tests {
     }
 
     #[test]
+    fn prefix_filter() {
+        assert_eq!(render(r#"{{ "abcdef" | prefix: 3 }}"#), "abc");
+        assert_eq!(render(r#"{{ "short" | prefix: 10 }}"#), "short");
+        assert_eq!(render(r#"{{ "value" | prefix: 0 }}"#), "");
+    }
+
+    #[test]
     fn crc32_and_base62_filters() {
         assert_eq!(render(r#"{{ "hello" | crc32 }}"#), "907060870");
         assert_eq!(render(r#"{{ "hello" | crc32 | base62 }}"#), "zNvy2");
         assert_eq!(render(r#"{{ "hello" | crc32 | base62: 6 }}"#), "0zNvy2");
+    }
+
+    #[test]
+    fn crc32_dec_filter() {
+        assert_eq!(render(r#"{{ "hello" | crc32_dec }}"#), "907060870");
+        assert_eq!(render(r#"{{ "hello" | crc32_dec: 6 }}"#), "060870");
+    }
+
+    #[test]
+    fn crc32_hex_filter() {
+        assert_eq!(render(r#"{{ "hello" | crc32_hex }}"#), "3610a686");
+        assert_eq!(render(r#"{{ "hello" | crc32_hex: 4 }}"#), "a686");
+        assert_eq!(render(r#"{{ "hello" | crc32_hex: 10 }}"#), "003610a686");
+    }
+
+    #[test]
+    fn crc32_le_b64_filter() {
+        assert_eq!(render(r#"{{ "hello" | crc32_le_b64 }}"#), "hqYQNg==");
+        assert_eq!(render(r#"{{ "hello" | crc32_le_b64: 6 }}"#), "hqYQNg");
     }
 
     #[test]
