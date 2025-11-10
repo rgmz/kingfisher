@@ -39,7 +39,6 @@ rules:
         ([A-Za-z0-9/+]{40})
         \b
       )
-      \b
     pattern_requirements:
       min_digits: 2
     min_entropy: 4.5
