@@ -6,6 +6,10 @@ on:
       - main
 
 env:
+  VCPKG_ROOT: C:\vcpkg
+  VCPKG_DOWNLOADS: C:\vcpkg\downloads
+  VCPKG_FEATURE_FLAGS: binarycaching
+  VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
   RUST_TOOLCHAIN: "1.90"
 
 jobs:
