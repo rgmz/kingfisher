@@ -5,6 +5,10 @@ on:
     branches:
       - main
 env:
+  VCPKG_ROOT: C:\vcpkg
+  VCPKG_DOWNLOADS: C:\vcpkg\downloads
+  VCPKG_FEATURE_FLAGS: binarycaching
+  VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
   RUST_TOOLCHAIN: "1.90"
 
 jobs:
@@ -198,13 +202,16 @@ jobs:
             C:\vcpkg\buildtrees
             C:\vcpkg\packages
             C:\vcpkg\installed
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.cmake') }}
+            C:\vcpkg\downloads
+            C:\vcpkg\archives
+            C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-vcpkg-hyperscan-542
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
-      - uses: Swatinem/rust-cache@v2 
+      - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: .\buildwin.bat -force
+        run: .\buildwin.bat
         shell: cmd
 
       - name: Run tests

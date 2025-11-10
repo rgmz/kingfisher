@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Improved OpsGenie validation.
 - Automatically enable `--no-dedup` when `--manage-baseline` is supplied so baseline management keeps every finding.
 - This release is focused on further improving detection accuracy, before even attempting to validate findings.
+- Updated GitHub Actions CI for Windows and buildwin.bat script
 
 ## [v1.61.0]
 - Fixed local filesystem scans to keep `open_path_as_is` enabled when opening Git repositories and only disable it for diff-based scans.
