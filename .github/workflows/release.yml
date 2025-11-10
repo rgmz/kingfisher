@@ -201,7 +201,7 @@ jobs:
             C:\vcpkg\downloads
             C:\vcpkg\archives
             C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-vcpkg-hyperscan
+          key: ${{ runner.os }}-vcpkg-hyperscan-542
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
