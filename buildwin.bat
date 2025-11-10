@@ -10,6 +10,9 @@ setlocal
 
 REM Set your Cargo project name manually here if desired:
 set "PROJECT_NAME=kingfisher"
+set "VCPKG_ROOT=%HOMEDRIVE%\vcpkg"
+set "FORCE_VCPKG=0"
+if /I "%~1"=="-force" set "FORCE_VCPKG=1"
 
 REM Optional check for OS:
 if NOT "%OS%"=="Windows_NT" (
@@ -46,38 +49,8 @@ call "%VCINSTALLDIR%\Auxiliary\Build\vcvars64.bat" || (
     exit /b 1
 )
 
-REM Locate vcpkg.exe
-where vcpkg.exe >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    if exist "%HOMEDRIVE%\vcpkg\vcpkg.exe" (
-        set "VCPKG_EXE=%HOMEDRIVE%\vcpkg\vcpkg.exe"
-        echo Found vcpkg at: %VCPKG_EXE%
-    ) else (
-        if "%~1"=="-force" (
-            echo Cloning and bootstrapping vcpkg...
-            if exist "%HOMEDRIVE%\vcpkg" (
-                rmdir /s /q "%HOMEDRIVE%\vcpkg"
-            )
-            git clone https://github.com/microsoft/vcpkg.git "%HOMEDRIVE%\vcpkg"
-            pushd "%HOMEDRIVE%\vcpkg"
-            dir
-            call .\bootstrap-vcpkg.bat
-            set "VCPKG_EXE=%CD%\vcpkg.exe"
-            popd
-            echo Installed vcpkg at: %VCPKG_EXE%
-        ) else (
-            echo ERROR: vcpkg not found. Please install it or re-run script with -force.
-            exit /b 1
-        )
-    )
-) else (
-    for /f "tokens=*" %%i in ('where vcpkg.exe') do (
-        set "VCPKG_EXE=%%i"
-        goto :found_vcpkg
-    )
-    :found_vcpkg
-    echo Found vcpkg at: %VCPKG_EXE%
-)
+REM Locate (or install) vcpkg.exe
+call :ensure_vcpkg || exit /b 1
 
 REM Check if LOCALAPPDATA starts with a drive letter, if not set it to APPDATA
 if /I not "%LOCALAPPDATA:~1,1%"==":" (
@@ -88,7 +61,7 @@ if /I not "%LOCALAPPDATA:~1,1%"==":" (
 REM ── Install Hyperscan ------------------------------------------------------
 set "VCPKG_TRIPLET=x64-windows-static"
 echo Installing Hyperscan (%VCPKG_TRIPLET%) via vcpkg...
-pushd "%HOMEDRIVE%\vcpkg"           REM ► work inside the vcpkg root
+pushd "%VCPKG_ROOT%"           REM ► work inside the vcpkg root
 "%VCPKG_EXE%" install hyperscan:%VCPKG_TRIPLET% || (
     echo ERROR: vcpkg install failed.
     popd
@@ -98,7 +71,7 @@ popd
 set "LIBHS_NO_PKG_CONFIG=1"
 
 REM Point vectorscan‑rs‑sys at the Hyperscan install
-set "HYPERSCAN_ROOT=%HOMEDRIVE%\vcpkg\installed\%VCPKG_TRIPLET%"
+set "HYPERSCAN_ROOT=%VCPKG_ROOT%\installed\%VCPKG_TRIPLET%"
 set "LIB=%HYPERSCAN_ROOT%\lib;%LIB%"
 set "INCLUDE=%HYPERSCAN_ROOT%\include;%INCLUDE%"
 
@@ -151,5 +124,51 @@ if exist "%PROJECT_NAME%-windows-x64.zip" (
 echo Archives in target\release:
 dir /b *.zip 2>nul || echo None found.
 
+goto :script_end
+
+:ensure_vcpkg
+where vcpkg.exe >nul 2>nul
+if %ERRORLEVEL%==0 (
+    for /f "tokens=*" %%i in ('where vcpkg.exe') do (
+        set "VCPKG_EXE=%%i"
+        echo Found vcpkg at: %VCPKG_EXE%
+        exit /b 0
+    )
+)
+
+if "%FORCE_VCPKG%"=="0" if exist "%VCPKG_ROOT%\vcpkg.exe" (
+    set "VCPKG_EXE=%VCPKG_ROOT%\vcpkg.exe"
+    echo Found vcpkg at: %VCPKG_EXE%
+    exit /b 0
+)
+
+if "%FORCE_VCPKG%"=="1" (
+    if exist "%VCPKG_ROOT%" (
+        echo Removing existing vcpkg at: %VCPKG_ROOT%
+        rmdir /s /q "%VCPKG_ROOT%"
+    )
+) else if exist "%VCPKG_ROOT%" (
+    echo Existing vcpkg directory found at %VCPKG_ROOT%, but vcpkg.exe was not located.
+    echo Recreating the installation...
+    rmdir /s /q "%VCPKG_ROOT%"
+)
+
+echo Cloning and bootstrapping vcpkg into %VCPKG_ROOT%...
+git clone https://github.com/microsoft/vcpkg.git "%VCPKG_ROOT%" || (
+    echo ERROR: Failed to clone vcpkg repository.
+    exit /b 1
+)
+pushd "%VCPKG_ROOT%"
+call .\bootstrap-vcpkg.bat || (
+    popd
+    echo ERROR: Failed to bootstrap vcpkg.
+    exit /b 1
+)
+set "VCPKG_EXE=%VCPKG_ROOT%\vcpkg.exe"
+popd
+echo Installed vcpkg at: %VCPKG_EXE%
+exit /b 0
+
+:script_end
 endlocal
 exit /b 0
