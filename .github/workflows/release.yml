@@ -198,13 +198,16 @@ jobs:
             C:\vcpkg\buildtrees
             C:\vcpkg\packages
             C:\vcpkg\installed
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.cmake') }}
+            C:\vcpkg\downloads
+            C:\vcpkg\archives
+            C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-vcpkg-hyperscan
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
-      - uses: Swatinem/rust-cache@v2 
+      - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: .\buildwin.bat -force
+        run: .\buildwin.bat
         shell: cmd
 
       - name: Run tests
