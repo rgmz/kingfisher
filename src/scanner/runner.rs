@@ -33,6 +33,7 @@ use crate::{
         run_secret_validation, save_docker_images,
         summary::print_scan_summary,
     },
+    util::set_redaction_enabled,
 };
 
 pub async fn run_scan(
@@ -74,6 +75,8 @@ pub async fn run_async_scan(
     trace!("Args:\n{global_args:#?}\n{args:#?}");
     let progress_enabled = global_args.use_progress();
     initialize_environment()?;
+
+    set_redaction_enabled(args.redact);
 
     let mut repo_urls = enumerate_github_repos(args, global_args).await?;
     let gitlab_repo_urls = enumerate_gitlab_repos(args, global_args).await?;

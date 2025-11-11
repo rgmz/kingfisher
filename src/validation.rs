@@ -80,7 +80,7 @@ fn secret_fingerprint(m: &OwnedBlobMatch) -> u64 {
 
     // first capture = the secret text itself
     if let Some(c0) = m.captures.captures.get(0) {
-        c0.value.hash(&mut hasher);
+        c0.raw_value().hash(&mut hasher);
     }
     hasher.finish()
 }
@@ -148,7 +148,7 @@ pub fn collect_variables_and_dependencies(
                         .entry(dependency.variable.to_uppercase())
                         .or_insert_with(Vec::new)
                         .push((
-                            matching_input.value.to_string(),
+                            matching_input.raw_value().to_string(),
                             other_match.matching_input_offset_span,
                         ));
                 }

@@ -73,7 +73,7 @@ pub async fn run_secret_validation(
                 .captures
                 .get(1)
                 .or_else(|| arc_msg.2.groups.captures.get(0))
-                .map_or("", |c| c.value);
+                .map_or("", |c| c.raw_value());
             groups.entry(format!("{}|{}", arc_msg.2.rule.id(), secret)).or_default().push(arc_msg);
         }
 
@@ -111,7 +111,7 @@ pub async fn run_secret_validation(
                     .captures
                     .get(1)
                     .or_else(|| rep_arc.2.groups.captures.get(0))
-                    .map_or("", |c| c.value);
+                    .map_or("", |c| c.raw_value());
                 let key = format!("{}|{}", rep_arc.2.rule.id(), secret);
 
                 match val_res.entry(key.clone()) {
@@ -352,7 +352,7 @@ async fn validate_single(
             sorted.into_iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("|")
         })
         .unwrap_or_default();
-    let capture0 = om.captures.captures.get(0).map_or(String::new(), |c| c.value.to_string());
+    let capture0 = om.captures.captures.get(0).map_or(String::new(), |c| c.raw_value().to_string());
     let cache_key = format!("{}|{}|{}", om.rule.name(), capture0, dep_vars_str);
     // Check cache first
     if let Some(cached) = cache.get(&cache_key) {
@@ -443,6 +443,6 @@ fn build_cache_key(
         .unwrap_or_default();
     // For demonstration, we’ll do a simplistic approach
     // You can adapt from your existing logic
-    let capture0 = om.captures.captures.get(0).map_or(String::new(), |c| c.value.to_string());
+    let capture0 = om.captures.captures.get(0).map_or(String::new(), |c| c.raw_value().to_string());
     format!("{}|{}|{}", om.rule.name(), capture0, dep_vars_str)
 }

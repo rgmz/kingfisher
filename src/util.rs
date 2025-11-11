@@ -1,7 +1,9 @@
 use std::{
+    borrow::Cow,
     fs::File,
     io::{stdin, stdout, BufReader, BufWriter},
     path::Path,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use blake3::Hasher;
@@ -11,6 +13,7 @@ use path_dedot::ParseDot;
 use ring::rand::{SecureRandom, SystemRandom};
 // Generate a random salt once and use it for the entire application runtime
 static APP_SALT: Lazy<String> = Lazy::new(|| generate_salt());
+static REDACTION_ENABLED: AtomicBool = AtomicBool::new(false);
 
 /// Interns a string once and returns a `'static` reference to it.
 pub fn intern(s: &str) -> &'static str {
@@ -40,6 +43,26 @@ pub fn redact_value(value: &str) -> String {
     hasher.update(value.as_bytes());
     let hash = hasher.finalize();
     format!("[REDACTED:{}]", hash_to_short_id(&hash))
+}
+
+/// Enables or disables global output redaction.
+pub fn set_redaction_enabled(enabled: bool) {
+    REDACTION_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
+/// Returns true if redaction is enabled for user-facing output.
+pub fn redaction_enabled() -> bool {
+    REDACTION_ENABLED.load(Ordering::Relaxed)
+}
+
+/// Returns either the original value or a redacted placeholder depending on
+/// the current redaction setting.
+pub fn display_value(value: &'static str) -> Cow<'static, str> {
+    if redaction_enabled() {
+        Cow::Owned(redact_value(value))
+    } else {
+        Cow::Borrowed(value)
+    }
 }
 // Generate a random salt (16-character alphanumeric string)
 fn generate_salt() -> String {
