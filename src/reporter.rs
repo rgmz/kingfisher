@@ -417,15 +417,19 @@ impl DetailsReporter {
         let source_span = &rm.m.location.source_span;
         let line_num = source_span.start.line;
 
+        // --- FIX IS HERE ---
+        // We now correctly serialize *only* the explicit capture groups (or group 0
+        // as a fallback). The primary "secret" is therefore always at index 0
+        // of the captures SmallVec.
         let snippet = Escaped(
             rm.m.groups
                 .captures
-                .get(1)
-                .or_else(|| rm.m.groups.captures.get(0))
+                .get(0) // Get the first (and primary) serialized capture
                 .map(|capture| capture.value.as_bytes())
                 .unwrap_or_default(),
         )
         .to_string();
+        // --- END FIX ---
 
         let validation_status = if rm.validation_success {
             "Active Credential".to_string()

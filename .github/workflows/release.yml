@@ -212,9 +212,10 @@ jobs:
             C:\vcpkg\downloads
             C:\vcpkg\archives
             C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-vcpkg-hyperscan-542
+          key: vcpkg-${{ runner.os }}-hs-542
           restore-keys: |
-            ${{ runner.os }}-vcpkg-
+            vcpkg-${{ runner.os }}-
+            vcpkg-
 
       # Ensure downloads dir exists and seed PCRE 8.45 zip from a working mirror
       - name: Pre-seed PCRE 8.45 for vcpkg (bypass SourceForge redirect)

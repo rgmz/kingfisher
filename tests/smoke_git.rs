@@ -15,7 +15,7 @@ fn smoke_scan_git_history() -> anyhow::Result<()> {
 
     // commit v1
     let file_path = repo_dir.join("config.yml");
-    fs::write(&file_path, b"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")?;
+    fs::write(&file_path, b"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")?;
     let mut idx = repo.index()?;
     idx.add_path(std::path::Path::new("config.yml"))?;
     let oid1 = idx.write_tree()?;
@@ -23,7 +23,7 @@ fn smoke_scan_git_history() -> anyhow::Result<()> {
     repo.commit(Some("HEAD"), &sig, &sig, "init", &tree1, &[])?;
 
     // commit v2 (same leak, will test dedup)
-    fs::write(&file_path, b"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 # unchanged")?;
+    fs::write(&file_path, b"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 # unchanged")?;
     idx.add_path(std::path::Path::new("config.yml"))?;
     let oid2 = idx.write_tree()?;
     let tree2 = repo.find_tree(oid2)?;
@@ -44,7 +44,7 @@ fn smoke_scan_git_history() -> anyhow::Result<()> {
         ])
         .assert()
         .code(200) // ← kingfisher’s “findings present” status
-        .stdout(predicate::str::contains("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"));
+        .stdout(predicate::str::contains("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"));
 
     dir.close()?;
     Ok(())

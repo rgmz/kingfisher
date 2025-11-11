@@ -159,7 +159,7 @@ async fn test_scan_slack_messages() -> Result<()> {
         "messages": {
             "matches": [{
                 "permalink": "https://example.slack.com/archives/C123/p1234",
-                "text": "This contains a github token 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",
+                "text": "This contains a github token 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",
                 "ts": "1234.56",
                 "channel": {"id": "C123", "name": "general"}
             }],

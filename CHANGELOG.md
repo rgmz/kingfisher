@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.63.0]
+- Fixed bug when retrieving some finding values and injecting them as TOKENS in the rule templates
+- Improved Datadog rule
+- Improved AWS rule
+
 ## [v1.62.0]
 - Added `pattern_requirements` checks to rules, providing lightweight post-regex character-class validation without lookarounds. See docs/RULES.md for detail
 - Added an `ignore_if_contains` option to `pattern_requirements` to drop matches containing case-insensitive placeholder words, with tests covering the new behavior.

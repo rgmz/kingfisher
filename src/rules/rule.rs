@@ -731,7 +731,7 @@ mod tests {
             }),
         };
 
-        let token = b"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";
+        let token = b"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";
         let regex =
             BytesRegex::new(r"(?x) ghp_(?P<body>[A-Za-z0-9]{30})(?P<checksum>[A-Za-z0-9]{6})")
                 .unwrap();

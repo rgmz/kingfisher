@@ -321,6 +321,10 @@ async fn timed_validate_single_match<'a>(
     for dep in m.rule.syntax().depends_on_rule.iter().flatten() {
         if let Some(vals) = dependent_variables.get(&dep.variable.to_uppercase()) {
             for (val, span) in vals {
+                // Skip adding captured values for TOKEN dependencies
+                if dep.variable.eq_ignore_ascii_case("TOKEN") {
+                    continue;
+                }
                 captured_values.push((
                     dep.variable.to_uppercase(),
                     val.clone(),

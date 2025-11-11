@@ -3,21 +3,45 @@ use tokio::net::lookup_host;
 
 use crate::validation::SerializableCaptures;
 
-/// Return (NAME, value, start, end) for every capture we care about.
+/// Return (NAME, value, start, end) for the captures we care about.
 ///
-/// * If a capture has a name, use that (upper-cased)  
-/// * If it’s unnamed, fall back to `"TOKEN"`
+/// * Named captures keep their (upper-cased) name
+/// * Among unnamed captures, keep **only the first one** and call it "TOKEN"
 pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String, usize, usize)> {
+    let mut saw_unnamed = false;
+
     captures
         .captures
         .iter()
-        .map(|cap| {
-            let name =
-                cap.name.as_ref().map(|n| n.to_uppercase()).unwrap_or_else(|| "TOKEN".to_string());
-            (name, cap.value.to_string(), cap.start, cap.end)
+        .filter_map(|cap| {
+            if let Some(name) = &cap.name {
+                Some((name.to_uppercase(), cap.value.to_string(), cap.start, cap.end))
+            } else if !saw_unnamed {
+                saw_unnamed = true;
+                Some(("TOKEN".to_string(), cap.value.to_string(), cap.start, cap.end))
+            } else {
+                // Ignore any additional unnamed captures (e.g., from unintended groups)
+                None
+            }
         })
         .collect()
 }
+
+// /// Return (NAME, value, start, end) for every capture we care about.
+// ///
+// /// * If a capture has a name, use that (upper-cased)
+// /// * If it’s unnamed, fall back to `"TOKEN"`
+// pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String, usize, usize)> {
+//     captures
+//         .captures
+//         .iter()
+//         .map(|cap| {
+//             let name =
+//                 cap.name.as_ref().map(|n| n.to_uppercase()).unwrap_or_else(|| "TOKEN".to_string());
+//             (name, cap.value.to_string(), cap.start, cap.end)
+//         })
+//         .collect()
+// }
 
 pub fn find_closest_variable(
     captures: &[(String, String, usize, usize)],
@@ -108,7 +132,7 @@ pub async fn check_url_resolvable(url: &Url) -> Result<(), Box<dyn std::error::E
 // -----------------------------------------------------------------------------
 // tests
 // -----------------------------------------------------------------------------
-
+//
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,7 +145,7 @@ mod tests {
         let captures = SerializableCaptures {
             captures: smallvec![SerializableCapture {
                 name: None,
-                match_number: 0,
+                match_number: 0, // This test is for a rule with *no* explicit captures
                 start: 1,
                 end: 4,
                 value: "abc",
@@ -130,21 +154,26 @@ mod tests {
         let result = process_captures(&captures);
         assert_eq!(result, vec![("TOKEN".to_string(), "abc".to_string(), 1usize, 4usize)]);
     }
-
     #[test]
     fn includes_whole_match_when_multiple() {
         let captures = SerializableCaptures {
             captures: smallvec![
+                // --- FIX ---
+                // This test simulated a regex like `(abc)de(?P<foo>bcd)`.
+                // With our fix, group 0 ("abcde") is NOT serialized.
+                // We only get the explicit captures (group 1 and "foo").
                 SerializableCapture {
+                    // This is group 1 (unnamed)
                     name: None,
-                    match_number: 0,
-                    start: 0,
-                    end: 5,
-                    value: "abcde",
+                    match_number: 1, // Corrected match_number
+                    start: 1,
+                    end: 4,
+                    value: "bcd",
                 },
                 SerializableCapture {
+                    // This is group 2 (named "foo")
                     name: Some("foo".to_string()),
-                    match_number: -1,
+                    match_number: 2, // Corrected match_number
                     start: 1,
                     end: 4,
                     value: "bcd",
@@ -152,45 +181,60 @@ mod tests {
             ],
         };
         let result = process_captures(&captures);
+
+        // --- FIX ---
+        // The expected result now only contains the explicit captures.
+        // The first unnamed capture ("bcd") becomes "TOKEN".
         assert_eq!(
             result,
             vec![
-                ("TOKEN".to_string(), "abcde".to_string(), 0usize, 5usize),
+                ("TOKEN".to_string(), "bcd".to_string(), 1usize, 4usize),
                 ("FOO".to_string(), "bcd".to_string(), 1usize, 4usize),
             ]
         );
+        // --- END FIX ---
     }
 
+    #[test]
     #[test]
     fn includes_whole_match_and_unnamed_groups() {
         let captures = SerializableCaptures {
             captures: smallvec![
+                // --- FIX ---
+                // This test simulated a regex like `(?P<foo>aa)bb(cc)`.
+                // With our fix, group 0 ("aabbcc") is NOT serialized.
+                // We only get the explicit captures ("foo" and group 2).
                 SerializableCapture {
-                    name: None,
-                    match_number: 0,
-                    start: 0,
-                    end: 6,
-                    value: "aabbcc",
-                },
-                SerializableCapture {
+                    // This is group 1 (named "foo")
                     name: Some("foo".to_string()),
-                    match_number: -1,
+                    match_number: 1, // Corrected match_number
                     start: 0,
                     end: 2,
                     value: "aa",
                 },
-                SerializableCapture { name: None, match_number: 1, start: 4, end: 6, value: "cc" },
+                SerializableCapture {
+                    // This is group 2 (unnamed)
+                    name: None,
+                    match_number: 2, // Corrected match_number
+                    start: 4,
+                    end: 6,
+                    value: "cc"
+                },
             ],
         };
         let result = process_captures(&captures);
+
+        // --- FIX ---
+        // The expected result no longer contains the full match ("aabbcc").
+        // The first (and only) unnamed capture ("cc") is now correctly labeled "TOKEN".
         assert_eq!(
             result,
             vec![
-                ("TOKEN".to_string(), "aabbcc".to_string(), 0usize, 6usize),
-                ("FOO".to_string(), "aa".to_string(), 0usize, 2usize),
-                ("TOKEN".to_string(), "cc".to_string(), 4usize, 6usize),
+                ("FOO".to_string(), "aa".to_string(), 0usize, 2usize), // From named group 1
+                ("TOKEN".to_string(), "cc".to_string(), 4usize, 6usize), // From unnamed group 2
             ]
         );
+        // --- END FIX ---
     }
 
     #[test]

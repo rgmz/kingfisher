@@ -187,9 +187,7 @@ pub fn validate_aws_credentials_input(access_key_id: &str, secret_key: &str) -> 
     if !access_key_id.chars().all(|c| c.is_ascii_alphanumeric()) {
         return Err("AWS access key ID contains invalid characters".to_string());
     }
-    if !secret_key.chars().all(|c| c.is_ascii_alphanumeric() || c == '/' || c == '+') {
-        return Err("AWS secret key contains invalid characters".to_string());
-    }
+
     Ok(())
 }
 

@@ -374,7 +374,9 @@ impl<'a> Matcher<'a> {
         } else {
             None
         };
+        /////////////////////////////
         // Process matches
+        /////////////////////////////
         let mut matches = Vec::new();
         let owned_ts_results = tree_sitter_result.map(|ts_results| {
             ts_results
@@ -565,9 +567,11 @@ fn record_match(
 ) -> bool {
     insert_span(map.entry(rule_id).or_default(), span)
 }
+// in src/matcher.rs
+
+#[allow(clippy::too_many_arguments)]
 fn filter_match<'b>(
     blob: &'b Blob,
-    // rule: &'b Rule,
     rule: Arc<Rule>,
     re: &Regex,
     start: usize,
@@ -596,14 +600,44 @@ fn filter_match<'b>(
 
     for captures in re.captures_iter(haystack) {
         let full_capture = captures.get(0).unwrap();
-        let matching_input = captures.get(1).unwrap_or(full_capture);
+
+        // --- LOGIC TO FIND THE "SECRET" FOR ENTROPY/SAFE-LISTING ---
+        let matching_input_for_entropy = 'block: {
+            // 1. Prefer a named capture called TOKEN (case-insensitive).
+            if let Some(token_cap) = re.capture_names().enumerate().find_map(|(i, name_opt)| {
+                name_opt
+                    .filter(|name| name.eq_ignore_ascii_case("TOKEN"))
+                    .and_then(|_| captures.get(i))
+            }) {
+                break 'block token_cap;
+            }
+
+            // 2. Otherwise, prefer the first *matched* named capture.
+            if let Some(named_cap) = re.capture_names().enumerate().find_map(|(i, name_opt)| {
+                name_opt.and_then(|_| captures.get(i)) // find(i > 0 && name_opt.is_some())
+            }) {
+                break 'block named_cap;
+            }
+
+            // 3. Otherwise, fall back to the first positional capture (group 1).
+            if let Some(pos_cap) = captures.get(1) {
+                break 'block pos_cap;
+            }
+
+            // 4. Finally, fall back to the full match (group 0).
+            break 'block full_capture;
+        };
+        // --- END LOGIC ---
+
         let min_entropy = rule.min_entropy();
-        let mi_bytes = matching_input.as_bytes();
+        let entropy_bytes = matching_input_for_entropy.as_bytes();
         let full_bytes = full_capture.as_bytes();
-        let calculated_entropy = calculate_shannon_entropy(mi_bytes);
+        let calculated_entropy = calculate_shannon_entropy(entropy_bytes);
+
+        // Check entropy and safe-listing against the *selected* secret bytes
         if calculated_entropy <= min_entropy
-            || is_safe_match(mi_bytes)
-            || is_user_match(mi_bytes, full_bytes)
+            || is_safe_match(entropy_bytes)
+            || is_user_match(entropy_bytes, full_bytes)
         {
             debug!(
                 "Skipping match with entropy {} <= {} or safe match",
@@ -619,7 +653,15 @@ fn filter_match<'b>(
                 captures: &captures,
                 full_match: full_bytes,
             };
-            match char_reqs.validate(mi_bytes, Some(context), respect_ignore_if_contains) {
+
+            // --- FIX IS HERE ---
+            //
+            // The `validate` function (and thus `{{ MATCH }}`) should *always*
+            // operate on the *full match* (group 0), not just the entropy bytes.
+            // This aligns the scan logic with the unit test's logic.
+            match char_reqs.validate(full_bytes, Some(context), respect_ignore_if_contains) {
+                //
+                // --- END FIX ---
                 PatternValidationResult::Passed => {}
                 PatternValidationResult::Failed => {
                     debug!(
@@ -647,6 +689,9 @@ fn filter_match<'b>(
             }
         }
 
+        // Use the `matching_input_for_entropy` as the span/key for the finding.
+        let matching_input = matching_input_for_entropy;
+
         let matching_input_offset_span = OffsetSpan::from_range(
             (start + matching_input.start())..(start + matching_input.end()),
         );
@@ -668,7 +713,10 @@ fn filter_match<'b>(
         }
         let only_matching_input =
             &blob.bytes()[matching_input_offset_span.start..matching_input_offset_span.end];
+
+        // Pass the *full* capture object to from_captures
         let groups = SerializableCaptures::from_captures(&captures, haystack, re, redact);
+
         matches.push(BlobMatch {
             rule: Arc::clone(&rule),
             blob_id: blob.id_ref(),
@@ -687,6 +735,7 @@ fn filter_match<'b>(
         t.end(new_count > 0, new_count, 0);
     }
 }
+
 fn get_language_and_queries(lang: &str) -> Option<(Language, FxHashMap<String, String>)> {
     match lang.to_lowercase().as_str() {
         "bash" | "shell" => Some((Language::Bash, parser::queries::bash::get_bash_queries())),
@@ -796,6 +845,7 @@ pub struct SerializableCaptures {
     #[schemars(with = "Vec<SerializableCapture>")]
     pub captures: SmallVec<[SerializableCapture; 2]>, // All captures (named and unnamed)
 }
+
 impl SerializableCaptures {
     pub fn from_captures(
         captures: &regex::bytes::Captures,
@@ -808,26 +858,51 @@ impl SerializableCaptures {
         let capture_names: SmallVec<[Option<String>; 4]> =
             re.capture_names().map(|name| name.map(str::to_string)).collect();
 
-        for i in 0..captures.len() {
-            if let Some(cap) = captures.get(i) {
+        // If there are explicit capture groups (e.g., group 1, 2, ...),
+        // only serialize those.
+        if captures.len() > 1 {
+            for i in 1..captures.len() {
+                // Start from 1
+                if let Some(cap) = captures.get(i) {
+                    let value = if redact {
+                        redact_value(&String::from_utf8_lossy(cap.as_bytes()))
+                    } else {
+                        String::from_utf8_lossy(cap.as_bytes()).to_string()
+                    };
+                    let interned = intern(&value);
+                    let name = capture_names.get(i).and_then(|opt| opt.as_ref()).cloned();
+
+                    serialized_captures.push(SerializableCapture {
+                        name,
+                        match_number: i32::try_from(i).unwrap_or(0),
+                        start: cap.start(),
+                        end: cap.end(),
+                        value: interned,
+                    });
+                }
+            }
+        } else if captures.len() == 1 {
+            // ELSE, if there is ONLY the full match (len == 1),
+            // serialize just that full match (group 0) as the fallback.
+            if let Some(cap) = captures.get(0) {
                 let value = if redact {
                     redact_value(&String::from_utf8_lossy(cap.as_bytes()))
                 } else {
                     String::from_utf8_lossy(cap.as_bytes()).to_string()
                 };
                 let interned = intern(&value);
-
-                let name = capture_names.get(i).and_then(|opt| opt.as_ref()).cloned();
+                let name = capture_names.get(0).and_then(|opt| opt.as_ref()).cloned();
 
                 serialized_captures.push(SerializableCapture {
                     name,
-                    match_number: i32::try_from(i).unwrap_or(0),
+                    match_number: 0,
                     start: cap.start(),
                     end: cap.end(),
                     value: interned,
                 });
             }
         }
+        // If len == 0 (no match), loop is skipped, empty vec is returned.
 
         SerializableCaptures { captures: serialized_captures }
     }
@@ -950,7 +1025,8 @@ pub struct DecodedData {
 }
 #[inline]
 fn is_base64_byte(b: u8) -> bool {
-    matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/')
+    // Include URL-safe characters '-' and '_'
+    matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/' | b'-' | b'_')
 }
 
 pub fn get_base64_strings(input: &[u8]) -> Vec<DecodedData> {
@@ -975,7 +1051,14 @@ pub fn get_base64_strings(input: &[u8]) -> Vec<DecodedData> {
         let len = end - start;
         if len >= 32 && len % 4 == 0 {
             let base64_slice = &input[start..end];
-            if let Ok(decoded) = general_purpose::STANDARD.decode(base64_slice) {
+
+            // Try decoding with STANDARD, then URL_SAFE, then URL_SAFE_NO_PAD
+            let decode_result = general_purpose::STANDARD
+                .decode(base64_slice)
+                .or_else(|_| general_purpose::URL_SAFE.decode(base64_slice))
+                .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(base64_slice));
+
+            if let Ok(decoded) = decode_result {
                 if let Ok(decoded_str) = std::str::from_utf8(&decoded) {
                     if decoded_str.is_ascii() {
                         results.push(DecodedData {
@@ -1521,10 +1604,10 @@ line2
             .map(|cap| (cap.name.as_deref(), cap.match_number, cap.value))
             .collect();
 
-        assert_eq!(entries.len(), 4);
-        assert_eq!(entries[0], (None, 0, "ghp_ABC12"));
-        assert_eq!(entries[1], (None, 1, "ghp_ABC12"));
-        assert_eq!(entries[2], (Some("body"), 2, "ABC"));
-        assert_eq!(entries[3], (Some("checksum"), 3, "12"));
+        assert_eq!(entries.len(), 3);
+
+        assert_eq!(entries[0], (None, 1, "ghp_ABC12"));
+        assert_eq!(entries[1], (Some("body"), 2, "ABC"));
+        assert_eq!(entries[2], (Some("checksum"), 3, "12"));
     }
 }

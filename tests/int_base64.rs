@@ -8,8 +8,8 @@ use tempfile::tempdir;
 fn detects_base64_encoded_secret() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let file_path = dir.path().join("secret.txt");
-    // Base64 for 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
-    let encoded = "Z2hwXzF3dUhGaWtCS1F0Q2NIM0VCMkZCVWt5bjhrclhoUDBNV0h4cw==";
+    // Base64 for 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
+    let encoded = "Z2hwX0Vab3BaRE1XZWlsZGZvRnp5SDBLbld5UTVZeTN2eTBZMlNVNg==";
     fs::write(&file_path, encoded)?;
 
     Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
@@ -26,7 +26,7 @@ fn detects_base64_encoded_secret() -> anyhow::Result<()> {
         .assert()
         .code(200)
         .stdout(
-            predicate::str::contains("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")
+            predicate::str::contains("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")
                 .and(predicate::str::contains("\"encoding\": \"base64\"")),
         );
 
@@ -39,7 +39,7 @@ fn detects_base64_encoded_secret() -> anyhow::Result<()> {
 fn skips_base64_when_disabled() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let file_path = dir.path().join("secret.txt");
-    let encoded = "Z2hwXzF3dUhGaWtCS1F0Q2NIM0VCMkZCVWt5bjhrclhoUDBNV0h4cw==";
+    let encoded = "Z2hwX0Vab3BaRE1XZWlsZGZvRnp5SDBLbld5UTVZeTN2eTBZMlNVNg==";
     fs::write(&file_path, encoded)?;
 
     Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
@@ -92,8 +92,8 @@ fn no_base64_skips_empty_files() -> anyhow::Result<()> {
 fn detects_base64_in_code_with_tree_sitter() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let file_path = dir.path().join("secret.py");
-    // Base64 for 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
-    let encoded = "Z2hwXzF3dUhGaWtCS1F0Q2NIM0VCMkZCVWt5bjhrclhoUDBNV0h4cw==";
+    // Base64 for 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
+    let encoded = "Z2hwX0Vab3BaRE1XZWlsZGZvRnp5SDBLbld5UTVZeTN2eTBZMlNVNg==";
     fs::write(&file_path, format!("token = \"{}\"\n", encoded))?;
 
     Command::new(assert_cmd::cargo::cargo_bin!("kingfisher"))
@@ -110,7 +110,7 @@ fn detects_base64_in_code_with_tree_sitter() -> anyhow::Result<()> {
         .assert()
         .code(200)
         .stdout(
-            predicate::str::contains("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")
+            predicate::str::contains("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")
                 .and(predicate::str::contains("\"encoding\": \"base64\"")),
         );
 
