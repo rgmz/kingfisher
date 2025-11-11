@@ -374,9 +374,9 @@ impl<'a> Matcher<'a> {
         } else {
             None
         };
-        /////////////////////////////
+        //
         // Process matches
-        /////////////////////////////
+        //
         let mut matches = Vec::new();
         let owned_ts_results = tree_sitter_result.map(|ts_results| {
             ts_results
@@ -567,7 +567,6 @@ fn record_match(
 ) -> bool {
     insert_span(map.entry(rule_id).or_default(), span)
 }
-// in src/matcher.rs
 
 #[allow(clippy::too_many_arguments)]
 fn filter_match<'b>(
@@ -1025,7 +1024,7 @@ pub struct DecodedData {
 }
 #[inline]
 fn is_base64_byte(b: u8) -> bool {
-    // Include URL-safe characters '-' and '_'
+    // Accepts both standard base64 ('+', '/') and URL-safe base64 ('-', '_') characters.
     matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/' | b'-' | b'_')
 }
 

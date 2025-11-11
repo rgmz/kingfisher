@@ -27,22 +27,6 @@ pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String,
         .collect()
 }
 
-// /// Return (NAME, value, start, end) for every capture we care about.
-// ///
-// /// * If a capture has a name, use that (upper-cased)
-// /// * If it’s unnamed, fall back to `"TOKEN"`
-// pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String, usize, usize)> {
-//     captures
-//         .captures
-//         .iter()
-//         .map(|cap| {
-//             let name =
-//                 cap.name.as_ref().map(|n| n.to_uppercase()).unwrap_or_else(|| "TOKEN".to_string());
-//             (name, cap.value.to_string(), cap.start, cap.end)
-//         })
-//         .collect()
-// }
-
 pub fn find_closest_variable(
     captures: &[(String, String, usize, usize)],
     target_value: &String,
@@ -195,7 +179,6 @@ mod tests {
         // --- END FIX ---
     }
 
-    #[test]
     #[test]
     fn includes_whole_match_and_unnamed_groups() {
         let captures = SerializableCaptures {
