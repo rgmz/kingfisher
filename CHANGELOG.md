@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.63.1]
+- Updated allocator
+
 ## [v1.63.0]
 - Fixed bug when retrieving some finding values and injecting them as TOKENS in the rule templates
 - Improved Datadog rule
