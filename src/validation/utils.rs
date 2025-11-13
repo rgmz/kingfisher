@@ -15,10 +15,10 @@ pub fn process_captures(captures: &SerializableCaptures) -> Vec<(String, String,
         .iter()
         .filter_map(|cap| {
             if let Some(name) = &cap.name {
-                Some((name.to_uppercase(), cap.value.to_string(), cap.start, cap.end))
+                Some((name.to_uppercase(), cap.raw_value().to_string(), cap.start, cap.end))
             } else if !saw_unnamed {
                 saw_unnamed = true;
-                Some(("TOKEN".to_string(), cap.value.to_string(), cap.start, cap.end))
+                Some(("TOKEN".to_string(), cap.raw_value().to_string(), cap.start, cap.end))
             } else {
                 // Ignore any additional unnamed captures (e.g., from unintended groups)
                 None
@@ -201,7 +201,7 @@ mod tests {
                     match_number: 2, // Corrected match_number
                     start: 4,
                     end: 6,
-                    value: "cc"
+                    value: "cc",
                 },
             ],
         };

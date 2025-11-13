@@ -157,7 +157,7 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
     assert!(!matches.is_empty());
     for m_arc in matches {
         let m = &m_arc.2;
-        assert!(m.groups.captures.iter().any(|cap| cap.value.starts_with("[REDACTED:")));
+        assert!(m.groups.captures.iter().any(|cap| cap.display_value().starts_with("[REDACTED:")));
     }
 
     Ok(())

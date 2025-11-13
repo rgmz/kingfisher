@@ -154,15 +154,15 @@ impl FindingsStore {
                     .captures
                     .iter()
                     .find(|c| c.name.is_none() && c.match_number == 0)
-                    .map(|c| c.value)
+                    .map(|c| c.raw_value())
                     .or_else(|| {
                         m.groups
                             .captures
                             .iter()
                             .find(|c| matches!(c.name.as_deref(), Some("TOKEN")))
-                            .map(|c| c.value)
+                            .map(|c| c.raw_value())
                     })
-                    .or_else(|| m.groups.captures.get(0).map(|c| c.value))
+                    .or_else(|| m.groups.captures.get(0).map(|c| c.raw_value()))
                     .unwrap_or("");
 
                 let origin_kind = match origin.first() {

@@ -421,14 +421,12 @@ impl DetailsReporter {
         // We now correctly serialize *only* the explicit capture groups (or group 0
         // as a fallback). The primary "secret" is therefore always at index 0
         // of the captures SmallVec.
-        let snippet = Escaped(
-            rm.m.groups
-                .captures
-                .get(0) // Get the first (and primary) serialized capture
-                .map(|capture| capture.value.as_bytes())
-                .unwrap_or_default(),
-        )
-        .to_string();
+        let snippet = if let Some(capture) = rm.m.groups.captures.get(0) {
+            let displayed = capture.display_value();
+            Escaped(displayed.as_ref().as_bytes()).to_string()
+        } else {
+            String::new()
+        };
         // --- END FIX ---
 
         let validation_status = if rm.validation_success {

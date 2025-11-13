@@ -34,7 +34,7 @@ use crate::{
     safe_list::{is_safe_match, is_user_match},
     scanner_pool::ScannerPool,
     snippet::Base64BString,
-    util::{intern, redact_value},
+    util::intern,
 };
 
 const MAX_CHUNK_SIZE: usize = 1 << 30; // 1 GiB per scan segment
@@ -100,7 +100,7 @@ impl OwnedBlobMatch {
             .captures
             .get(1)
             .or_else(|| blob_match.captures.captures.get(0))
-            .map(|capture| capture.value.as_bytes().to_vec())
+            .map(|capture| capture.raw_value().as_bytes().to_vec())
             .unwrap_or_else(Vec::new);
 
         let mut owned_blob_match = OwnedBlobMatch {
@@ -714,7 +714,7 @@ fn filter_match<'b>(
             &blob.bytes()[matching_input_offset_span.start..matching_input_offset_span.end];
 
         // Pass the *full* capture object to from_captures
-        let groups = SerializableCaptures::from_captures(&captures, haystack, re, redact);
+        let groups = SerializableCaptures::from_captures(&captures, haystack, re);
 
         matches.push(BlobMatch {
             rule: Arc::clone(&rule),
@@ -829,14 +829,45 @@ impl JsonSchema for Groups {
 //     pub end: usize,    // End position of the match
 //     pub value: String, // The actual captured value
 // }
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SerializableCapture {
     pub name: Option<String>,
     pub match_number: i32,
     pub start: usize,
     pub end: usize,
-    /// Interned value of the capture.
+    /// Interned original (unredacted) value.
+    #[serde(skip_serializing, skip_deserializing)]
     pub value: &'static str,
+}
+
+impl SerializableCapture {
+    /// Returns the original captured value.
+    pub fn raw_value(&self) -> &'static str {
+        self.value
+    }
+
+    /// Returns the value that should be shown in user-facing output.
+    pub fn display_value(&self) -> std::borrow::Cow<'static, str> {
+        crate::util::display_value(self.value)
+    }
+}
+
+impl serde::Serialize for SerializableCapture {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut state = serializer.serialize_struct("SerializableCapture", 5)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("match_number", &self.match_number)?;
+        state.serialize_field("start", &self.start)?;
+        state.serialize_field("end", &self.end)?;
+        let value = self.display_value();
+        state.serialize_field("value", &value)?;
+        state.end()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
@@ -846,12 +877,7 @@ pub struct SerializableCaptures {
 }
 
 impl SerializableCaptures {
-    pub fn from_captures(
-        captures: &regex::bytes::Captures,
-        _input: &[u8],
-        re: &Regex,
-        redact: bool,
-    ) -> Self {
+    pub fn from_captures(captures: &regex::bytes::Captures, _input: &[u8], re: &Regex) -> Self {
         let mut serialized_captures: SmallVec<[SerializableCapture; 2]> = SmallVec::new();
 
         let capture_names: SmallVec<[Option<String>; 4]> =
@@ -863,12 +889,8 @@ impl SerializableCaptures {
             for i in 1..captures.len() {
                 // Start from 1
                 if let Some(cap) = captures.get(i) {
-                    let value = if redact {
-                        redact_value(&String::from_utf8_lossy(cap.as_bytes()))
-                    } else {
-                        String::from_utf8_lossy(cap.as_bytes()).to_string()
-                    };
-                    let interned = intern(&value);
+                    let raw_value = String::from_utf8_lossy(cap.as_bytes()).to_string();
+                    let raw_interned = intern(&raw_value);
                     let name = capture_names.get(i).and_then(|opt| opt.as_ref()).cloned();
 
                     serialized_captures.push(SerializableCapture {
@@ -876,7 +898,7 @@ impl SerializableCaptures {
                         match_number: i32::try_from(i).unwrap_or(0),
                         start: cap.start(),
                         end: cap.end(),
-                        value: interned,
+                        value: raw_interned,
                     });
                 }
             }
@@ -884,12 +906,8 @@ impl SerializableCaptures {
             // ELSE, if there is ONLY the full match (len == 1),
             // serialize just that full match (group 0) as the fallback.
             if let Some(cap) = captures.get(0) {
-                let value = if redact {
-                    redact_value(&String::from_utf8_lossy(cap.as_bytes()))
-                } else {
-                    String::from_utf8_lossy(cap.as_bytes()).to_string()
-                };
-                let interned = intern(&value);
+                let raw_value = String::from_utf8_lossy(cap.as_bytes()).to_string();
+                let raw_interned = intern(&raw_value);
                 let name = capture_names.get(0).and_then(|opt| opt.as_ref()).cloned();
 
                 serialized_captures.push(SerializableCapture {
@@ -897,7 +915,7 @@ impl SerializableCaptures {
                     match_number: 0,
                     start: cap.start(),
                     end: cap.end(),
-                    value: interned,
+                    value: raw_interned,
                 });
             }
         }
@@ -959,7 +977,7 @@ impl Match {
             .captures
             .get(1)
             .or_else(|| owned_blob_match.captures.captures.get(0))
-            .map(|capture| capture.value.as_bytes())
+            .map(|capture| capture.raw_value().as_bytes())
             .unwrap_or_default();
 
         // The fingerprint will be based on the content of the secret.
@@ -1596,7 +1614,7 @@ line2
             Regex::new(r"(?xi)\b(ghp_(?P<body>[A-Z0-9]{3})(?P<checksum>[A-Z0-9]{2}))").unwrap();
         let caps = re.captures(b"ghp_ABC12").expect("expected captures");
 
-        let serialized = SerializableCaptures::from_captures(&caps, b"", &re, false);
+        let serialized = SerializableCaptures::from_captures(&caps, b"", &re);
         let entries: Vec<(Option<&str>, i32, &str)> = serialized
             .captures
             .iter()

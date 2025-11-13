@@ -5,12 +5,17 @@ use std::{
 
 use tracing::{debug, debug_span};
 
-use crate::git_url::GitUrl;
+use crate::{bitbucket::is_bitbucket_access_token, git_url::GitUrl};
 
 const BITBUCKET_CREDENTIAL_HELPER: &str = r#"credential.helper=!_bbcreds() {
     if [ -n "$KF_BITBUCKET_OAUTH_TOKEN" ]; then
         echo username="x-token-auth";
         echo password="$KF_BITBUCKET_OAUTH_TOKEN";
+        return;
+    fi
+    if [ -n "$KF_BITBUCKET_ACCESS_TOKEN" ]; then
+        echo username="x-token-auth";
+        echo password="$KF_BITBUCKET_ACCESS_TOKEN";
         return;
     fi
     if [ -n "$KF_BITBUCKET_USERNAME" ]; then
@@ -95,6 +100,7 @@ fn summarize_output(output: &[u8]) -> Option<String> {
 pub struct Git {
     credentials: Vec<String>,
     ignore_certs: bool,
+    bitbucket_access_token: Option<String>,
 }
 
 impl Git {
@@ -112,14 +118,18 @@ impl Git {
             matches!(std::env::var("KF_GITEA_TOKEN"), Ok(token) if !token.is_empty());
         let has_bitbucket_username =
             matches!(std::env::var("KF_BITBUCKET_USERNAME"), Ok(value) if !value.is_empty());
+        let bitbucket_access_token = std::env::var("KF_BITBUCKET_TOKEN")
+            .ok()
+            .filter(|value| !value.is_empty() && is_bitbucket_access_token(value));
         let has_bitbucket_password =
             ["KF_BITBUCKET_APP_PASSWORD", "KF_BITBUCKET_TOKEN", "KF_BITBUCKET_PASSWORD"]
                 .iter()
                 .any(|key| matches!(std::env::var(key), Ok(value) if !value.is_empty()));
         let has_bitbucket_oauth_token =
             matches!(std::env::var("KF_BITBUCKET_OAUTH_TOKEN"), Ok(value) if !value.is_empty());
-        let has_bitbucket_credentials =
-            has_bitbucket_oauth_token || (has_bitbucket_username && has_bitbucket_password);
+        let has_bitbucket_credentials = has_bitbucket_oauth_token
+            || bitbucket_access_token.is_some()
+            || (has_bitbucket_username && has_bitbucket_password);
         let has_azure_token = ["KF_AZURE_TOKEN", "KF_AZURE_PAT"]
             .iter()
             .any(|key| matches!(std::env::var(key), Ok(value) if !value.is_empty()));
@@ -176,7 +186,7 @@ impl Git {
             credentials.push(HUGGINGFACE_CREDENTIAL_HELPER.into());
         }
 
-        Self { credentials, ignore_certs }
+        Self { credentials, ignore_certs, bitbucket_access_token }
     }
 
     /// Create a basic `git` `Command` with environment variables set to
@@ -190,6 +200,9 @@ impl Git {
         cmd.env("GIT_TERMINAL_PROMPT", "0");
         if self.ignore_certs {
             cmd.env("GIT_SSL_NO_VERIFY", "1");
+        }
+        if let Some(token) = &self.bitbucket_access_token {
+            cmd.env("KF_BITBUCKET_ACCESS_TOKEN", token);
         }
         cmd.args(&self.credentials);
         cmd.stdin(Stdio::null());
@@ -302,6 +315,7 @@ mod tests {
         let git = Git::new(false);
         assert!(!git.ignore_certs);
         assert!(git.credentials.is_empty());
+        assert!(git.bitbucket_access_token.is_none());
 
         temp_env::with_var("KF_GITHUB_TOKEN", Some("test_token"), || {
             let git = Git::new(false);
@@ -315,6 +329,7 @@ mod tests {
             let git = Git::new(false);
             assert_eq!(git.credentials.len(), 4);
             assert!(git.credentials.iter().any(|value| value == BITBUCKET_CREDENTIAL_HELPER));
+            assert!(git.bitbucket_access_token.is_none());
         });
     }
 
@@ -329,8 +344,20 @@ mod tests {
                 let git = Git::new(false);
                 assert_eq!(git.credentials.len(), 4);
                 assert!(git.credentials.iter().any(|value| value == BITBUCKET_CREDENTIAL_HELPER));
+                assert!(git.bitbucket_access_token.is_none());
             },
         );
+    }
+
+    #[test]
+    fn test_git_new_bitbucket_access_token() {
+        let token = "AT1234567890_ACCESS_TOKEN_EXAMPLE_WITH_UNDERSCORE";
+        temp_env::with_var("KF_BITBUCKET_TOKEN", Some(token), || {
+            let git = Git::new(false);
+            assert_eq!(git.credentials.len(), 4);
+            assert!(git.credentials.iter().any(|value| value == BITBUCKET_CREDENTIAL_HELPER));
+            assert_eq!(git.bitbucket_access_token.as_deref(), Some(token));
+        });
     }
 
     #[test]
