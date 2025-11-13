@@ -882,7 +882,7 @@ KF_GITEA_TOKEN="gtoken" kingfisher scan gitea --user johndoe --gitea-api-url htt
 ```bash
 kingfisher scan bitbucket --workspace my-team
 # include Bitbucket Cloud repositories from every accessible workspace
-KF_BITBUCKET_USERNAME="$USER" KF_BITBUCKET_APP_PASSWORD="$APP_PASSWORD" \
+KF_BITBUCKET_TOKEN="$BITBUCKET_TOKEN" \
   kingfisher scan bitbucket --all-workspaces
 ```
 
@@ -915,8 +915,7 @@ require credentials (see [Authenticate to Bitbucket](#authenticate-to-bitbucket)
 kingfisher scan --git-url https://bitbucket.org/hashashash/secretstest.git
 
 # Include repository issues
-KF_BITBUCKET_USERNAME="user" \
-KF_BITBUCKET_APP_PASSWORD="app-password" \
+KF_BITBUCKET_TOKEN="$BITBUCKET_TOKEN" \
   kingfisher scan --git-url https://bitbucket.org/workspace/project.git --repo-artifacts
 ```
 
@@ -925,7 +924,7 @@ KF_BITBUCKET_APP_PASSWORD="app-password" \
 ```bash
 kingfisher scan bitbucket --workspace my-team --list-only
 # enumerate all accessible workspaces or projects
-KF_BITBUCKET_USERNAME="$USER" KF_BITBUCKET_APP_PASSWORD="$APP_PASSWORD" \
+KF_BITBUCKET_TOKEN="$BITBUCKET_TOKEN" \
   kingfisher scan bitbucket --all-workspaces --list-only
 # filter out repositories using glob patterns
 kingfisher scan bitbucket --workspace my-team --bitbucket-exclude my-team/**/experimental-* --list-only
@@ -935,13 +934,22 @@ kingfisher scan bitbucket --workspace my-team --bitbucket-exclude my-team/**/exp
 
 Kingfisher supports Bitbucket Cloud and Bitbucket Server credentials:
 
-- **App password or server token** – set `KF_BITBUCKET_USERNAME` and either
-  `KF_BITBUCKET_APP_PASSWORD`, `KF_BITBUCKET_TOKEN`, or
-  `KF_BITBUCKET_PASSWORD`.
+- **Workspace API token (Cloud)** – set `KF_BITBUCKET_TOKEN`. `KF_BITBUCKET_USERNAME`
+  is optional; Kingfisher automatically uses the token for Bitbucket REST APIs
+  and authenticates git operations as `x-token-auth`.
+- **Bitbucket Server token** – set `KF_BITBUCKET_USERNAME` and either
+  `KF_BITBUCKET_TOKEN` or `KF_BITBUCKET_PASSWORD`.
+- **Legacy app password (Cloud)** – set `KF_BITBUCKET_USERNAME` and
+  `KF_BITBUCKET_APP_PASSWORD`.
 - **OAuth/PAT token** – set `KF_BITBUCKET_OAUTH_TOKEN`.
 
 These credentials match the options described in the [ghorg setup
 guide](https://github.com/gabrie30/ghorg/blob/master/README.md#bitbucket-setup).
+
+Bitbucket no longer supports App Tokens as of September 9, 2025:
+https://support.atlassian.com/bitbucket-cloud/docs/api-tokens/
+
+> As of September 9, 2025, app passwords can no longer be created. Use API tokens with scopes instead. All existing app passwords will be disabled on June 9, 2026. Migrate any integrations before then to avoid disruptions.
 
 ### Self-hosted Bitbucket Server
 
@@ -1050,8 +1058,9 @@ KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan slack "akia" \
 | `KF_GITEA_USERNAME` | Username for private Gitea clones (used with `KF_GITEA_TOKEN`) |
 | `KF_AZURE_TOKEN` / `KF_AZURE_PAT` | Azure Repos Personal Access Token |
 | `KF_AZURE_USERNAME` | Username to use with Azure Repos PATs (defaults to `pat` when unset) |
-| `KF_BITBUCKET_USERNAME` | Bitbucket username for basic authentication |
-| `KF_BITBUCKET_APP_PASSWORD` / `KF_BITBUCKET_TOKEN` | Bitbucket app password or server token |
+| `KF_BITBUCKET_TOKEN` | Bitbucket Cloud workspace API token or Bitbucket Server PAT |
+| `KF_BITBUCKET_USERNAME` | Optional Bitbucket username for legacy app passwords or server tokens |
+| `KF_BITBUCKET_APP_PASSWORD` | Legacy Bitbucket app password (deprecated September 9, 2025; disabled June 9, 2026) |
 | `KF_BITBUCKET_OAUTH_TOKEN` | Bitbucket OAuth or PAT token |
 | `KF_HUGGINGFACE_TOKEN` | Hugging Face access token for API enumeration and git cloning |
 | `KF_HUGGINGFACE_USERNAME` | Optional username for Hugging Face git operations (defaults to `hf_user`) |

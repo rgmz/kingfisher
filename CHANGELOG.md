@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [v1.64.0]
 - Fixed a bug when using --redact, that broke validation
 - Added JDBC rule with validator
+- Filter out empty 'KF_BITBUCKET_*' environment values when constructing the Bitbucket authentication configuration so blank variables no longer override valid credentials
 
 ## [v1.63.1]
 - Updated allocator

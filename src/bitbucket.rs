@@ -40,18 +40,43 @@ pub struct AuthConfig {
     pub bearer_token: Option<String>,
 }
 
+pub(crate) fn is_bitbucket_access_token(token: &str) -> bool {
+    token.len() > 40 && token.starts_with("AT") && token.contains('_')
+}
+
 impl AuthConfig {
     pub fn from_options(
         username: Option<String>,
         password: Option<String>,
         bearer_token: Option<String>,
     ) -> Self {
-        let username = username.or_else(|| env::var("KF_BITBUCKET_USERNAME").ok());
-        let password = password
-            .or_else(|| env::var("KF_BITBUCKET_APP_PASSWORD").ok())
-            .or_else(|| env::var("KF_BITBUCKET_TOKEN").ok())
-            .or_else(|| env::var("KF_BITBUCKET_PASSWORD").ok());
-        let bearer_token = bearer_token.or_else(|| env::var("KF_BITBUCKET_OAUTH_TOKEN").ok());
+        fn normalized(value: Option<String>) -> Option<String> {
+            value.and_then(|v| if v.trim().is_empty() { None } else { Some(v) })
+        }
+
+        fn env_var(name: &str) -> Option<String> {
+            match env::var(name) {
+                Ok(value) if value.trim().is_empty() => None,
+                Ok(value) => Some(value),
+                Err(_) => None,
+            }
+        }
+
+        let username = normalized(username).or_else(|| env_var("KF_BITBUCKET_USERNAME"));
+        let password = normalized(password)
+            .or_else(|| env_var("KF_BITBUCKET_APP_PASSWORD"))
+            .or_else(|| env_var("KF_BITBUCKET_TOKEN"))
+            .or_else(|| env_var("KF_BITBUCKET_PASSWORD"));
+        let mut bearer_token =
+            normalized(bearer_token).or_else(|| env_var("KF_BITBUCKET_OAUTH_TOKEN"));
+
+        if bearer_token.is_none() {
+            if let Some(password) = &password {
+                if is_bitbucket_access_token(password) {
+                    bearer_token = Some(password.clone());
+                }
+            }
+        }
         Self { username, password, bearer_token }
     }
 
@@ -707,6 +732,54 @@ mod tests {
         assert_eq!(
             parse_excluded_repo("ssh://git@bitbucket.example.com/scm/WS/repo.git").as_deref(),
             Some("ws/repo")
+        );
+    }
+
+    #[test]
+    fn auth_config_ignores_empty_environment_values() {
+        temp_env::with_vars(
+            &[
+                ("KF_BITBUCKET_USERNAME", Some("")),
+                ("KF_BITBUCKET_APP_PASSWORD", Some("")),
+                ("KF_BITBUCKET_OAUTH_TOKEN", Some("   ")),
+            ],
+            || {
+                let auth = AuthConfig::from_env();
+                assert!(auth.username.is_none());
+                assert!(auth.password.is_none());
+                assert!(auth.bearer_token.is_none());
+            },
+        );
+    }
+
+    #[test]
+    fn auth_config_prefers_basic_auth_when_bearer_is_empty() {
+        temp_env::with_vars(
+            &[
+                ("KF_BITBUCKET_USERNAME", Some("user")),
+                ("KF_BITBUCKET_APP_PASSWORD", Some("pass")),
+                ("KF_BITBUCKET_OAUTH_TOKEN", Some("")),
+            ],
+            || {
+                let auth = AuthConfig::from_env();
+                assert_eq!(auth.username.as_deref(), Some("user"));
+                assert_eq!(auth.password.as_deref(), Some("pass"));
+                assert!(auth.bearer_token.is_none());
+            },
+        );
+    }
+
+    #[test]
+    fn auth_config_treats_access_token_as_bearer() {
+        let token = "AT1234567890_ACCESS_TOKEN_EXAMPLE_WITH_UNDERSCORE";
+        temp_env::with_vars(
+            &[("KF_BITBUCKET_USERNAME", Some("user")), ("KF_BITBUCKET_TOKEN", Some(token))],
+            || {
+                let auth = AuthConfig::from_env();
+                assert_eq!(auth.username.as_deref(), Some("user"));
+                assert_eq!(auth.password.as_deref(), Some(token));
+                assert_eq!(auth.bearer_token.as_deref(), Some(token));
+            },
         );
     }
 }

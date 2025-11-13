@@ -610,12 +610,7 @@ impl RuleSyntax {
             let context = e.location().map_or(String::new(), |loc| {
                 format!(" at line {} column {}", loc.line(), loc.column())
             });
-            anyhow!(
-                "Failed to parse YAML from {}{}: {}",
-                path.display(),
-                context,
-                e
-            )
+            anyhow!("Failed to parse YAML from {}{}: {}", path.display(), context, e)
         })?;
 
         Ok(match parsed {
