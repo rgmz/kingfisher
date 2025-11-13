@@ -599,11 +599,28 @@ impl RuleSyntax {
         let path = path.as_ref();
         let contents = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read file: {}", path.display()))?;
-        serde_yaml::from_str(&contents).map_err(|e| {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum RuleSyntaxDocument {
+            Sequence(Vec<RuleSyntax>),
+            Mapped { rules: Vec<RuleSyntax> },
+        }
+
+        let parsed: RuleSyntaxDocument = serde_yaml::from_str(&contents).map_err(|e| {
             let context = e.location().map_or(String::new(), |loc| {
                 format!(" at line {} column {}", loc.line(), loc.column())
             });
-            anyhow!("Failed to parse YAML from {}{}: {}", path.display(), context, e)
+            anyhow!(
+                "Failed to parse YAML from {}{}: {}",
+                path.display(),
+                context,
+                e
+            )
+        })?;
+
+        Ok(match parsed {
+            RuleSyntaxDocument::Sequence(rules) => rules,
+            RuleSyntaxDocument::Mapped { rules } => rules,
         })
     }
 }
