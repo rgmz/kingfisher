@@ -29,6 +29,7 @@ mod azure;
 mod coinbase;
 mod gcp;
 mod httpvalidation;
+mod jdbc;
 mod jwt;
 mod mongodb;
 mod postgres;
@@ -665,6 +666,58 @@ async fn timed_validate_single_match<'a>(
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
+            cache.insert(
+                cache_key,
+                CachedResponse {
+                    body: m.validation_response_body.clone(),
+                    status: m.validation_response_status,
+                    is_valid: m.validation_success,
+                    timestamp: Instant::now(),
+                },
+            );
+        }
+
+        // ---------------------------------------------------- JDBC validator
+        Some(Validation::Jdbc) => {
+            let jdbc_conn = captured_values
+                .iter()
+                .find(|(n, ..)| n == "TOKEN")
+                .map(|(_, v, ..)| v.clone())
+                .unwrap_or_default();
+
+            if jdbc_conn.is_empty() {
+                m.validation_success = false;
+                m.validation_response_body = "JDBC connection string not found.".to_string();
+                m.validation_response_status = StatusCode::BAD_REQUEST;
+                commit_and_return(m);
+                return;
+            }
+
+            let cache_key = jdbc::generate_jdbc_cache_key(&jdbc_conn);
+            if let Some(cached) = cache.get(&cache_key) {
+                let c = cached.value();
+                if c.timestamp.elapsed() < Duration::from_secs(VALIDATION_CACHE_SECONDS) {
+                    m.validation_success = c.is_valid;
+                    m.validation_response_body = c.body.clone();
+                    m.validation_response_status = c.status;
+                    commit_and_return(m);
+                    return;
+                }
+            }
+
+            match jdbc::validate_jdbc(&jdbc_conn).await {
+                Ok(outcome) => {
+                    m.validation_success = outcome.valid;
+                    m.validation_response_body = outcome.message;
+                    m.validation_response_status = outcome.status;
+                }
+                Err(e) => {
+                    m.validation_success = false;
+                    m.validation_response_body = format!("JDBC validation error: {}", e);
+                    m.validation_response_status = StatusCode::BAD_GATEWAY;
+                }
+            }
+
             cache.insert(
                 cache_key,
                 CachedResponse {

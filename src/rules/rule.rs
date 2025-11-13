@@ -47,6 +47,7 @@ pub enum Validation {
     GCP,
     MongoDB,
     Postgres,
+    Jdbc,
     JWT,
     Raw(String),
     Http(HttpValidation),

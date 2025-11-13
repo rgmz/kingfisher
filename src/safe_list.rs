@@ -198,6 +198,13 @@ pub fn is_safe_match_reason(input: &[u8]) -> Option<&'static str> {
         .map(|rule| rule.description)
 }
 
+/// Test helper: clear all user-provided allow-list configuration.
+#[doc(hidden)]
+pub fn clear_user_filters_for_tests() {
+    USER_SAFE_REGEXES.lock().unwrap().clear();
+    USER_SAFE_SKIPWORDS.lock().unwrap().clear();
+}
+
 /// Returns true if the input likely contains *benign* placeholder/test strings,
 /// and logs which rule triggered at `debug!` level.
 pub fn is_safe_match(input: &[u8]) -> bool {
