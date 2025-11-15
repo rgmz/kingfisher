@@ -46,6 +46,7 @@ pub enum Validation {
     Coinbase,
     GCP,
     MongoDB,
+    MySQL,
     Postgres,
     Jdbc,
     JWT,
