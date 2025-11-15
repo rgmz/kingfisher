@@ -31,9 +31,23 @@ pub fn generate_postgres_cache_key(postgres_url: &str) -> String {
     format!("Postgres:{:x}", hasher.finalize())
 }
 
+pub fn parse_postgres_url(postgres_url: &str) -> Result<Config> {
+    match Config::from_str(postgres_url) {
+        Ok(cfg) => Ok(cfg),
+        Err(e) => {
+            if let Some(rest) = postgres_url.strip_prefix("postgis://") {
+                let fallback = format!("postgres://{rest}");
+                Config::from_str(&fallback)
+                    .map_err(|_| anyhow!("Failed to parse Postgres URL: {e}"))
+            } else {
+                Err(anyhow!("Failed to parse Postgres URL: {e}"))
+            }
+        }
+    }
+}
+
 pub async fn validate_postgres(postgres_url: &str) -> Result<(bool, Vec<String>)> {
-    let mut cfg =
-        Config::from_str(postgres_url).map_err(|e| anyhow!("Failed to parse Postgres URL: {e}"))?;
+    let mut cfg = parse_postgres_url(postgres_url)?;
 
     // --- skip localhost/loopback/unix-socket targets entirely -------------
     if has_any_local_host(&cfg) {
@@ -189,7 +203,10 @@ fn missing_cluster_identifier(err_msg: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_local_tcp_host, missing_cluster_identifier, server_requires_encryption};
+    use super::{
+        is_local_tcp_host, missing_cluster_identifier, parse_postgres_url,
+        server_requires_encryption,
+    };
 
     #[test]
     fn detects_encryption_requirement() {
@@ -221,5 +238,17 @@ mod tests {
         for h in ["db.example.com", "10.0.0.1"] {
             assert!(!is_local_tcp_host(h), "should not treat {h} as local");
         }
+    }
+
+    #[test]
+    fn parse_accepts_postgis_scheme() {
+        let url = "postgis://postgres:secret@example.com:5432";
+        assert!(parse_postgres_url(url).is_ok(), "postgis scheme should be accepted");
+    }
+
+    #[test]
+    fn parse_rejects_invalid_port() {
+        let url = "postgres://postgres:secret@example.com:70000";
+        assert!(parse_postgres_url(url).is_err(), "invalid port should be rejected");
     }
 }

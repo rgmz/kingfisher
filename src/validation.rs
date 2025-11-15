@@ -32,6 +32,7 @@ mod httpvalidation;
 mod jdbc;
 mod jwt;
 mod mongodb;
+mod mysql;
 mod postgres;
 mod utils;
 
@@ -102,6 +103,21 @@ where
     S: Into<String>,
 {
     aws::set_aws_skip_account_ids(ids);
+}
+
+/// Returns `true` if the provided string can be parsed as a MongoDB connection URI.
+pub fn is_parseable_mongodb_uri(uri: &str) -> bool {
+    mongodb::looks_like_mongodb_uri(uri)
+}
+
+/// Returns `true` if the provided string can be parsed as a Postgres connection URI.
+pub fn is_parseable_postgres_uri(uri: &str) -> bool {
+    postgres::parse_postgres_url(uri).is_ok()
+}
+
+/// Returns `true` if the provided string can be parsed as a MySQL connection URI.
+pub fn is_parseable_mysql_uri(uri: &str) -> bool {
+    mysql::parse_mysql_url(uri).is_ok()
 }
 
 #[derive(Clone)]
@@ -615,6 +631,63 @@ async fn timed_validate_single_match<'a>(
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
+        }
+
+        // ---------------------------------------------------- MySQL validator
+        Some(Validation::MySQL) => {
+            let mysql_url = globals
+                .get("TOKEN")
+                .and_then(|v| v.as_scalar())
+                .map(|s| s.into_owned().to_kstr().to_string())
+                .unwrap_or_default();
+
+            if mysql_url.is_empty() {
+                m.validation_success = false;
+                m.validation_response_body = "MySQL URL not found.".to_string();
+                m.validation_response_status = StatusCode::BAD_REQUEST;
+                commit_and_return(m);
+                return;
+            }
+
+            let cache_key = mysql::generate_mysql_cache_key(&mysql_url);
+            if let Some(cached) = cache.get(&cache_key) {
+                let c = cached.value();
+                if c.timestamp.elapsed() < Duration::from_secs(VALIDATION_CACHE_SECONDS) {
+                    m.validation_success = c.is_valid;
+                    m.validation_response_body = c.body.clone();
+                    m.validation_response_status = c.status;
+                    commit_and_return(m);
+                    return;
+                }
+            }
+
+            match mysql::validate_mysql(&mysql_url).await {
+                Ok((ok, meta)) => {
+                    m.validation_success = ok;
+                    m.validation_response_body = if ok {
+                        format!("MySQL connection is valid. Metadata: {:?}", meta)
+                    } else {
+                        "MySQL connection failed.".to_string()
+                    };
+                    m.validation_response_status =
+                        if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
+                }
+                Err(e) => {
+                    m.validation_success = false;
+                    m.validation_response_body = format!("MySQL error: {}", e);
+                    m.validation_response_status = StatusCode::BAD_GATEWAY;
+                }
+            }
+
+            cache.insert(
+                cache_key,
+                CachedResponse {
+                    body: m.validation_response_body.clone(),
+                    status: m.validation_response_status,
+                    is_valid: m.validation_success,
+                    timestamp: Instant::now(),
+                },
+            );
         }
 
         // ------------------------------------------------ Azure Storage validator

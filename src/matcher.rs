@@ -29,12 +29,13 @@ use crate::{
     parser,
     parser::{Checker, Language},
     rule_profiling::{ConcurrentRuleProfiler, RuleStats, RuleTimer},
-    rules::rule::{PatternRequirementContext, PatternValidationResult, Rule},
+    rules::rule::{PatternRequirementContext, PatternValidationResult, Rule, Validation},
     rules_database::RulesDatabase,
     safe_list::{is_safe_match, is_user_match},
     scanner_pool::ScannerPool,
     snippet::Base64BString,
     util::intern,
+    validation::{is_parseable_mongodb_uri, is_parseable_mysql_uri, is_parseable_postgres_uri},
 };
 
 const MAX_CHUNK_SIZE: usize = 1 << 30; // 1 GiB per scan segment
@@ -697,6 +698,44 @@ fn filter_match<'b>(
         if inline_ignore_config.should_ignore(blob_bytes, &matching_input_offset_span) {
             debug!("Skipping match due to inline ignore directive");
             continue;
+        }
+        if let Some(validation) = rule.syntax.validation.as_ref() {
+            match validation {
+                Validation::MongoDB => {
+                    let Ok(uri) = std::str::from_utf8(matching_input.as_bytes()) else {
+                        debug!("Skipping match for rule {} due to non-UTF8 MongoDB URI", rule.id());
+                        continue;
+                    };
+                    if !is_parseable_mongodb_uri(uri) {
+                        debug!("Skipping match for rule {} due to invalid MongoDB URI", rule.id());
+                        continue;
+                    }
+                }
+                Validation::Postgres => {
+                    let Ok(uri) = std::str::from_utf8(matching_input.as_bytes()) else {
+                        debug!(
+                            "Skipping match for rule {} due to non-UTF8 Postgres URI",
+                            rule.id()
+                        );
+                        continue;
+                    };
+                    if !is_parseable_postgres_uri(uri) {
+                        debug!("Skipping match for rule {} due to invalid Postgres URI", rule.id());
+                        continue;
+                    }
+                }
+                Validation::MySQL => {
+                    let Ok(uri) = std::str::from_utf8(matching_input.as_bytes()) else {
+                        debug!("Skipping match for rule {} due to non-UTF8 MySQL URI", rule.id());
+                        continue;
+                    };
+                    if !is_parseable_mysql_uri(uri) {
+                        debug!("Skipping match for rule {} due to invalid MySQL URI", rule.id());
+                        continue;
+                    }
+                }
+                _ => {}
+            }
         }
         let match_key = compute_match_key(
             matching_input.as_bytes(),

@@ -24,6 +24,10 @@ rules:
       (?:
         \d+
       )
+    pattern_requirements:
+      ignore_if_contains:
+        - "*****"
+        - "xxxxx"
     min_entropy: 3.3
     confidence: medium
     examples:

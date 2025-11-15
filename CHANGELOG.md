@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.65.0]
+- Skip reporting MongoDB and Postgres findings when their connection strings cannot be parsed, even when validation is disabled.
+- Improve MySQL detection by broadening URI coverage and adding live validation that skips clearly invalid connection strings.
+
 ## [v1.64.0]
 - Fixed a bug when using --redact, that broke validation
 - Added JDBC rule with validator
