@@ -49,7 +49,7 @@ rules:
       (?xi)
       \b
       (
-        [a-z0-9-]+
+        [a-z0-9-]{3,32}
         \.openai\.azure\.com
       )
       \b

@@ -10,6 +10,10 @@ rules:
         :
         [^\s"'<>,(){}\[\]]{10,448}
       )
+    pattern_requirements:
+      ignore_if_contains:
+        - "*****"
+        - "xxxxx"
     min_entropy: 3.3
     confidence: medium
     validation:
