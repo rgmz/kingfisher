@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [v1.65.0]
 - Skip reporting MongoDB and Postgres findings when their connection strings cannot be parsed, even when validation is disabled.
 - Improve MySQL detection by broadening URI coverage and adding live validation that skips clearly invalid connection strings.
+- Added a helper to truncate validation response bodies only at UTF-8 character boundaries to prevent panics during validation.
 
 ## [v1.64.0]
 - Fixed a bug when using --redact, that broke validation

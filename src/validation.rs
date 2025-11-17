@@ -34,10 +34,25 @@ mod jwt;
 mod mongodb;
 mod mysql;
 mod postgres;
+pub use mysql::validate_mysql;
+pub use postgres::validate_postgres;
 mod utils;
 
 const VALIDATION_CACHE_SECONDS: u64 = 1200; // 20 minutes
 const MAX_VALIDATION_BODY_LEN: usize = 2048;
+
+fn truncate_to_char_boundary(s: &mut String, max_len: usize) {
+    if s.len() <= max_len {
+        return;
+    }
+
+    let mut new_len = max_len;
+    while new_len > 0 && !s.is_char_boundary(new_len) {
+        new_len -= 1;
+    }
+
+    s.truncate(new_len);
+}
 
 static USER_AGENT_SUFFIX: OnceCell<String> = OnceCell::new();
 
@@ -550,9 +565,7 @@ async fn timed_validate_single_match<'a>(
                             return;
                         }
                     };
-                    if body.len() > MAX_VALIDATION_BODY_LEN {
-                        body.truncate(MAX_VALIDATION_BODY_LEN);
-                    }
+                    truncate_to_char_boundary(&mut body, MAX_VALIDATION_BODY_LEN);
 
                     m.validation_response_status = status;
                     m.validation_response_body = body.clone();
@@ -1138,6 +1151,18 @@ mod tests {
 
         assert!(globals.get("TOKEN").is_none());
         assert_eq!(globals.get("CHECKSUM"), Some(Value::scalar("123456")).as_ref());
+    }
+
+    #[test]
+    fn truncate_to_char_boundary_handles_multibyte_characters() {
+        let mut body = "a".repeat(MAX_VALIDATION_BODY_LEN);
+        body.push('é');
+
+        truncate_to_char_boundary(&mut body, MAX_VALIDATION_BODY_LEN);
+
+        assert_eq!(body.len(), MAX_VALIDATION_BODY_LEN);
+        assert!(body.is_char_boundary(body.len()));
+        assert!(body.ends_with('a'));
     }
 }
 

@@ -16,6 +16,10 @@ rules:
         (?:\?[A-Za-z0-9\-._~%!$&'()*,;=:@/?%]*)?
         (?:\#[A-Za-z0-9\-._~%!$&'()*,;=:@/?%]*)?
       )
+    pattern_requirements:
+      ignore_if_contains:
+        - "*****"
+        - "xxxxx"
     min_entropy: 4.0
     confidence: medium
     examples:
