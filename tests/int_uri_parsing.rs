@@ -72,7 +72,7 @@ fn filters_invalid_mysql_uri_even_without_validation() -> anyhow::Result<()> {
             "scan",
             dir.path().to_str().unwrap(),
             "--no-binary",
-            "--confidence=low", 
+            "--confidence=low",
             "--format",
             "json",
             "--no-validate",

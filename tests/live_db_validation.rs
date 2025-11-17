@@ -47,9 +47,7 @@ async fn validates_mysql_secret_against_testcontainer() -> Result<()> {
         .with_env_var("MYSQL_ROOT_PASSWORD", "secret")
         .with_env_var("MYSQL_DATABASE", "app")
         .with_env_var("MYSQL_ROOT_HOST", "%")
-        .with_wait_for(WaitFor::message_on_stdout(
-            "MySQL init process done. Ready for start up.",
-        ));
+        .with_wait_for(WaitFor::message_on_stdout("MySQL init process done. Ready for start up."));
 
     let container = docker.run(image);
     let port = container.get_host_port_ipv4(3306);
@@ -73,7 +71,6 @@ async fn validates_mysql_secret_against_testcontainer() -> Result<()> {
     drop(docker);
     Ok(())
 }
-
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore]
