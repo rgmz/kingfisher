@@ -3,11 +3,9 @@ rules:
     id: kingfisher.supabase.1
     pattern: |
       (?xi)
-      \b
       (
         sbp_[a-z0-9_-]{40}
       )
-      \b
     pattern_requirements:
       min_digits: 2
     min_entropy: 3.5
@@ -34,11 +32,9 @@ rules:
     id: kingfisher.supabase.2
     pattern: |
       (?xi)
-      \b
       (
         sb_secret_[a-z0-9_-]{31}
       )
-      \b
     pattern_requirements:
       min_digits: 2
     min_entropy: 4.0

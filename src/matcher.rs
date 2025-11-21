@@ -583,7 +583,7 @@ fn filter_match<'b>(
     _origin: &OriginSet,
     ts_match: Option<&[u8]>,
     is_base64: bool,
-    redact: bool,
+    _redact: bool,
     filename: &str,
     profiler: Option<&Arc<ConcurrentRuleProfiler>>,
     respect_ignore_if_contains: bool,

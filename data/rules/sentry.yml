@@ -3,14 +3,13 @@ rules:
     id: kingfisher.sentry.1
     pattern: |
       (?xi)
-      \b
       sentry
       (?:.|[\n\r]){0,32}?
       (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [a-f0-9]{64}
+          [a-f0-9]{64}
       )
       \b
     pattern_requirements:
@@ -44,7 +43,6 @@ rules:
       (
         sntrys_eyJpYXQiO[a-zA-Z0-9+/]{10,200}(?:LCJyZWdpb25fdXJs|InJlZ2lvbl91cmwi|cmVnaW9uX3VybCI6)[a-zA-Z0-9+/]{10,200}={0,2}_[a-zA-Z0-9+/]{43}
       )
-      \b
     pattern_requirements:
       min_digits: 2
     min_entropy: 4.2
@@ -73,11 +71,9 @@ rules:
     id: kingfisher.sentry.3
     pattern: |
       (?xi)
-      \b
       (
         sntryu_[a-f0-9]{64}
       )
-      \b
     pattern_requirements:
       min_digits: 2
     min_entropy: 3.5

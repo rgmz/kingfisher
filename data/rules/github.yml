@@ -3,7 +3,7 @@ rules:
     id: kingfisher.github.1
     pattern: |
       (?xi)                 
-      (                        
+      (
         github_pat_
         [A-Z0-9_+]{82,84}
       )
@@ -39,8 +39,7 @@ rules:
   - name: GitHub Personal Access Token
     id: kingfisher.github.2
     pattern: |
-      (?xi)                     
-      \b                       
+      (?xi)
       (
         ghp_(?P<body>[A-Z0-9]{30})(?P<checksum>[A-Z0-9]{6})
       )
@@ -85,9 +84,8 @@ rules:
   - name: GitHub OAuth Access Token
     id: kingfisher.github.3
     pattern: |
-      (?xi)                     
-      \b                       
-      (                        
+      (?xi)
+      (
         gho_(?P<body>[A-Z0-9]{30})(?P<checksum>[A-Z0-9]{6})
       )
     pattern_requirements:

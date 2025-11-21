@@ -3,7 +3,6 @@ rules:
     id: kingfisher.nvidia.nim.1
     pattern: |
       (?xi)
-      \b
       (
         nvapi-[A-Z0-9_-]{60,70}
       )

@@ -2,16 +2,14 @@ rules:
   - name: Anthropic API Key
     id: kingfisher.anthropic.1
     pattern: |
-      (?xi)                    
-      \b                       
-      (                        
+      (?xi)
+      (
         sk-ant-api
         \d{2,4}
         -
         [\w\-]{93}
         AA
       )
-      \b
     pattern_requirements:
       min_digits: 2
       min_uppercase: 1
