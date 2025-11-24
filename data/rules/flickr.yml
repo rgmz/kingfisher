@@ -10,7 +10,7 @@ rules:
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [a-f0-9]{16}
+        [a-f0-9]{32}
       )
       \b
     pattern_requirements:
