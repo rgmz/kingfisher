@@ -1,5 +1,3 @@
-//! src/utils/decompress.rs   (or wherever you keep the module)
-
 use std::{
     fs,
     io::Read,

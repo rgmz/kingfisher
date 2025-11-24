@@ -8,7 +8,9 @@ use wiremock::{
 #[tokio::test]
 async fn no_update_when_flag_set() {
     let args = GlobalArgs { no_update_check: true, ..Default::default() };
-    assert!(check_for_update(&args, None).is_none());
+    let status = check_for_update(&args, None);
+    assert_eq!(status.check_status.as_str(), "disabled");
+    assert!(status.latest_version.is_none());
 }
 
 #[tokio::test]
@@ -33,14 +35,18 @@ async fn detects_new_release() {
     }
 
     // run the update checker on a blocking thread
-    let msg = tokio::task::spawn_blocking({
+    let status = tokio::task::spawn_blocking({
         let uri = server.uri(); // move into closure
         let args = GlobalArgs::default();
         move || check_for_update(&args, Some(&uri))
     })
     .await
-    .expect("blocking task panicked")
-    .expect("update checker returned None");
+    .expect("blocking task panicked");
 
-    assert!(msg.contains("99.999.0"));
+    assert!(status.is_outdated);
+    assert!(status
+        .message
+        .as_deref()
+        .expect("update check should return a message")
+        .contains("99.999.0"));
 }

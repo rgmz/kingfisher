@@ -41,8 +41,9 @@ pub async fn run_scan(
     scan_args: &scan::ScanArgs,
     rules_db: &RulesDatabase,
     datastore: Arc<Mutex<FindingsStore>>,
+    update_status: &crate::update::UpdateStatus,
 ) -> Result<()> {
-    run_async_scan(global_args, scan_args, Arc::clone(&datastore), rules_db)
+    run_async_scan(global_args, scan_args, Arc::clone(&datastore), rules_db, update_status)
         .await
         .context("Failed to run scan command")
 }
@@ -52,6 +53,7 @@ pub async fn run_async_scan(
     args: &scan::ScanArgs,
     datastore: Arc<Mutex<findings_store::FindingsStore>>,
     rules_db: &RulesDatabase,
+    update_status: &crate::update::UpdateStatus,
 ) -> Result<()> {
     // Ensure all provided paths exist before proceeding
     for path in &args.input_specifier_args.path_inputs {
@@ -71,6 +73,7 @@ pub async fn run_async_scan(
     }
 
     let start_time = Instant::now();
+    let scan_started_at = chrono::Local::now();
 
     trace!("Args:\n{global_args:#?}\n{args:#?}");
     let progress_enabled = global_args.use_progress();
@@ -287,12 +290,14 @@ pub async fn run_async_scan(
         .context("Failed to run report command")?;
     print_scan_summary(
         start_time,
+        scan_started_at,
         &datastore,
         global_args,
         args,
         rules_db,
         &matcher_stats,
         if enable_profiling { Some(shared_profiler.as_ref()) } else { None },
+        update_status,
     );
     Ok(())
 }

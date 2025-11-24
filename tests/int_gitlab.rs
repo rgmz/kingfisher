@@ -24,6 +24,7 @@ use kingfisher::{
     findings_store::FindingsStore,
     git_url::GitUrl,
     scanner::{load_and_record_rules, run_scan},
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
@@ -171,9 +172,10 @@ fn test_gitlab_remote_scan() -> Result<()> {
     let rt = Runtime::new()?;
 
     let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
+    let update_status = UpdateStatus::default();
 
     rt.block_on(async {
-        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore)).await
+        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore), &update_status).await
     })?;
 
     let ds = datastore.lock().unwrap();
@@ -323,9 +325,10 @@ fn test_gitlab_remote_scan_no_history() -> Result<()> {
     let rt = Runtime::new()?;
 
     let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
+    let update_status = UpdateStatus::default();
 
     rt.block_on(async {
-        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore)).await
+        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore), &update_status).await
     })?;
 
     let ds = datastore.lock().unwrap();

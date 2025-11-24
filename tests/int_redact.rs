@@ -24,6 +24,7 @@ use kingfisher::{
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::run_async_scan,
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use url::Url;
@@ -148,9 +149,11 @@ async fn test_redact_hashes_finding_values() -> Result<()> {
     let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;
     let resolved = loaded.resolve_enabled_rules()?;
     let rules_db = RulesDatabase::from_rules(resolved.into_iter().cloned().collect())?;
+    let update_status = UpdateStatus::default();
 
     let datastore = Arc::new(Mutex::new(FindingsStore::new(temp_dir.path().to_path_buf())));
-    run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db).await?;
+    run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db, &update_status)
+        .await?;
 
     let ds = datastore.lock().unwrap();
     let matches = ds.get_matches();

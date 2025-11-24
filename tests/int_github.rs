@@ -24,6 +24,7 @@ use kingfisher::{
     findings_store::FindingsStore,
     git_url::GitUrl,
     scanner::{load_and_record_rules, run_scan},
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
@@ -174,9 +175,10 @@ fn test_github_remote_scan() -> Result<()> {
     let runtime = Runtime::new().expect("Failed to create Tokio runtime");
     // Load rules
     let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
+    let update_status = UpdateStatus::default();
     // Run the scan using runtime.block_on
     runtime.block_on(async {
-        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore)).await
+        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore), &update_status).await
     })?;
     // Get scan results
     let ds = datastore.lock().unwrap();

@@ -28,6 +28,7 @@ use kingfisher::{
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::run_async_scan,
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
@@ -186,6 +187,7 @@ rules:
     let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;
     let resolved = loaded.resolve_enabled_rules()?;
     let rules_db = Arc::new(RulesDatabase::from_rules(resolved.into_iter().cloned().collect())?);
+    let update_status = UpdateStatus::default();
 
     // Fresh FindingsStore for this run
     let store_path = work.path().join("store");
@@ -198,6 +200,7 @@ rules:
         &scan_args,
         Arc::clone(&datastore),
         &rules_db,
+        &update_status,
     ))?;
 
     let x = Ok(datastore.lock().unwrap().get_matches().len());

@@ -24,6 +24,7 @@ use kingfisher::{
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::run_async_scan,
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
@@ -165,10 +166,17 @@ fn run_skiplist(skip_regex: Vec<String>, skip_skipword: Vec<String>) -> Result<u
     let loaded = RuleLoader::from_rule_specifiers(&scan_args.rules).load(&scan_args)?;
     let resolved = loaded.resolve_enabled_rules()?;
     let rules_db = Arc::new(RulesDatabase::from_rules(resolved.into_iter().cloned().collect())?);
+    let update_status = UpdateStatus::default();
 
     let datastore = Arc::new(Mutex::new(FindingsStore::new(work.path().join("store"))));
 
-    rt.block_on(run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db))?;
+    rt.block_on(run_async_scan(
+        &global_args,
+        &scan_args,
+        Arc::clone(&datastore),
+        &rules_db,
+        &update_status,
+    ))?;
 
     let x = Ok(datastore.lock().unwrap().get_matches().len());
     x

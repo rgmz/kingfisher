@@ -333,11 +333,11 @@ impl DetailsReporter {
         }
 
         use std::collections::HashMap;
-        let mut by_fp: HashMap<u64, ReportMatch> = HashMap::new();
+        let mut by_fp: HashMap<(u64, String), ReportMatch> = HashMap::new();
 
         for rm in matches {
-            let fp = rm.m.finding_fingerprint;
-            if let Some(existing) = by_fp.get_mut(&fp) {
+            let key = (rm.m.finding_fingerprint, rm.m.rule.id().to_string());
+            if let Some(existing) = by_fp.get_mut(&key) {
                 // merge origin sets (keep first origin, append the rest)
                 for o in rm.origin.iter() {
                     if !existing.origin.iter().any(|e| e == o) {
@@ -355,7 +355,7 @@ impl DetailsReporter {
                 }
                 continue;
             }
-            by_fp.insert(fp, rm);
+            by_fp.insert(key, rm);
         }
         by_fp.into_values().collect()
     }

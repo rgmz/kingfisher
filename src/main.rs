@@ -27,7 +27,7 @@ static GLOBAL: System = System;
 // static GLOBAL: System = System;
 
 use std::{
-    io::{IsTerminal, Read},
+    io::{IsTerminal, Read, Write},
     sync::{Arc, Mutex},
 };
 
@@ -194,7 +194,7 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
             let clone_dir = temp_dir.path().to_path_buf();
 
             let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
-            let update_msg = check_for_update(&global_args, None);
+            let update_status = check_for_update(&global_args, None);
             match command {
                 Command::Scan(scan_command) => match scan_command.into_operation()? {
                     ScanOperation::Scan(mut scan_args) => {
@@ -213,8 +213,19 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         }
 
                         let rules_db = Arc::new(load_and_record_rules(&scan_args, &datastore)?);
-                        run_scan(&global_args, &scan_args, &rules_db, Arc::clone(&datastore))
-                            .await?;
+                        run_scan(
+                            &global_args,
+                            &scan_args,
+                            &rules_db,
+                            Arc::clone(&datastore),
+                            &update_status,
+                        )
+                        .await?;
+                        if update_status.is_outdated {
+                            if let Some(styled) = &update_status.styled_message {
+                                let _ = writeln!(std::io::stderr(), "{}", styled);
+                            }
+                        }
                         let exit_code = determine_exit_code(&datastore);
 
                         if let Err(e) = temp_dir.close() {
@@ -324,8 +335,8 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                     anyhow::bail!("SelfUpdate command should not reach this branch")
                 }
             }
-            if let Some(msg) = update_msg {
-                info!("{msg}");
+            if let Some(message) = &update_status.message {
+                info!("{}", message);
             }
             Ok(())
         }

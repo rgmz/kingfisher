@@ -28,6 +28,7 @@ use kingfisher::{
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::run_async_scan,
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use url::Url;
@@ -242,8 +243,10 @@ async fn test_validation_cache_and_depvars() -> Result<()> {
         ignore_certs: false,
         user_agent_suffix: None,
     };
+    let update_status = UpdateStatus::default();
 
-    run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db).await?;
+    run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &rules_db, &update_status)
+        .await?;
 
     /* --------------------------------------------------------- *
      * 6. Assertions                                             *

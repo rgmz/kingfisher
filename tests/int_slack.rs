@@ -24,6 +24,7 @@ use kingfisher::{
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::run_async_scan,
+    update::UpdateStatus,
 };
 use tempfile::TempDir;
 use url::Url;
@@ -294,8 +295,10 @@ async fn test_scan_slack_messages() -> Result<()> {
     };
 
     let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
+    let update_status = UpdateStatus::default();
 
-    run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &ctx.rules_db).await?;
+    run_async_scan(&global_args, &scan_args, Arc::clone(&datastore), &ctx.rules_db, &update_status)
+        .await?;
 
     let findings = {
         let ds = datastore.lock().unwrap();

@@ -17,7 +17,6 @@ const STARTUP_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 async fn wait_for_port(host: &str, port: u16) -> Result<()> {
     let deadline = Instant::now() + STARTUP_TIMEOUT;
-    let mut last_err = None;
 
     loop {
         match TcpStream::connect((host, port)).await {
@@ -26,10 +25,9 @@ async fn wait_for_port(host: &str, port: u16) -> Result<()> {
                 return Ok(());
             }
             Err(err) => {
-                last_err = Some(err);
                 if Instant::now() >= deadline {
                     return Err(anyhow!(
-                        "timed out after {:?} waiting for {host}:{port}: {last_err:?}",
+                        "timed out after {:?} waiting for {host}:{port}: {err}",
                         STARTUP_TIMEOUT,
                     ));
                 }

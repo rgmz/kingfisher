@@ -83,8 +83,8 @@ rules:
       \b
     pattern_requirements:
       ignore_if_contains:
-        - "*****"
-        - "xxxxx"
+        - "****"
+        - "xxxx"
     min_entropy: 3
     examples:
       - client = mongoc_client_new ("mongodb+srv://someuser:hunter2@my-atlas-rd941.mongodb.net/test?retryWrites=true&w=majority");

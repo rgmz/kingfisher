@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.67.0]
+- Added checksum to GitLab rule
+- Fixed deduplication to consider rule identifiers so overlapping patterns are not merged before validation
+- After scan summaries, emit the styled outdated-version notice to stderr when a newer release is available
+- Reduced false positives across a number of rules
+- Updated Summary to include scan date, kingfisher version ran, and latest kingfisher version available
+
 ## [v1.66.0]
 - Updating to support Bitbucket App Passwords
 - Improved boundaries for several rules

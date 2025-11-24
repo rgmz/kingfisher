@@ -11,6 +11,9 @@ rules:
       \b
     pattern_requirements:
       min_digits: 2
+      ignore_if_contains:
+        - "EXAMPLE"
+        - "TEST"
     min_entropy: 3.2
     visible: false
     confidence: medium
@@ -41,6 +44,9 @@ rules:
       )
     pattern_requirements:
       min_digits: 2
+      ignore_if_contains:
+        - "EXAMPLE"
+        - "TEST"
     min_entropy: 4.5
     confidence: medium
     examples:

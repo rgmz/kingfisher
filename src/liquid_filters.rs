@@ -728,6 +728,83 @@ fn value_to_usize(value: &Value) -> Option<usize> {
         .or_else(|| view.to_kstr().parse::<usize>().ok())
 }
 
+#[derive(Debug, FilterParameters)]
+struct Base36Args {
+    #[parameter(
+        description = "Pad the encoded value to at least this width",
+        arg_type = "integer"
+    )]
+    width: Option<Expression>,
+}
+
+#[derive(Clone, ParseFilter, FilterReflection, Default)]
+#[filter(
+    name = "base36",
+    description = "Encode the provided integer value using Base36.",
+    parameters(Base36Args),
+    parsed(Base36)
+)]
+pub struct Base36Filter;
+
+#[derive(Debug, FromFilterParameters, Display_filter)]
+#[name = "base36"]
+struct Base36 {
+    #[parameters]
+    args: Base36Args,
+}
+
+impl Filter for Base36 {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+        let args = self.args.evaluate(runtime)?;
+        let value = input
+            .as_scalar()
+            .and_then(|scalar| {
+                if let Some(int) = scalar.to_integer() {
+                    Some(if int < 0 { 0 } else { int as u64 })
+                } else if let Some(float) = scalar.to_float() {
+                    Some(if float.is_sign_negative() { 0 } else { float.floor() as u64 })
+                } else if let Some(boolean) = scalar.to_bool() {
+                    Some(u64::from(boolean))
+                } else {
+                    scalar.to_kstr().to_string().parse::<u64>().ok()
+                }
+            })
+            .or_else(|| input.to_kstr().to_string().parse::<u64>().ok())
+            .unwrap_or(0);
+
+        let mut encoded = encode_base36(value);
+        if let Some(width) = args.width.and_then(|value| {
+            let scalar = Value::scalar(value);
+            value_to_usize(&scalar)
+        }) {
+            if encoded.len() < width {
+                let mut padded = String::with_capacity(width);
+                for _ in 0..(width - encoded.len()) {
+                    padded.push('0');
+                }
+                padded.push_str(&encoded);
+                encoded = padded;
+            }
+        }
+
+        Ok(Value::scalar(encoded))
+    }
+}
+
+fn encode_base36(mut value: u64) -> String {
+    const ALPHABET: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
+    if value == 0 {
+        return "0".to_string();
+    }
+    let mut buf = Vec::new();
+    while value > 0 {
+        let rem = (value % 36) as usize;
+        buf.push(ALPHABET[rem] as char);
+        value /= 36;
+    }
+    buf.iter().rev().collect()
+}
+
 // {{ value | b64url_enc }} – URL-safe base64 w/o padding
 static_filter!(
     /// Base64 URL-safe (no ‘=’ padding).
@@ -844,6 +921,7 @@ pub fn register_all(builder: liquid::ParserBuilder) -> liquid::ParserBuilder {
         .filter(Crc32HexFilter::default())
         .filter(Crc32LeB64Filter::default())
         .filter(Base62Filter::default())
+        .filter(Base36Filter::default())
         .filter(HmacSha256::default())
         .filter(HmacSha1::default())
         .filter(HmacSha384::default())
@@ -909,6 +987,12 @@ mod tests {
         assert_eq!(render(r#"{{ "hello" | crc32 }}"#), "907060870");
         assert_eq!(render(r#"{{ "hello" | crc32 | base62 }}"#), "zNvy2");
         assert_eq!(render(r#"{{ "hello" | crc32 | base62: 6 }}"#), "0zNvy2");
+    }
+
+    #[test]
+    fn base36_filter() {
+        assert_eq!(render(r#"{{ 123456 | base36 }}"#), "2n9c");
+        assert_eq!(render(r#"{{ 123456 | base36: 6 }}"#), "002n9c");
     }
 
     #[test]

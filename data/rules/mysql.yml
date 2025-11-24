@@ -34,8 +34,8 @@ rules:
       )
     pattern_requirements:
       ignore_if_contains:
-        - "*****"
-        - "xxxxx"
+        - "****"
+        - "xxxx"
     min_entropy: 3.3
     confidence: medium
     examples:

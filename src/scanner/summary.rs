@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use chrono::Local;
 use http::StatusCode;
 use indicatif::HumanBytes;
 use serde_json::json;
@@ -19,6 +20,7 @@ use crate::{
     matcher::MatcherStats,
     rule_profiling::ConcurrentRuleProfiler,
     rules_database::RulesDatabase,
+    update::{UpdateCheckStatus, UpdateStatus},
 };
 
 macro_rules! safe_println {
@@ -37,6 +39,7 @@ macro_rules! safe_println {
 
 pub fn print_scan_summary(
     start_time: Instant,
+    scan_started_at: chrono::DateTime<Local>,
     datastore: &Arc<Mutex<findings_store::FindingsStore>>,
     global_args: &global::GlobalArgs,
     args: &scan::ScanArgs,
@@ -44,6 +47,7 @@ pub fn print_scan_summary(
     rules_db: &RulesDatabase,
     matcher_stats: &Mutex<MatcherStats>,
     profiler: Option<&ConcurrentRuleProfiler>,
+    update_status: &UpdateStatus,
 ) {
     if global_args.quiet {
         if args.rule_stats {
@@ -137,12 +141,28 @@ pub fn print_scan_summary(
             "blobs_scanned": matcher_stats.blobs_scanned,
             "bytes_scanned": matcher_stats.bytes_scanned,
             "scan_duration": duration.as_secs_f64(),
+            "scan_date": scan_started_at.to_rfc3339(),
+            "kingfisher": {
+                "version_used": update_status.running_version.clone(),
+                "latest_version": update_status.latest_version.clone(),
+                "update_check_status": update_status.check_status.as_str(),
+                "update_check_message": update_status.message.clone(),
+            },
             "findings_by_rule": sorted_findings
         });
         safe_println!("{}", summary.to_string());
     } else if args.output_args.format == ReportOutputFormat::Pretty
         || args.output_args.output.is_some()
     {
+        let scan_date = scan_started_at.format("%Y-%m-%d %H:%M:%S %Z");
+        let latest_version = match update_status.check_status {
+            UpdateCheckStatus::Disabled => "Update check disabled (--no-update-check)".to_string(),
+            UpdateCheckStatus::Failed => "Unknown (update check failed)".to_string(),
+            UpdateCheckStatus::Ok => {
+                update_status.latest_version.clone().unwrap_or_else(|| "Unknown".to_string())
+            }
+        };
+
         safe_println!("\n==========================================");
         safe_println!("Scan Summary:");
         safe_println!("==========================================");
@@ -165,6 +185,9 @@ pub fn print_scan_summary(
             HumanBytes(matcher_stats.bytes_scanned)
         );
         safe_println!(" |Scan Duration...............: {}", humantime::format_duration(duration));
+        safe_println!(" |Scan Date...................: {}", scan_date);
+        safe_println!(" |Kingfisher Version..........: {}", &update_status.running_version);
+        safe_println!(" |__Latest Version............: {}", latest_version);
     }
 
     if args.rule_stats {

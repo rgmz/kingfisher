@@ -18,8 +18,13 @@ rules:
       )
     pattern_requirements:
       ignore_if_contains:
-        - "*****"
-        - "xxxxx"
+        - "****"
+        - "xxxx"
+        - "username:"
+        - "user:"
+        - ":password"
+        - ":pass"
+        - ">:<"
     min_entropy: 4.0
     confidence: medium
     examples:
@@ -31,7 +36,7 @@ rules:
           method: GET
           url: '{{ TOKEN }}'
           response_matcher:
-            - report_response: true
+            - report_response: false
               type: StatusMatch
               status:
                 - 200

@@ -6,7 +6,7 @@ rules:
       \b
       (?:datadog|dd)
       (?:.|[\n\r]){0,64}?
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)?
+      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b
       (

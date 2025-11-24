@@ -273,6 +273,23 @@ jobs:
         with:
           path: target/release/kingfisher-*
           merge-multiple: true
+      - name: Generate aggregate checksums
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          OUTPUT="kingfisher_${VERSION}_checksums.txt"
+
+          cd target/release
+          shopt -s nullglob
+          files=(kingfisher-*.tgz kingfisher-*.zip kingfisher-*.deb kingfisher-*.rpm)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No release artifacts found for checksum generation" >&2
+            exit 1
+          fi
+
+          sha256sum "${files[@]}" > "$OUTPUT"
+          echo "Wrote checksums to target/release/$OUTPUT"
       - name: Extract latest changelog section
         run: |
           awk '

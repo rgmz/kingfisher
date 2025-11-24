@@ -120,21 +120,37 @@ rules:
                 - '"403 Forbidden"'
               negative: true
           url: https://gitlab.com/api/v4/ci/pipeline_triggers/{{ TOKEN }}
-  - name: GitLab Private Token - Updated Format
+  - name: GitLab Private Token - Routable Format
     id: kingfisher.gitlab.4
     pattern: |
-      (?x)
+      (?xi)
       \b
       (
-        glpat-[A-Za-z0-9_-]{36,38}\.01\.[a-z0-9]{9}
+        glpat-
+        (?<base64_payload>[0-9A-Za-z_-]{27,300})
+        \.
+        (?<version>01)
+        \.
+        (?<base36_payload_length>[0-9a-z]{2})
+        (?<crc32>[0-9a-z]{7})
       )
       \b
     pattern_requirements:
       min_digits: 2
+      # GitLab's RoutableTokenGenerator renders the CRC32 digest as lowercase
+      # base36 with a fixed width of 7 characters. The regex and checksum
+      # expectation mirror that encoding so we only report matches that carry a
+      # valid GitLab-style checksum.
+      checksum:
+        actual:
+          template: "{{ MATCH | suffix: 7 }}"
+          requires_capture: crc32
+        expected: "{{ \"glpat-\" | append: BASE64_PAYLOAD | append: \".01.\" | append: BASE36_PAYLOAD_LENGTH | crc32 | base36: 7 }}"
+        skip_if_missing: true
     min_entropy: 3.5
     confidence: medium
     examples:
-      - glpat-5m8CwMZi4bwlRSCKzG0-3W86MQp1OmV5Y2UK.01.1012mzo24
+      - glpat-ymiBP0-I-J6ghspoBPoZxtSC3g7MyHYG0X0r.01.101erjmwl
     references:
       - https://github.com/diffblue/gitlab/blob/39c63ee83369bf5353256a6b95f3116728edd102/doc/api/personal_access_tokens.md
       - https://docs.gitlab.com/api/personal_access_tokens/

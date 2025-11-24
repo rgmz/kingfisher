@@ -20,10 +20,10 @@ use kingfisher::{
 use smallvec::smallvec;
 // ---- helpers -------------------------------------------------------------------------------
 
-fn make_match(fp: u64) -> Match {
+fn make_match(fp: u64, rule_id: &str) -> Match {
     let syntax = RuleSyntax {
         name: "Example Rule".to_string(),
-        id: "RULE.1".to_string(),
+        id: rule_id.to_string(),
         pattern: "dummy".to_string(),
         min_entropy: 0.0,
         confidence: Confidence::Medium,
@@ -99,8 +99,8 @@ fn git_origin(commit_id: &str) -> OriginSet {
 #[test]
 fn reporter_deduplicates_across_git_commits() -> Result<()> {
     // Build two matches with the same fingerprint.
-    let m1 = make_match(0xBADC0FFE);
-    let m2 = make_match(0xBADC0FFE);
+    let m1 = make_match(0xBADC0FFE, "RULE.1");
+    let m2 = make_match(0xBADC0FFE, "RULE.1");
 
     // Different commit ids -- old dedup logic *fails* to merge them.
     let origin_a = git_origin("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
@@ -153,6 +153,62 @@ fn reporter_deduplicates_across_git_commits() -> Result<()> {
 
     // Old code ⇒ len == 2  (fails).  Fixed code ⇒ len == 1  (passes).
     assert_eq!(deduped.len(), 1, "identical findings across commits must be merged");
+
+    Ok(())
+}
+
+#[test]
+fn dedup_preserves_distinct_rules_with_same_fingerprint() -> Result<()> {
+    let shared_fp = 0xDEADC0DE;
+    let m1 = make_match(shared_fp, "RULE.OPENAI");
+    let m2 = make_match(shared_fp, "RULE.DEEPSEEK");
+
+    let origin = git_origin("cccccccccccccccccccccccccccccccccccccccc");
+
+    let reporter = DetailsReporter {
+        datastore: Arc::new(Mutex::new(FindingsStore::new(PathBuf::from("/tmp")))),
+        styles: Styles::new(false),
+        only_valid: false,
+    };
+
+    let matches = vec![
+        ReportMatch {
+            origin: origin.clone(),
+            blob_metadata: BlobMetadata {
+                id: BlobId::new(b"dummy"),
+                num_bytes: 10,
+                mime_essence: None,
+                language: None,
+            },
+            m: m1,
+            comment: None,
+            match_confidence: Confidence::Medium,
+            visible: true,
+            validation_response_body: String::new(),
+            validation_response_status: 0,
+            validation_success: false,
+        },
+        ReportMatch {
+            origin,
+            blob_metadata: BlobMetadata {
+                id: BlobId::new(b"dummy"),
+                num_bytes: 10,
+                mime_essence: None,
+                language: None,
+            },
+            m: m2,
+            comment: None,
+            match_confidence: Confidence::Medium,
+            visible: true,
+            validation_response_body: String::new(),
+            validation_response_status: 0,
+            validation_success: false,
+        },
+    ];
+
+    let deduped = reporter.deduplicate_matches(matches, /* no_dedup= */ false);
+
+    assert_eq!(deduped.len(), 2, "matches from distinct rules must not be deduplicated");
 
     Ok(())
 }

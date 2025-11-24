@@ -23,6 +23,46 @@ use tracing::error;
 
 use crate::{cli::global::GlobalArgs, reporter::styles::Styles};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UpdateCheckStatus {
+    Disabled,
+    Failed,
+    Ok,
+}
+
+impl UpdateCheckStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            UpdateCheckStatus::Disabled => "disabled",
+            UpdateCheckStatus::Failed => "failed",
+            UpdateCheckStatus::Ok => "ok",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UpdateStatus {
+    pub message: Option<String>,
+    pub styled_message: Option<String>,
+    pub is_outdated: bool,
+    pub running_version: String,
+    pub latest_version: Option<String>,
+    pub check_status: UpdateCheckStatus,
+}
+
+impl Default for UpdateStatus {
+    fn default() -> Self {
+        UpdateStatus {
+            message: None,
+            styled_message: None,
+            is_outdated: false,
+            running_version: cargo_crate_version!().to_string(),
+            latest_version: None,
+            check_status: UpdateCheckStatus::Disabled,
+        }
+    }
+}
+
 fn styled_heading(styles: &Styles, text: &str) -> String {
     styles.style_finding_active_heading.apply_to(text).to_string()
 }
@@ -31,9 +71,18 @@ fn styled_heading(styles: &Styles, text: &str) -> String {
 ///
 /// * `base_url` lets tests point at a mock server.
 /// * Self-update is skipped when the user disabled it **or** the binary is a Homebrew install.
-pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Option<String> {
+pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> UpdateStatus {
+    let running_version = cargo_crate_version!().to_string();
+
     if global_args.no_update_check {
-        return None;
+        return UpdateStatus {
+            message: Some("Update check disabled (--no-update-check)".to_string()),
+            styled_message: None,
+            is_outdated: false,
+            running_version,
+            latest_version: None,
+            check_status: UpdateCheckStatus::Disabled,
+        };
     }
 
     // Respect the user's color preferences when printing update
@@ -88,49 +137,75 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
 
     // Build the updater.
     let Ok(updater) = builder.build() else {
-        let _ = writeln!(
-            std::io::stderr(),
-            "{}",
-            styled_heading(&styles, "Failed to configure update checker")
-        );
-        return None;
+        let plain = "Failed to configure update checker".to_string();
+        let styled_message = styled_heading(&styles, &plain);
+        let _ = writeln!(std::io::stderr(), "{}", styled_message);
+        return UpdateStatus {
+            message: Some(plain),
+            styled_message: Some(styled_message),
+            is_outdated: false,
+            running_version,
+            latest_version: None,
+            check_status: UpdateCheckStatus::Failed,
+        };
     };
 
     // Query GitHub.
     let Ok(release) = updater.get_latest_release() else {
-        let _ = writeln!(
-            std::io::stderr(),
-            "{}",
-            styled_heading(&styles, "Failed to check for updates")
-        );
-        return None;
+        let plain = "Failed to check for updates".to_string();
+        let styled_message = styled_heading(&styles, &plain);
+        let _ = writeln!(std::io::stderr(), "{}", styled_message);
+        return UpdateStatus {
+            message: Some(plain),
+            styled_message: Some(styled_message),
+            is_outdated: false,
+            running_version,
+            latest_version: None,
+            check_status: UpdateCheckStatus::Failed,
+        };
     };
 
-    let running_v = cargo_crate_version!();
-
     // ───────────── Case 1: running == latest ─────────────
-    if release.version == running_v {
-        let plain = format!("Kingfisher {running_v} is up to date");
+    if release.version == running_version {
+        let plain = format!("Kingfisher {running_version} is up to date");
         let _ = writeln!(std::io::stderr(), "{plain}");
-        return Some(plain);
+        return UpdateStatus {
+            message: Some(plain.clone()),
+            styled_message: Some(plain),
+            is_outdated: false,
+            running_version,
+            latest_version: Some(release.version),
+            check_status: UpdateCheckStatus::Ok,
+        };
     }
 
     // Try semantic version comparison.  If parsing fails, fall back to the
     // self-update code-path (which will treat the strings lexicographically).
-    if let (Ok(curr), Ok(latest)) = (Version::parse(running_v), Version::parse(&release.version)) {
+    if let (Ok(curr), Ok(latest)) =
+        (Version::parse(&running_version), Version::parse(&release.version))
+    {
         // ───────── Case 2: running > latest (dev build) ─────────
         if curr > latest {
             let plain =
                 format!("Running Kingfisher {curr} which is newer than latest released {latest}");
-            let _ = writeln!(std::io::stderr(), "{}", styled_heading(&styles, &plain));
-            return Some(plain);
+            let styled_message = styled_heading(&styles, &plain);
+            let _ = writeln!(std::io::stderr(), "{}", styled_message);
+            return UpdateStatus {
+                message: Some(plain),
+                styled_message: Some(styled_message),
+                is_outdated: false,
+                running_version,
+                latest_version: Some(release.version),
+                check_status: UpdateCheckStatus::Ok,
+            };
         }
         // else fall through to Case 3 (latest > running)
     }
 
     // ───────────── Case 3: latest > running ─────────────
     let plain = format!("New Kingfisher release {} available", release.version);
-    let _ = writeln!(std::io::stderr(), "{}", styled_heading(&styles, &plain));
+    let styled_message = styled_heading(&styles, &plain);
+    let _ = writeln!(std::io::stderr(), "{}", styled_message);
 
     // Attempt self-update when allowed and feasible.
     if global_args.self_update {
@@ -172,5 +247,12 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Opt
         }
     }
 
-    Some(plain)
+    UpdateStatus {
+        message: Some(plain),
+        styled_message: Some(styled_message),
+        is_outdated: true,
+        running_version,
+        latest_version: Some(release.version),
+        check_status: UpdateCheckStatus::Ok,
+    }
 }
