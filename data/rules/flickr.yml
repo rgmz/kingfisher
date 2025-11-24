@@ -5,12 +5,12 @@ rules:
       (?xi)
       \b
       flickr
-      (?:.|[\n\r]){0,32}?
-      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)?
+      (?:.|[\n\r]){0,16}?
+      (?:SECRET|PRIVATE|ACCESS|KEY|TOKEN)
       (?:.|[\n\r]){0,32}?
       \b
       (
-        [a-f0-9]{32}
+        [a-f0-9]{16}
       )
       \b
     pattern_requirements:

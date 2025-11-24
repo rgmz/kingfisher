@@ -18,8 +18,8 @@ rules:
       )
     pattern_requirements:
       ignore_if_contains:
-        - "*****"
-        - "xxxxx"
+        - "****"
+        - "xxxx"
         - "username:"
         - "user:"
         - ":password"
