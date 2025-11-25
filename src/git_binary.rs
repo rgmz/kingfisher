@@ -156,9 +156,12 @@ impl Git {
         } else if let Some(token) = bitbucket_access_token.clone() {
             Some(("x-token-auth".to_string(), token))
         } else if let (Some(username), Some(password)) =
-            (bitbucket_username.clone(), bitbucket_basic_password)
+            (bitbucket_username.clone(), bitbucket_basic_password.clone())
         {
             Some((username, password))
+        } else if let Some(token) = bitbucket_token.clone() {
+            // Allow token-only authentication (common for x-token-auth URLs).
+            Some(("x-token-auth".to_string(), token))
         } else {
             None
         };
@@ -169,6 +172,7 @@ impl Git {
         let has_bitbucket_oauth_token = bitbucket_oauth_token.is_some();
         let has_bitbucket_credentials = has_bitbucket_oauth_token
             || bitbucket_access_token.is_some()
+            || bitbucket_token.is_some()
             || (has_bitbucket_username && has_bitbucket_password);
         let has_azure_token = ["KF_AZURE_TOKEN", "KF_AZURE_PAT"]
             .iter()
@@ -455,6 +459,21 @@ mod tests {
     }
 
     #[test]
+    fn test_repo_arg_for_clone_uses_token_only_auth() {
+        let url =
+            GitUrl::try_from(url::Url::parse("https://bitbucket.org/workspace/demo.git").unwrap())
+                .unwrap();
+
+        temp_env::with_vars(&[("KF_BITBUCKET_TOKEN", Some("token123"))], || {
+            let git = Git::new(false);
+            assert_eq!(
+                git.repo_arg_for_clone(&url),
+                "https://x-token-auth:token123@bitbucket.org/workspace/demo.git"
+            );
+        });
+    }
+
+    #[test]
     fn test_repo_arg_for_clone_leaves_non_bitbucket_urls_untouched() {
         let url = GitUrl::try_from(
             url::Url::parse("https://github.com/octocat/Hello-World.git").unwrap(),
@@ -481,6 +500,20 @@ mod tests {
             assert_eq!(git.credentials.len(), 4);
             assert!(git.credentials.iter().any(|value| value == BITBUCKET_CREDENTIAL_HELPER));
             assert_eq!(git.bitbucket_access_token.as_deref(), Some(token));
+        });
+    }
+
+    #[test]
+    fn test_git_new_bitbucket_token_without_username() {
+        temp_env::with_var("KF_BITBUCKET_TOKEN", Some("token123"), || {
+            let git = Git::new(false);
+            assert_eq!(git.credentials.len(), 4);
+            assert!(git.credentials.iter().any(|value| value == BITBUCKET_CREDENTIAL_HELPER));
+            assert_eq!(git.bitbucket_access_token.as_deref(), None);
+            assert_eq!(
+                git.bitbucket_basic_auth,
+                Some(("x-token-auth".to_string(), "token123".to_string()))
+            );
         });
     }
 

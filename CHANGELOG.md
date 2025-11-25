@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.68.0]
+- Fixed Bitbucket authenticated cloning bug
+
 ## [v1.67.0]
 - Added checksum to GitLab rule
 - Fixed deduplication to consider rule identifiers so overlapping patterns are not merged before validation
