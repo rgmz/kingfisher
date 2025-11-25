@@ -934,7 +934,7 @@ kingfisher scan bitbucket --workspace my-team --bitbucket-exclude my-team/**/exp
 
 Kingfisher supports Bitbucket Cloud and Bitbucket Server credentials:
 
-- **Workspace API token (Cloud)** – set `KF_BITBUCKET_TOKEN`.Kingfisher automatically uses the token for Bitbucket REST APIs and authenticates git operations as `x-token-auth`.
+- **Workspace API token (Cloud)** – set `KF_BITBUCKET_TOKEN`. Kingfisher automatically uses the token for Bitbucket REST APIs and authenticates git operations as `x-token-auth`.
 - **Bitbucket Server token** – set `KF_BITBUCKET_USERNAME` and either
   `KF_BITBUCKET_TOKEN` or `KF_BITBUCKET_PASSWORD`.
 - **Legacy app password (Cloud)** – set `KF_BITBUCKET_USERNAME` and
