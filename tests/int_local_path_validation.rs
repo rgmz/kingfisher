@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use anyhow::Result;
 use assert_cmd::Command;
 use tempfile::tempdir;
