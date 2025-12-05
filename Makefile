@@ -208,28 +208,7 @@ darwin-arm64:
 	$(MAKE) list-archives
 
 darwin-dev:
-# 	@echo "Checking Rust for darwin-arm64..."
-# 	@$(MAKE) check-rust || ( \
-# 		echo "Rust not found or out-of-date. Installing via Homebrew..." && \
-# 		brew install rust \
-# 	)
-# 	@brew list cmake >/dev/null 2>&1 || brew install cmake
-# 	@brew list boost >/dev/null 2>&1 || brew install boost
-# 	@brew install gcc libpcap pkg-config ragel sqlite coreutils gnu-tar
-# 	@rustup target add aarch64-apple-darwin
 	cargo build --profile=dev --target aarch64-apple-darwin --features system-alloc
-# 	@cd target/aarch64-apple-darwin/release && \
-# 		find ./$(PROJECT_NAME) -type f -not -name "*.d" -not -name "*.rlib" -exec shasum -a 256 {} \; > CHECKSUM.txt
-# 	@mkdir -p target/release
-# 	@cp target/aarch64-apple-darwin/release/$(PROJECT_NAME) target/release/
-# 	@cp target/aarch64-apple-darwin/release/CHECKSUM.txt target/release/CHECKSUM-darwin-arm64.txt
-# 	@cd target/release && \
-# 	    rm -rf $(PROJECT_NAME)-darwin-arm64.tgz && \
-# 		$(ARCHIVE_CMD) $(PROJECT_NAME)-darwin-arm64.tgz $(PROJECT_NAME) CHECKSUM-darwin-arm64.txt && \
-# 		if [ -f $(PROJECT_NAME)-darwin-arm64.tgz ]; then \
-# 		  shasum -a 256 $(PROJECT_NAME)-darwin-arm64.tgz >> CHECKSUM-darwin-arm64.txt; \
-# 		fi
-# 	$(MAKE) list-archives
 
 darwin-x64:
 	@echo "Checking Rust for darwin-x64..."
