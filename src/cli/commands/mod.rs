@@ -1,3 +1,4 @@
+pub mod access_map;
 pub mod azure;
 pub mod bitbucket;
 pub mod gitea;

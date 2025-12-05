@@ -33,7 +33,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use kingfisher::{
-    azure, bitbucket,
+    access_map, azure, bitbucket,
     cli::{
         self,
         commands::{
@@ -54,7 +54,7 @@ use kingfisher::{
     rule_loader::RuleLoader,
     rules_database::RulesDatabase,
     scanner::{load_and_record_rules, run_scan},
-    update::check_for_update,
+    update::check_for_update_async,
     validation::set_user_agent_suffix,
 };
 use serde_json::json;
@@ -79,15 +79,18 @@ use crate::cli::commands::{
 fn main() -> anyhow::Result<()> {
     color_backtrace::install();
     // Parse command-line arguments
-    let args = CommandLineArgs::parse_args();
+    let CommandLineArgs { command, global_args } = CommandLineArgs::parse_args();
 
-    set_user_agent_suffix(args.global_args.user_agent_suffix.clone());
+    set_user_agent_suffix(global_args.user_agent_suffix.clone());
+
+    let args = CommandLineArgs { command, global_args };
 
     // Determine the number of jobs, defaulting to the number of CPUs
     let num_jobs = match &args.command {
         Command::Scan(scan_args) => scan_args.scan_args.num_jobs,
         Command::SelfUpdate => 1, // Self-update doesn't need a thread pool
         Command::Rules(_) => num_cpus::get(), // Default for Rules commands
+        Command::AccessMap(_) => 1,
     };
 
     // Set up the Tokio runtime with the specified number of threads
@@ -186,15 +189,16 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
             let mut g = global_args;
             g.self_update = true;
             g.no_update_check = false;
-            check_for_update(&g, None);
+            let _ = check_for_update_async(&g, None).await;
             Ok(())
         }
+        Command::AccessMap(identity_args) => access_map::run(identity_args).await,
         command => {
             let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
             let clone_dir = temp_dir.path().to_path_buf();
 
             let datastore = Arc::new(Mutex::new(FindingsStore::new(clone_dir)));
-            let update_status = check_for_update(&global_args, None);
+            let update_status = check_for_update_async(&global_args, None).await;
             match command {
                 Command::Scan(scan_command) => match scan_command.into_operation()? {
                     ScanOperation::Scan(mut scan_args) => {
@@ -331,6 +335,9 @@ async fn async_main(args: CommandLineArgs) -> Result<()> {
                         run_rules_list(&list_args)?;
                     }
                 },
+                Command::AccessMap(_) => {
+                    anyhow::bail!("AccessMap command should not reach this branch")
+                }
                 Command::SelfUpdate => {
                     anyhow::bail!("SelfUpdate command should not reach this branch")
                 }
@@ -442,6 +449,8 @@ fn create_default_scan_args() -> cli::commands::scan::ScanArgs {
         },
         confidence: ConfidenceLevel::Medium,
         no_validate: true,
+        access_map: false,
+        access_map_html: None,
         rule_stats: false,
         only_valid: false,
         min_entropy: None,

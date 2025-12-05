@@ -37,13 +37,13 @@ fn make_match(fp: u64, rule_id: &str) -> Match {
     };
     let rule = Arc::new(Rule::new(syntax));
     Match {
-        location: Location {
-            offset_span: OffsetSpan { start: 0, end: 10 },
-            source_span: SourceSpan {
+        location: Location::with_source_span(
+            OffsetSpan { start: 0, end: 10 },
+            Some(SourceSpan {
                 start: SourcePoint { line: 1, column: 0 },
                 end: SourcePoint { line: 1, column: 10 },
-            },
-        },
+            }),
+        ),
         groups: SerializableCaptures {
             captures: smallvec![SerializableCapture {
                 name: None,
@@ -56,7 +56,7 @@ fn make_match(fp: u64, rule_id: &str) -> Match {
         blob_id: BlobId::new(b"dummy"),
         finding_fingerprint: fp,
         rule,
-        validation_response_body: String::new(),
+        validation_response_body: None,
         validation_response_status: 0,
         validation_success: false,
         calculated_entropy: 0.0,
@@ -126,7 +126,7 @@ fn reporter_deduplicates_across_git_commits() -> Result<()> {
             comment: None,
             match_confidence: Confidence::Medium,
             visible: true,
-            validation_response_body: String::new(),
+            validation_response_body: None,
             validation_response_status: 0,
             validation_success: false,
         },
@@ -142,7 +142,7 @@ fn reporter_deduplicates_across_git_commits() -> Result<()> {
             comment: None,
             match_confidence: Confidence::Medium,
             visible: true,
-            validation_response_body: String::new(),
+            validation_response_body: None,
             validation_response_status: 0,
             validation_success: false,
         },
@@ -184,7 +184,7 @@ fn dedup_preserves_distinct_rules_with_same_fingerprint() -> Result<()> {
             comment: None,
             match_confidence: Confidence::Medium,
             visible: true,
-            validation_response_body: String::new(),
+            validation_response_body: None,
             validation_response_status: 0,
             validation_success: false,
         },
@@ -200,7 +200,7 @@ fn dedup_preserves_distinct_rules_with_same_fingerprint() -> Result<()> {
             comment: None,
             match_confidence: Confidence::Medium,
             visible: true,
-            validation_response_body: String::new(),
+            validation_response_body: None,
             validation_response_status: 0,
             validation_success: false,
         },

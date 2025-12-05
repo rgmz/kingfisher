@@ -1,4 +1,5 @@
 use std::{
+    collections::{BTreeMap, BTreeSet},
     fmt::Write,
     sync::{Arc, Mutex},
 };
@@ -11,6 +12,7 @@ use serde::Serialize;
 use url::Url;
 
 use crate::{
+    access_map::{AccessSummary, ResourceExposure},
     blob::BlobMetadata,
     bstring_escape::Escaped,
     cli,
@@ -19,6 +21,7 @@ use crate::{
     matcher::Match,
     origin::{Origin, OriginSet},
     rules::rule::Confidence,
+    validation_body::{self, ValidationResponseBody},
 };
 mod bson_format;
 mod json_format;
@@ -396,14 +399,18 @@ impl DetailsReporter {
             path_a
                 .cmp(&path_b)
                 .then_with(|| {
-                    a.m.location.source_span.start.line.cmp(&b.m.location.source_span.start.line)
+                    a.m.location
+                        .resolved_source_span()
+                        .start
+                        .line
+                        .cmp(&b.m.location.resolved_source_span().start.line)
                 })
                 .then_with(|| {
                     a.m.location
-                        .source_span
+                        .resolved_source_span()
                         .start
                         .column
-                        .cmp(&b.m.location.source_span.start.column)
+                        .cmp(&b.m.location.resolved_source_span().start.column)
                 })
         });
         Ok(matches)
@@ -414,7 +421,7 @@ impl DetailsReporter {
         rm: &ReportMatch,
         args: &cli::commands::scan::ScanArgs,
     ) -> FindingReporterRecord {
-        let source_span = &rm.m.location.source_span;
+        let source_span = rm.m.location.resolved_source_span();
         let line_num = source_span.start.line;
 
         // --- FIX IS HERE ---
@@ -438,10 +445,9 @@ impl DetailsReporter {
         };
 
         const MAX_RESPONSE_LENGTH: usize = 512;
-        let truncated_body: String =
-            rm.validation_response_body.chars().take(MAX_RESPONSE_LENGTH).collect();
-        let ellipsis =
-            if rm.validation_response_body.len() > MAX_RESPONSE_LENGTH { "..." } else { "" };
+        let validation_body = validation_body::as_str(&rm.validation_response_body);
+        let truncated_body: String = validation_body.chars().take(MAX_RESPONSE_LENGTH).collect();
+        let ellipsis = if validation_body.len() > MAX_RESPONSE_LENGTH { "..." } else { "" };
         let response_body = format!("{}{}", truncated_body, ellipsis);
 
         let git_metadata_val = rm
@@ -449,7 +455,7 @@ impl DetailsReporter {
             .iter()
             .filter_map(|origin| {
                 if let Origin::GitRepo(e) = origin {
-                    self.extract_git_metadata(e, source_span)
+                    self.extract_git_metadata(e, &source_span)
                 } else {
                     None
                 }
@@ -557,6 +563,66 @@ impl DetailsReporter {
         Ok(matches.iter().map(|rm| self.build_finding_record(rm, args)).collect())
     }
 
+    pub fn build_report_envelope(
+        &self,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Result<ReportEnvelope> {
+        let findings = self.build_finding_records(args)?;
+        let access_map = self.build_access_map_records(args);
+
+        Ok(ReportEnvelope { findings, access_map })
+    }
+
+    fn build_access_map_records(
+        &self,
+        args: &cli::commands::scan::ScanArgs,
+    ) -> Option<Vec<AccessMapEntry>> {
+        if !args.access_map {
+            return None;
+        }
+
+        let ds = self.datastore.lock().unwrap();
+        let raw_results = ds.access_map_results();
+
+        if raw_results.is_empty() {
+            return None;
+        }
+
+        let mut entries = Vec::new();
+        for result in raw_results {
+            let account = summarize_account(&result.identity);
+            let mut grouped: BTreeMap<Vec<String>, Vec<String>> = BTreeMap::new();
+
+            if result.resources.is_empty() {
+                grouped.insert(Vec::new(), vec![result.identity.id.clone()]);
+            } else {
+                for resource in &result.resources {
+                    let resource_name = format_resource(resource);
+                    let permissions = normalize_permissions(&result.cloud, &resource.permissions);
+                    grouped.entry(permissions).or_default().push(resource_name);
+                }
+            }
+
+            let mut groups: Vec<AccessMapResourceGroup> = grouped
+                .into_iter()
+                .map(|(permissions, mut resources)| {
+                    resources.sort();
+                    AccessMapResourceGroup { resources, permissions }
+                })
+                .collect();
+
+            groups.sort_by(|a, b| a.resources.cmp(&b.resources));
+
+            entries.push(AccessMapEntry {
+                provider: result.cloud.clone(),
+                account: account.clone(),
+                groups,
+            });
+        }
+
+        Some(entries)
+    }
+
     fn style_finding_heading<D>(&self, val: D) -> StyledObject<D> {
         self.styles.style_finding_heading.apply_to(val)
     }
@@ -585,6 +651,46 @@ impl DetailsReporter {
 
     fn style_active_creds<D>(&self, val: D) -> StyledObject<D> {
         self.styles.style_active_creds.apply_to(val)
+    }
+}
+
+fn normalize_permissions(cloud: &str, permissions: &[String]) -> Vec<String> {
+    if cloud.eq_ignore_ascii_case("aws") {
+        return Vec::new();
+    }
+
+    let mut set = BTreeSet::new();
+    for perm in permissions {
+        let normalized = perm.trim();
+        if !normalized.is_empty() {
+            set.insert(normalized.to_string());
+        }
+    }
+
+    set.into_iter().collect()
+}
+
+fn summarize_account(identity: &AccessSummary) -> Option<String> {
+    identity
+        .account_id
+        .clone()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| identity.project.clone().filter(|s| !s.trim().is_empty()))
+        .or_else(|| identity.tenant.clone().filter(|s| !s.trim().is_empty()))
+        .or_else(|| Some(identity.id.clone()).filter(|s| !s.trim().is_empty()))
+}
+
+fn format_resource(resource: &ResourceExposure) -> String {
+    let name = resource.name.trim();
+    if name.is_empty() {
+        return resource.resource_type.clone();
+    }
+
+    let resource_type = resource.resource_type.trim();
+    if resource_type.is_empty() {
+        name.to_string()
+    } else {
+        format!("{}:{}", resource_type, name)
     }
 }
 /// A trait for things that can be output as a document.
@@ -641,7 +747,13 @@ pub struct ReportMatch {
     pub visible: bool,
 
     /// Validation Body
-    pub validation_response_body: String,
+    #[serde(
+        default,
+        serialize_with = "validation_body::serialize",
+        deserialize_with = "validation_body::deserialize"
+    )]
+    #[schemars(schema_with = "validation_body::schema")]
+    pub validation_response_body: ValidationResponseBody,
 
     /// Validation Status Code
     pub validation_response_status: u16,
@@ -654,6 +766,28 @@ pub struct ReportMatch {
 pub struct FindingReporterRecord {
     pub rule: RuleMetadata,
     pub finding: FindingRecordData,
+}
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct AccessMapEntry {
+    pub provider: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
+    pub groups: Vec<AccessMapResourceGroup>,
+}
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct AccessMapResourceGroup {
+    pub resources: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub permissions: Vec<String>,
+}
+
+#[derive(Serialize, JsonSchema, Clone, Debug)]
+pub struct ReportEnvelope {
+    pub findings: Vec<FindingReporterRecord>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_map: Option<Vec<AccessMapEntry>>,
 }
 
 #[derive(Serialize, JsonSchema, Clone, Debug)]
@@ -794,6 +928,8 @@ mod tests {
             },
             confidence: ConfidenceLevel::Medium,
             no_validate: false,
+            access_map: false,
+            access_map_html: None,
             only_valid: false,
             min_entropy: None,
             rule_stats: false,
@@ -847,7 +983,7 @@ mod tests {
         }));
 
         let blob_id = BlobId::new(b"blob-data");
-        let validation_body_owned = validation_body.to_string();
+        let validation_body_stored = validation_body::from_string(validation_body);
         let report_match = ReportMatch {
             origin,
             blob_metadata: BlobMetadata {
@@ -857,20 +993,20 @@ mod tests {
                 language: Some("Unknown".into()),
             },
             m: Match {
-                location: Location {
-                    offset_span: OffsetSpan { start: 0, end: 10 },
-                    source_span: SourceSpan {
+                location: Location::with_source_span(
+                    OffsetSpan { start: 0, end: 10 },
+                    Some(SourceSpan {
                         start: SourcePoint { line: 19, column: 0 },
                         end: SourcePoint { line: 19, column: 10 },
-                    },
-                },
+                    }),
+                ),
                 groups: SerializableCaptures {
                     captures: SmallVec::<[SerializableCapture; 2]>::new(),
                 },
                 blob_id,
                 finding_fingerprint: 123,
                 rule: Arc::clone(&rule),
-                validation_response_body: validation_body_owned.clone(),
+                validation_response_body: validation_body_stored.clone(),
                 validation_response_status: validation_status,
                 validation_success,
                 calculated_entropy: 5.29,
@@ -880,7 +1016,7 @@ mod tests {
             comment: None,
             match_confidence: Confidence::Medium,
             visible: true,
-            validation_response_body: validation_body_owned,
+            validation_response_body: validation_body_stored,
             validation_response_status: validation_status,
             validation_success,
         };

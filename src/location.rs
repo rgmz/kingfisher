@@ -141,9 +141,112 @@ impl<'a> LocationMapping<'a> {
     }
 }
 
+/// Compact representation of a source span to reduce per-match footprint while
+/// still being able to materialize full line/column data on demand.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, JsonSchema)]
+pub struct CompactSourceSpan {
+    pub start_line: u32,
+    pub start_column: u32,
+    pub end_line: u32,
+    pub end_column: u32,
+}
+
+impl CompactSourceSpan {
+    #[inline]
+    fn zero() -> Self {
+        Self { start_line: 0, start_column: 0, end_line: 0, end_column: 0 }
+    }
+
+    #[inline]
+    fn from_source_span(span: &SourceSpan) -> Self {
+        Self {
+            start_line: span.start.line.try_into().unwrap_or(0),
+            start_column: span.start.column.try_into().unwrap_or(0),
+            end_line: span.end.line.try_into().unwrap_or(0),
+            end_column: span.end.column.try_into().unwrap_or(0),
+        }
+    }
+
+    #[inline]
+    fn to_source_span(self) -> SourceSpan {
+        SourceSpan {
+            start: SourcePoint {
+                line: usize::try_from(self.start_line).unwrap_or(0),
+                column: usize::try_from(self.start_column).unwrap_or(0),
+            },
+            end: SourcePoint {
+                line: usize::try_from(self.end_line).unwrap_or(0),
+                column: usize::try_from(self.end_column).unwrap_or(0),
+            },
+        }
+    }
+}
+
 /// Combined byte‑ and source‑span.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct Location {
     pub offset_span: OffsetSpan,
-    pub source_span: SourceSpan,
+    #[serde(
+        default,
+        serialize_with = "serialize_compact_source_span",
+        deserialize_with = "deserialize_compact_source_span"
+    )]
+    #[schemars(with = "SourceSpan")]
+    pub source_span: Option<CompactSourceSpan>,
+}
+
+impl serde::Serialize for Location {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut state = serializer.serialize_struct("Location", 2)?;
+        state.serialize_field("offset_span", &self.offset_span)?;
+        let source_span = self.source_span().unwrap_or_else(CompactSourceSpan::zero);
+        state.serialize_field("source_span", &source_span.to_source_span())?;
+        state.end()
+    }
+}
+
+impl Location {
+    #[inline]
+    pub fn with_source_span(offset_span: OffsetSpan, source_span: Option<SourceSpan>) -> Self {
+        Self {
+            offset_span,
+            source_span: source_span.as_ref().map(CompactSourceSpan::from_source_span),
+        }
+    }
+
+    #[inline]
+    pub fn source_span(&self) -> Option<CompactSourceSpan> {
+        self.source_span
+    }
+
+    #[inline]
+    pub fn resolved_source_span(&self) -> SourceSpan {
+        self.source_span.unwrap_or_else(CompactSourceSpan::zero).to_source_span()
+    }
+}
+
+fn serialize_compact_source_span<S>(
+    span: &Option<CompactSourceSpan>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let source_span = span.unwrap_or_else(CompactSourceSpan::zero).to_source_span();
+    source_span.serialize(serializer)
+}
+
+fn deserialize_compact_source_span<'de, D>(
+    deserializer: D,
+) -> Result<Option<CompactSourceSpan>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let span = SourceSpan::deserialize(deserializer)?;
+    Ok(Some(CompactSourceSpan::from_source_span(&span)))
 }

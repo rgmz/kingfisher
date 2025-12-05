@@ -251,7 +251,8 @@ impl BlobId {
         let mut hasher = Sha1::new();
         write!(&mut hasher, "blob {}\0", bytes.len()).unwrap();
         hasher.update(bytes);
-        BlobId(hasher.finalize().as_slice().try_into().expect("SHA-1 output size mismatch"))
+        let digest: [u8; 20] = hasher.finalize().into();
+        BlobId(digest)
     }
 }
 impl<'de> Deserialize<'de> for BlobId {
@@ -303,7 +304,8 @@ impl BlobId {
             hasher.update(&input[..CHUNK]);
             hasher.update(&input[input.len() - CHUNK..]);
         }
-        BlobId(hasher.finalize().as_slice().try_into().expect("SHA-1 output size mismatch"))
+        let digest: [u8; 20] = hasher.finalize().into();
+        BlobId(digest)
     }
 
     #[inline]

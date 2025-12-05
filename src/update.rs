@@ -20,6 +20,9 @@ use std::io::{ErrorKind, Write};
 use self_update::{backends::github::Update, cargo_crate_version, errors::Error as UpdError};
 use semver::Version;
 use tracing::error;
+use tracing::warn;
+
+use tokio::task;
 
 use crate::{cli::global::GlobalArgs, reporter::styles::Styles};
 
@@ -254,5 +257,23 @@ pub fn check_for_update(global_args: &GlobalArgs, base_url: Option<&str>) -> Upd
         running_version,
         latest_version: Some(release.version),
         check_status: UpdateCheckStatus::Ok,
+    }
+}
+
+/// Run the update check on a blocking thread so it can safely be invoked from async
+/// contexts without creating nested Tokio runtimes.
+pub async fn check_for_update_async(
+    global_args: &GlobalArgs,
+    base_url: Option<&str>,
+) -> UpdateStatus {
+    let args = global_args.clone();
+    let base = base_url.map(str::to_owned);
+
+    match task::spawn_blocking(move || check_for_update(&args, base.as_deref())).await {
+        Ok(status) => status,
+        Err(err) => {
+            warn!("Update check task cancelled: {err}");
+            UpdateStatus::default()
+        }
     }
 }

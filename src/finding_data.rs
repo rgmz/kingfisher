@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     blob::BlobMetadata, findings_store, matcher::Match, origin::OriginSet, rules::rule::Confidence,
+    validation_body::ValidationResponseBody,
 };
 // -------------------------------------------------------------------------------------------------
 // FindingData
@@ -23,7 +24,7 @@ pub struct FindingDataEntry {
     pub match_confidence: Confidence,
     pub visible: bool,
     /// Validation Body
-    pub validation_response_body: String,
+    pub validation_response_body: ValidationResponseBody,
 
     /// Validation Status Code
     pub validation_response_status: u16,

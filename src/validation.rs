@@ -22,12 +22,13 @@ use crate::{
     location::OffsetSpan,
     matcher::{OwnedBlobMatch, SerializableCaptures},
     rules::rule::Validation,
+    validation_body::{self, ValidationResponseBody},
 };
 
 mod aws;
 mod azure;
 mod coinbase;
-mod gcp;
+pub mod gcp;
 mod httpvalidation;
 mod jdbc;
 mod jwt;
@@ -36,7 +37,7 @@ mod mysql;
 mod postgres;
 pub use mysql::validate_mysql;
 pub use postgres::validate_postgres;
-mod utils;
+pub mod utils;
 
 const VALIDATION_CACHE_SECONDS: u64 = 1200; // 20 minutes
 const MAX_VALIDATION_BODY_LEN: usize = 2048;
@@ -137,14 +138,14 @@ pub fn is_parseable_mysql_uri(uri: &str) -> bool {
 
 #[derive(Clone)]
 pub struct CachedResponse {
-    pub body: String,
+    pub body: ValidationResponseBody,
     pub status: StatusCode,
     pub is_valid: bool,
     pub timestamp: Instant,
 }
 
 impl CachedResponse {
-    pub fn new(body: String, status: StatusCode, is_valid: bool) -> Self {
+    pub fn new(body: ValidationResponseBody, status: StatusCode, is_valid: bool) -> Self {
         Self { body, status, is_valid, timestamp: Instant::now() }
     }
 
@@ -268,7 +269,8 @@ pub async fn validate_single_match(
 
     if timeout_result.is_err() {
         m.validation_success = false;
-        m.validation_response_body = "Validation timed out after 60 seconds".to_string();
+        m.validation_response_body =
+            validation_body::from_string("Validation timed out after 60 seconds");
         m.validation_response_status = StatusCode::REQUEST_TIMEOUT;
     }
 }
@@ -329,8 +331,10 @@ async fn timed_validate_single_match<'a>(
     if let Some(missing) = missing_dependencies.get(&m.rule.syntax().id) {
         if !missing.is_empty() {
             m.validation_success = false;
-            m.validation_response_body =
-                format!("Validation skipped - missing dependent rules: {}", missing.join(", "));
+            m.validation_response_body = validation_body::from_string(format!(
+                "Validation skipped - missing dependent rules: {}",
+                missing.join(", ")
+            ));
             m.validation_response_status = StatusCode::PRECONDITION_REQUIRED;
             commit_and_return(m);
             return;
@@ -343,7 +347,8 @@ async fn timed_validate_single_match<'a>(
         Ok(_) => utils::process_captures(&m.captures),
         Err(e) => {
             m.validation_success = false;
-            m.validation_response_body = format!("Regex error: {}", e);
+            m.validation_response_body =
+                validation_body::from_string(format!("Regex error: {}", e));
             m.validation_response_status = StatusCode::INTERNAL_SERVER_ERROR;
             commit_and_return(m);
             return;
@@ -390,7 +395,7 @@ async fn timed_validate_single_match<'a>(
                 Ok(u) => u,
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = e;
+                    m.validation_response_body = validation_body::from_string(e);
                     m.validation_response_status = StatusCode::BAD_REQUEST;
                     commit_and_return(m);
                     return;
@@ -410,7 +415,7 @@ async fn timed_validate_single_match<'a>(
                 Ok(rb) => rb,
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = e;
+                    m.validation_response_body = validation_body::from_string(e);
                     m.validation_response_status = StatusCode::BAD_REQUEST;
                     commit_and_return(m);
                     return;
@@ -559,7 +564,10 @@ async fn timed_validate_single_match<'a>(
                         Ok(b) => b,
                         Err(e) => {
                             m.validation_success = false;
-                            m.validation_response_body = format!("Error reading response: {}", e);
+                            m.validation_response_body = validation_body::from_string(format!(
+                                "Error reading response: {}",
+                                e
+                            ));
                             m.validation_response_status = StatusCode::BAD_GATEWAY;
                             commit_and_return(m);
                             return;
@@ -568,7 +576,8 @@ async fn timed_validate_single_match<'a>(
                     truncate_to_char_boundary(&mut body, MAX_VALIDATION_BODY_LEN);
 
                     m.validation_response_status = status;
-                    m.validation_response_body = body.clone();
+                    let body_opt = validation_body::from_string(body.clone());
+                    m.validation_response_body = body_opt.clone();
                     let matchers = http_validation
                         .request
                         .response_matcher
@@ -587,7 +596,7 @@ async fn timed_validate_single_match<'a>(
                         cache.insert(
                             cache_key,
                             CachedResponse {
-                                body,
+                                body: body_opt,
                                 status,
                                 is_valid: m.validation_success,
                                 timestamp: Instant::now(),
@@ -597,7 +606,8 @@ async fn timed_validate_single_match<'a>(
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("HTTP error: {:?}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("HTTP error: {:?}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -613,7 +623,8 @@ async fn timed_validate_single_match<'a>(
 
             if uri.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "MongoDB URI not found.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("MongoDB URI not found.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -634,13 +645,14 @@ async fn timed_validate_single_match<'a>(
             match mongodb::validate_mongodb(&uri).await {
                 Ok((ok, msg)) => {
                     m.validation_success = ok;
-                    m.validation_response_body = msg;
+                    m.validation_response_body = validation_body::from_string(msg);
                     m.validation_response_status =
                         if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("MongoDB validation error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("MongoDB validation error: {}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -656,7 +668,8 @@ async fn timed_validate_single_match<'a>(
 
             if mysql_url.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "MySQL URL not found.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("MySQL URL not found.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -677,17 +690,18 @@ async fn timed_validate_single_match<'a>(
             match mysql::validate_mysql(&mysql_url).await {
                 Ok((ok, meta)) => {
                     m.validation_success = ok;
-                    m.validation_response_body = if ok {
+                    m.validation_response_body = validation_body::from_string(if ok {
                         format!("MySQL connection is valid. Metadata: {:?}", meta)
                     } else {
                         "MySQL connection failed.".to_string()
-                    };
+                    });
                     m.validation_response_status =
                         if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("MySQL error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("MySQL error: {}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -716,7 +730,9 @@ async fn timed_validate_single_match<'a>(
 
             if storage_account.is_empty() || storage_key.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "Missing Azure Storage account or key.".to_string();
+                m.validation_response_body = validation_body::from_string(
+                    "Missing Azure Storage account or key.".to_string(),
+                );
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -748,7 +764,8 @@ async fn timed_validate_single_match<'a>(
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("Azure Storage error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("Azure Storage error: {}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -773,7 +790,8 @@ async fn timed_validate_single_match<'a>(
 
             if jdbc_conn.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "JDBC connection string not found.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("JDBC connection string not found.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -794,12 +812,13 @@ async fn timed_validate_single_match<'a>(
             match jdbc::validate_jdbc(&jdbc_conn).await {
                 Ok(outcome) => {
                     m.validation_success = outcome.valid;
-                    m.validation_response_body = outcome.message;
+                    m.validation_response_body = validation_body::from_string(outcome.message);
                     m.validation_response_status = outcome.status;
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("JDBC validation error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("JDBC validation error: {}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -825,7 +844,8 @@ async fn timed_validate_single_match<'a>(
 
             if pg_url.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "Postgres URL not found.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("Postgres URL not found.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -846,17 +866,18 @@ async fn timed_validate_single_match<'a>(
             match postgres::validate_postgres(&pg_url).await {
                 Ok((ok, meta)) => {
                     m.validation_success = ok;
-                    m.validation_response_body = if ok {
+                    m.validation_response_body = validation_body::from_string(if ok {
                         format!("Postgres connection is valid. Metadata: {:?}", meta)
                     } else {
                         "Postgres connection failed.".to_string()
-                    };
+                    });
                     m.validation_response_status =
                         if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("Postgres error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("Postgres error: {}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -880,7 +901,8 @@ async fn timed_validate_single_match<'a>(
 
             if token.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "JWT token not found.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("JWT token not found.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -889,13 +911,14 @@ async fn timed_validate_single_match<'a>(
             match jwt::validate_jwt(&token).await {
                 Ok((ok, msg)) => {
                     m.validation_success = ok;
-                    m.validation_response_body = msg;
+                    m.validation_response_body = validation_body::from_string(msg);
                     m.validation_response_status =
                         if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("JWT validation error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("JWT validation error: {}", e));
                     m.validation_response_status = StatusCode::BAD_REQUEST;
                 }
             }
@@ -912,7 +935,9 @@ async fn timed_validate_single_match<'a>(
 
             if akid.is_empty() || secret.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "Missing AWS access-key ID or secret.".to_string();
+                m.validation_response_body = validation_body::from_string(
+                    "Missing AWS access-key ID or secret.".to_string(),
+                );
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -932,10 +957,10 @@ async fn timed_validate_single_match<'a>(
 
             if let Some(account_id) = aws::should_skip_aws_validation(&akid) {
                 m.validation_success = false;
-                m.validation_response_body = format!(
+                m.validation_response_body = validation_body::from_string(format!(
                     "(skip list entry) AWS validation not attempted for account {}.",
                     account_id
-                );
+                ));
                 m.validation_response_status = StatusCode::CONTINUE;
                 cache.insert(
                     cache_key,
@@ -952,7 +977,10 @@ async fn timed_validate_single_match<'a>(
 
             if let Err(e) = aws::validate_aws_credentials_input(&akid, &secret) {
                 m.validation_success = false;
-                m.validation_response_body = format!("Invalid AWS credentials ({}): {}", akid, e);
+                m.validation_response_body = validation_body::from_string(format!(
+                    "Invalid AWS credentials ({}): {}",
+                    akid, e
+                ));
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -962,15 +990,17 @@ async fn timed_validate_single_match<'a>(
                 Ok((ok, msg)) => {
                     m.validation_success = ok;
                     if ok {
-                        m.validation_response_body = format!("{} --- ARN: {}", akid, msg);
-                        m.validation_response_status = StatusCode::OK;
+                        let mut body = format!("{} --- ARN: {}", akid, msg);
                         if let Ok(acct) = aws::aws_key_to_account_number(&akid) {
-                            m.validation_response_body
-                                .push_str(&format!(" --- AWS Account Number: {:012}", acct));
+                            body.push_str(&format!(" --- AWS Account Number: {:012}", acct));
                         }
+                        m.validation_response_body = validation_body::from_string(body);
+                        m.validation_response_status = StatusCode::OK;
                     } else {
-                        m.validation_response_body =
-                            format!("AWS validation error ({}): {}", akid, msg);
+                        m.validation_response_body = validation_body::from_string(format!(
+                            "AWS validation error ({}): {}",
+                            akid, msg
+                        ));
                         m.validation_response_status = StatusCode::UNAUTHORIZED;
                     }
                     cache.insert(
@@ -985,7 +1015,10 @@ async fn timed_validate_single_match<'a>(
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("AWS validation error ({}): {}", akid, e);
+                    m.validation_response_body = validation_body::from_string(format!(
+                        "AWS validation error ({}): {}",
+                        akid, e
+                    ));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -1001,7 +1034,8 @@ async fn timed_validate_single_match<'a>(
 
             if gcp_json.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "GCP JSON not found.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("GCP JSON not found.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -1024,20 +1058,27 @@ async fn timed_validate_single_match<'a>(
                     match validator.validate_gcp_credentials(&gcp_json.as_bytes()).await {
                         Ok((ok, meta)) => {
                             m.validation_success = ok;
-                            m.validation_response_body = meta.join("\n");
+                            m.validation_response_body =
+                                validation_body::from_string(meta.join("\n"));
                             m.validation_response_status =
                                 if ok { StatusCode::OK } else { StatusCode::UNAUTHORIZED };
                         }
                         Err(e) => {
                             m.validation_success = false;
-                            m.validation_response_body = format!("GCP validation error: {}", e);
+                            m.validation_response_body = validation_body::from_string(format!(
+                                "GCP validation error: {}",
+                                e
+                            ));
                             m.validation_response_status = StatusCode::BAD_GATEWAY;
                         }
                     }
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("Failed to create GCP validator: {}", e);
+                    m.validation_response_body = validation_body::from_string(format!(
+                        "Failed to create GCP validator: {}",
+                        e
+                    ));
                     m.validation_response_status = StatusCode::INTERNAL_SERVER_ERROR;
                 }
             }
@@ -1066,7 +1107,8 @@ async fn timed_validate_single_match<'a>(
 
             if cred_name.is_empty() || private_key.is_empty() {
                 m.validation_success = false;
-                m.validation_response_body = "Missing key name or private key.".to_string();
+                m.validation_response_body =
+                    validation_body::from_string("Missing key name or private key.".to_string());
                 m.validation_response_status = StatusCode::BAD_REQUEST;
                 commit_and_return(m);
                 return;
@@ -1083,7 +1125,8 @@ async fn timed_validate_single_match<'a>(
                 }
                 Err(e) => {
                     m.validation_success = false;
-                    m.validation_response_body = format!("Coinbase validation error: {}", e);
+                    m.validation_response_body =
+                        validation_body::from_string(format!("Coinbase validation error: {}", e));
                     m.validation_response_status = StatusCode::BAD_GATEWAY;
                 }
             }
@@ -1092,7 +1135,8 @@ async fn timed_validate_single_match<'a>(
         Some(Validation::Raw(raw)) => {
             debug!("Raw validation not implemented: {}", raw);
             m.validation_success = false;
-            m.validation_response_body = "Validator not implemented".to_string();
+            m.validation_response_body =
+                validation_body::from_string("Validator not implemented".to_string());
             m.validation_response_status = StatusCode::NOT_IMPLEMENTED;
         }
         None => { /* no validation specified */ }

@@ -89,7 +89,7 @@ pub fn apply_baseline(
                 let entry = BaselineFinding {
                     filepath: normalized,
                     fingerprint: hash,
-                    linenum: m.location.source_span.start.line,
+                    linenum: m.location.resolved_source_span().start.line,
                     lastupdated: Local::now().to_rfc2822(),
                 };
                 new_entries.push(entry);
@@ -159,18 +159,18 @@ mod tests {
         let mut store = FindingsStore::new(PathBuf::from("."));
         let rule = test_rule();
         let match_item = Match {
-            location: Location {
-                offset_span: OffsetSpan { start: 0, end: 1 },
-                source_span: SourceSpan {
+            location: Location::with_source_span(
+                OffsetSpan { start: 0, end: 1 },
+                Some(SourceSpan {
                     start: SourcePoint { line: 1, column: 0 },
                     end: SourcePoint { line: 1, column: 1 },
-                },
-            },
+                }),
+            ),
             groups: empty_captures(),
             blob_id: BlobId::default(),
             finding_fingerprint: fingerprint,
             rule: Arc::clone(&rule),
-            validation_response_body: String::new(),
+            validation_response_body: None,
             validation_response_status: 0,
             validation_success: false,
             calculated_entropy: 0.0,

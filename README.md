@@ -130,6 +130,7 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Scan Confluence pages matching a CQL query](#scan-confluence-pages-matching-a-cql-query)
   - [ Scanning Slack](#-scanning-slack)
     - [Scan Slack messages matching a search query](#scan-slack-messages-matching-a-search-query)
+  - [Identity mapping for cloud credentials](#identity-mapping-for-cloud-credentials)
   - [Environment Variables for Tokens](#environment-variables-for-tokens)
   - [Exit Codes](#exit-codes)
   - [Update Checks](#update-checks)
@@ -1045,6 +1046,30 @@ KF_SLACK_TOKEN="xoxp-1234..." kingfisher scan slack "akia" \
     --max-results 1000
 ```
 *The Slack token must be a user token with the `search:read` scope. Bot tokens (those beginning with `xoxb-`) cannot call the Slack search API.*
+
+## Identity mapping for cloud credentials
+
+Use the `identity-map` command to understand the blast radius of cloud credentials by resolving the owning identity, attached roles (including inherited org/folder bindings), and risky permissions. The command prints a JSON summary to stdout by default and can optionally emit a standalone HTML report.
+
+```bash
+# Map AWS credentials using your default CLI environment (env vars, config files),
+# write JSON to disk, and emit an interactive HTML report
+kingfisher identity-map aws \
+  --json-out identity-map.json \
+  --html-out identity-map.html
+
+# Map a GCP service account key and save JSON + HTML to disk
+kingfisher identity-map gcp path/to/key.json \
+  --json-out identity-map.json \
+  --html-out identity-map.html
+```
+
+Specify the provider (`aws`, `gcp`, or `azure`) as the first argument.
+- **AWS**: Uses your default AWS credential chain (environment variables, config/credential profiles, or instance metadata). To map a static key file instead, pass the path as the second argument (supports JSON or `aws_access_key_id=` / `aws_secret_access_key=` key-value pairs). When possible, Kingfisher expands IAM permissions by reading the caller's attached managed and inline policies and surfaces admin, privilege-escalation, or read-only actions in the report. Lacking `iam:List*`/`iam:Get*` access will limit permission expansion but the identity can still be resolved.
+- **GCP**: Pass the path to a service account key JSON file.
+- **Azure**: Pass the path to a service principal JSON file.
+
+You can also collect identity maps while running a normal scan by passing `--identity-map`; a consolidated HTML output for every validated credential can be written with `--identity-map-html`. Identity mapping runs after the validation phase and will emit an HTML report when validated AWS or GCP credentials are found (the flag requires validation, so it cannot be combined with `--no-validate`). Each validated credential renders as its own card in the unified report, so mixed AWS/GCP findings appear together with direct links to their console views. If you enable `--identity-map` without specifying `--identity-map-html`, the scanner writes `kingfisher_idmap_<timestamp>.html` to the current directory; if no validated credentials are discovered, a debug log call notes that no identity-map output was written.
 
 ## Environment Variables for Tokens
 

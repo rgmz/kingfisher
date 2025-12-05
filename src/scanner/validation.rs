@@ -17,12 +17,44 @@ use rustc_hash::FxHashMap;
 use tokio::{sync::Notify, time::timeout};
 
 use crate::{
+    access_map::AccessMapRequest,
     blob::BlobId,
     findings_store::{FindingsStore, FindingsStoreMessage},
     location::OffsetSpan,
     matcher::{Match, OwnedBlobMatch},
-    validation::{collect_variables_and_dependencies, validate_single_match, CachedResponse},
+    rules::rule::Validation,
+    validation::{
+        collect_variables_and_dependencies, utils, validate_single_match, CachedResponse,
+    },
+    validation_body,
 };
+
+#[derive(Clone, Default)]
+pub struct AccessMapCollector {
+    inner: Arc<DashMap<u64, AccessMapRequest>>,
+}
+
+impl AccessMapCollector {
+    pub fn record_aws(&self, access_key: &str, secret_key: &str) {
+        let key = xxhash_rust::xxh3::xxh3_64(format!("aws|{access_key}|{secret_key}").as_bytes());
+        self.inner.entry(key).or_insert_with(|| AccessMapRequest::Aws {
+            access_key: access_key.to_string(),
+            secret_key: secret_key.to_string(),
+            session_token: None,
+        });
+    }
+
+    pub fn record_gcp(&self, credential_json: &str) {
+        let key = xxhash_rust::xxh3::xxh3_64(credential_json.as_bytes());
+        self.inner.entry(key).or_insert_with(|| AccessMapRequest::Gcp {
+            credential_json: credential_json.to_string(),
+        });
+    }
+
+    pub fn into_requests(self) -> Vec<AccessMapRequest> {
+        self.inner.iter().map(|entry| entry.value().clone()).collect()
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 pub async fn run_secret_validation(
@@ -31,6 +63,8 @@ pub async fn run_secret_validation(
     client: &Client,
     cache: &Arc<SkipMap<String, CachedResponse>>,
     num_jobs: usize,
+    range: Option<std::ops::Range<usize>>,
+    access_map: Option<AccessMapCollector>,
 ) -> Result<()> {
     // ── 1. Concurrency & counters ───────────────────────────────────────────
     let concurrency = if num_jobs > 0 { num_jobs } else { num_cpus::get() };
@@ -43,7 +77,13 @@ pub async fn run_secret_validation(
         let ds = datastore.lock().unwrap();
         let rules = ds.get_rules()?;
         let mut map: FxHashMap<BlobId, Vec<Arc<FindingsStoreMessage>>> = FxHashMap::default();
-        for arc_msg in ds.get_matches().iter().map(Arc::clone) {
+        let matches = if let Some(r) = range.clone() {
+            ds.get_matches()[r].to_vec()
+        } else {
+            ds.get_matches().to_vec()
+        };
+
+        for arc_msg in matches.into_iter() {
             map.entry(arc_msg.1.id).or_default().push(arc_msg);
         }
         (rules, map)
@@ -103,6 +143,7 @@ pub async fn run_secret_validation(
             let fail = fail_count.clone();
             // *** FIX: Clone the progress bar for each concurrent task ***
             let pb = pb.clone();
+            let access_map = access_map.clone();
 
             async move {
                 let secret = rep_arc
@@ -119,7 +160,7 @@ pub async fn run_secret_validation(
                     dashmap::mapref::entry::Entry::Vacant(entry) => {
                         // *** FIX: Corrected placeholder to match struct definition ***
                         entry.insert(CachedResponse {
-                            body: String::new(),
+                            body: validation_body::from_string(String::new()),
                             status: StatusCode::ACCEPTED,
                             is_valid: false,
                             timestamp: Instant::now(),
@@ -143,6 +184,7 @@ pub async fn run_secret_validation(
                     &success,
                     &fail,
                     &cache_glob,
+                    access_map.as_ref(),
                 )
                 .await;
 
@@ -215,6 +257,7 @@ pub async fn run_secret_validation(
                     let success = success_count.clone();
                     let fail = fail_count.clone();
                     let cache_glob = cache.clone();
+                    let access_map = access_map.clone();
 
                     async move {
                         let owned = matches_for_blob
@@ -248,6 +291,7 @@ pub async fn run_secret_validation(
                                 let success = success.clone();
                                 let fail = fail.clone();
                                 let cache_glob = cache_glob.clone();
+                                let access_map = access_map.clone();
 
                                 async move {
                                     validate_single(
@@ -261,6 +305,7 @@ pub async fn run_secret_validation(
                                         &success,
                                         &fail,
                                         &cache_glob,
+                                        access_map.as_ref(),
                                     )
                                     .await;
                                     for d in &mut dups {
@@ -342,6 +387,7 @@ async fn validate_single(
     success_count: &AtomicUsize,
     fail_count: &AtomicUsize,
     cache2: &Arc<SkipMap<String, CachedResponse>>,
+    access_map: Option<&AccessMapCollector>,
 ) {
     // Build key
     let dep_vars_str = dep_vars
@@ -364,6 +410,7 @@ async fn validate_single(
         } else if om.validation_response_status != http::StatusCode::CONTINUE {
             fail_count.fetch_add(1, Ordering::Relaxed);
         }
+        maybe_record_access_map(om, access_map);
         return;
     }
 
@@ -384,6 +431,7 @@ async fn validate_single(
             } else if om.validation_response_status != http::StatusCode::CONTINUE {
                 fail_count.fetch_add(1, Ordering::Relaxed);
             }
+            maybe_record_access_map(om, access_map);
             return; // Exit early if cached result is found
         }
         return;
@@ -414,11 +462,12 @@ async fn validate_single(
         }
         Err(_) => {
             om.validation_success = false;
-            om.validation_response_body = "Validation timed out".to_string();
+            om.validation_response_body = validation_body::from_string("Validation timed out");
             om.validation_response_status = http::StatusCode::REQUEST_TIMEOUT;
             fail_count.fetch_add(1, Ordering::Relaxed);
         }
     }
+    maybe_record_access_map(om, access_map);
     // Remove from `in_progress`
     // in_progress.remove(&cache_key);
     in_progress.remove(&cache_key);
@@ -445,4 +494,54 @@ fn build_cache_key(
     // You can adapt from your existing logic
     let capture0 = om.captures.captures.get(0).map_or(String::new(), |c| c.raw_value().to_string());
     format!("{}|{}|{}", om.rule.name(), capture0, dep_vars_str)
+}
+
+fn maybe_record_access_map(om: &OwnedBlobMatch, collector: Option<&AccessMapCollector>) {
+    let collector = match collector {
+        Some(c) if om.validation_success => c,
+        _ => return,
+    };
+
+    let captures = utils::process_captures(&om.captures);
+
+    match om.rule.syntax().validation {
+        Some(Validation::AWS) => {
+            let secret = captures
+                .iter()
+                .find(|(name, ..)| name == "TOKEN")
+                .map(|(_, value, ..)| value.clone())
+                .unwrap_or_default();
+
+            let mut akid = utils::find_closest_variable(&captures, &secret, "TOKEN", "AKID")
+                .unwrap_or_default();
+
+            if akid.is_empty() {
+                akid = extract_akid_from_body(&om.validation_response_body).unwrap_or_default();
+            }
+
+            if !akid.is_empty() && !secret.is_empty() {
+                collector.record_aws(&akid, &secret);
+            }
+        }
+        Some(Validation::GCP) => {
+            if let Some((_, value, ..)) = captures.iter().find(|(name, ..)| name == "TOKEN") {
+                if !value.is_empty() {
+                    collector.record_gcp(value);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn extract_akid_from_body(body: &validation_body::ValidationResponseBody) -> Option<String> {
+    static AKID_RE: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
+        regex::Regex::new(
+            r"(?xi)\b(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[0-9A-Z]{16}\b",
+        )
+        .expect("valid regex")
+    });
+
+    let text = validation_body::clone_as_string(body);
+    AKID_RE.find(&text).map(|m| m.as_str().to_string())
 }

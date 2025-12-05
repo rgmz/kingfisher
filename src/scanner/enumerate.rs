@@ -237,11 +237,14 @@ pub fn enumerate_filesystem_inputs(
                         // nothing to record
                     }
                     Ok(Some((origin_set, blob_metadata, vec_of_matches))) => {
+                        let origin_set = Arc::new(origin_set);
+                        let blob_metadata = Arc::new(blob_metadata);
+
                         for (_, single_match) in vec_of_matches {
                             // Send each match
                             send_ds.send((
-                                Arc::new(origin_set.clone()),
-                                Arc::new(blob_metadata.clone()),
+                                origin_set.clone(),
+                                blob_metadata.clone(),
                                 single_match,
                             ))?;
                         }

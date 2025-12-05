@@ -1,0 +1,106 @@
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #38bdf8;
+  --border: #1f2937;
+  --good: #34d399;
+  --warn: #f59e0b;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(56,189,248,0.08), transparent 25%),
+              radial-gradient(circle at 80% 0%, rgba(52,211,153,0.12), transparent 30%),
+              var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+h1 { margin: 0; font-size: 22px; }
+h1 span { color: var(--accent); }
+
+.page {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.35);
+}
+
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+input[type="file"] { display: none; }
+
+.btn {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+  color: #0b1224;
+  border: none;
+  box-shadow: 0 12px 28px rgba(56,189,248,0.35);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap: 10px;
+}
+
+.stat {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.stat-label { color: var(--muted); font-size: 13px; }
+.stat-value { font-size: 24px; font-weight: 800; }
+
+.table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.table th, .table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.table th { color: var(--muted); font-weight: 700; }
+.table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+.badge { padding: 4px 8px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+.badge-good { background: rgba(52,211,153,0.16); color: #6ee7b7; }
+.badge-warn { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+pre {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed var(--border);
+  padding: 12px;
+  border-radius: 12px;
+  color: var(--muted);
+  overflow: auto;
+}
+
+@media (max-width: 1000px) {
+  .page { grid-template-columns: 1fr; }
+}

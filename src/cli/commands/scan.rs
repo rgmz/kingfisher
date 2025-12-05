@@ -82,6 +82,14 @@ pub struct ScanArgs {
     #[arg(long, short = 'n', default_value_t = false)]
     pub no_validate: bool,
 
+    /// Map validated cloud credentials to their effective identities
+    #[arg(long, default_value_t = false)]
+    pub access_map: bool,
+
+    /// Optional path to write a consolidated access-map HTML report
+    #[arg(long, value_name = "PATH")]
+    pub access_map_html: Option<PathBuf>,
+
     /// Display only validated findings
     #[arg(long, default_value_t = false)]
     pub only_valid: bool,
@@ -422,6 +430,14 @@ impl ScanCommandArgs {
 
         if self.scan_args.manage_baseline {
             self.scan_args.no_dedup = true;
+        }
+
+        if self.scan_args.access_map_html.is_some() {
+            self.scan_args.access_map = true;
+        }
+
+        if self.scan_args.access_map && self.scan_args.no_validate {
+            bail!("--access-map cannot be used with --no-validate");
         }
 
         Ok(ScanOperation::Scan(self.scan_args))

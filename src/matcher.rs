@@ -36,6 +36,7 @@ use crate::{
     snippet::Base64BString,
     util::intern,
     validation::{is_parseable_mongodb_uri, is_parseable_mysql_uri, is_parseable_postgres_uri},
+    validation_body::{self, ValidationResponseBody},
 };
 
 const MAX_CHUNK_SIZE: usize = 1 << 30; // 1 GiB per scan segment
@@ -65,7 +66,7 @@ pub struct OwnedBlobMatch {
     pub finding_fingerprint: u64,
     pub matching_input_offset_span: OffsetSpan,
     pub captures: SerializableCaptures,
-    pub validation_response_body: String,
+    pub validation_response_body: ValidationResponseBody,
     pub validation_response_status: StatusCode,
     pub validation_success: bool,
     pub calculated_entropy: f32,
@@ -156,7 +157,7 @@ pub struct BlobMatch<'a> {
     /// The capture groups from the match
     pub captures: SerializableCaptures, // regex::bytes::Captures<'a>,
 
-    pub validation_response_body: String,
+    pub validation_response_body: ValidationResponseBody,
     pub validation_response_status: StatusCode,
 
     pub validation_success: bool,
@@ -475,7 +476,7 @@ impl<'a> Matcher<'a> {
                         rule_id_usize,
                         &mut seen_matches,
                         origin,
-                        Some(item.decoded.as_bytes()),
+                        Some(item.decoded.as_slice()),
                         true,
                         redact,
                         &filename,
@@ -485,10 +486,9 @@ impl<'a> Matcher<'a> {
                     );
                 }
                 if depth + 1 < MAX_B64_DEPTH {
-                    for nested in get_base64_strings(item.decoded.as_bytes()) {
+                    for nested in get_base64_strings(item.decoded.as_slice()) {
                         b64_stack.push((
                             DecodedData {
-                                original: nested.original,
                                 decoded: nested.decoded,
                                 pos_start: item.pos_start,
                                 pos_end: item.pos_end,
@@ -761,7 +761,7 @@ fn filter_match<'b>(
             matching_input: only_matching_input,
             matching_input_offset_span,
             captures: groups,
-            validation_response_body: String::new(),
+            validation_response_body: None,
             validation_response_status: StatusCode::from_u16(0).unwrap_or(StatusCode::CONTINUE),
             validation_success: false,
             calculated_entropy,
@@ -870,7 +870,7 @@ impl JsonSchema for Groups {
 // }
 #[derive(Debug, Clone, JsonSchema)]
 pub struct SerializableCapture {
-    pub name: Option<String>,
+    pub name: Option<&'static str>,
     pub match_number: i32,
     pub start: usize,
     pub end: usize,
@@ -919,8 +919,8 @@ impl SerializableCaptures {
     pub fn from_captures(captures: &regex::bytes::Captures, _input: &[u8], re: &Regex) -> Self {
         let mut serialized_captures: SmallVec<[SerializableCapture; 2]> = SmallVec::new();
 
-        let capture_names: SmallVec<[Option<String>; 4]> =
-            re.capture_names().map(|name| name.map(str::to_string)).collect();
+        let capture_names: SmallVec<[Option<&'static str>; 4]> =
+            re.capture_names().map(|name| name.map(intern)).collect();
 
         // If there are explicit capture groups (e.g., group 1, 2, ...),
         // only serialize those.
@@ -928,9 +928,9 @@ impl SerializableCaptures {
             for i in 1..captures.len() {
                 // Start from 1
                 if let Some(cap) = captures.get(i) {
-                    let raw_value = String::from_utf8_lossy(cap.as_bytes()).to_string();
-                    let raw_interned = intern(&raw_value);
-                    let name = capture_names.get(i).and_then(|opt| opt.as_ref()).cloned();
+                    let raw_value = String::from_utf8_lossy(cap.as_bytes());
+                    let raw_interned = intern(raw_value.as_ref());
+                    let name = capture_names.get(i).and_then(|opt| *opt);
 
                     serialized_captures.push(SerializableCapture {
                         name,
@@ -945,9 +945,9 @@ impl SerializableCaptures {
             // ELSE, if there is ONLY the full match (len == 1),
             // serialize just that full match (group 0) as the fallback.
             if let Some(cap) = captures.get(0) {
-                let raw_value = String::from_utf8_lossy(cap.as_bytes()).to_string();
-                let raw_interned = intern(&raw_value);
-                let name = capture_names.get(0).and_then(|opt| opt.as_ref()).cloned();
+                let raw_value = String::from_utf8_lossy(cap.as_bytes());
+                let raw_interned = intern(raw_value.as_ref());
+                let name = capture_names.get(0).and_then(|opt| *opt);
 
                 serialized_captures.push(SerializableCapture {
                     name,
@@ -986,7 +986,13 @@ pub struct Match {
     pub rule: Arc<Rule>,
 
     /// Validation Body
-    pub validation_response_body: String,
+    #[serde(
+        default,
+        serialize_with = "validation_body::serialize",
+        deserialize_with = "validation_body::deserialize"
+    )]
+    #[schemars(schema_with = "validation_body::schema")]
+    pub validation_response_body: ValidationResponseBody,
 
     /// Validation Status Code
     pub validation_response_status: u16,
@@ -1042,7 +1048,7 @@ impl Match {
         Match {
             rule: owned_blob_match.rule.clone(),
             visible: owned_blob_match.rule.visible().to_owned(),
-            location: Location { offset_span, source_span: source_span.clone() },
+            location: Location::with_source_span(offset_span, Some(source_span.clone())),
             groups: owned_blob_match.captures.clone(),
             blob_id: owned_blob_match.blob_id,
             finding_fingerprint,
@@ -1074,8 +1080,7 @@ impl Match {
 }
 #[derive(Debug, Clone)]
 pub struct DecodedData {
-    pub original: String,
-    pub decoded: String,
+    pub decoded: Vec<u8>,
     pub pos_start: usize,
     pub pos_end: usize,
 }
@@ -1115,15 +1120,8 @@ pub fn get_base64_strings(input: &[u8]) -> Vec<DecodedData> {
                 .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(base64_slice));
 
             if let Ok(decoded) = decode_result {
-                if let Ok(decoded_str) = std::str::from_utf8(&decoded) {
-                    if decoded_str.is_ascii() {
-                        results.push(DecodedData {
-                            original: String::from_utf8_lossy(base64_slice).into_owned(),
-                            decoded: decoded_str.to_string(),
-                            pos_start: start,
-                            pos_end: end,
-                        });
-                    }
+                if decoded.is_ascii() {
+                    results.push(DecodedData { decoded, pos_start: start, pos_end: end });
                 }
             }
         }
@@ -1438,15 +1436,17 @@ mod test {
     /// and report correct byte-offsets.
     #[test]
     fn test_get_base64_strings_basic() {
-        let raw = b"foo MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY= bar";
+        let base64_payload = b"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+        let mut raw = b"foo ".to_vec();
+        raw.extend_from_slice(base64_payload);
+        raw.extend_from_slice(b" bar");
         // decodes to "0123456789abcdef0123456789abcdef"
-        let hits = get_base64_strings(raw);
+        let hits = get_base64_strings(&raw);
         assert_eq!(hits.len(), 1);
         let item = &hits[0];
-        assert_eq!(item.decoded, "0123456789abcdef0123456789abcdef");
-        assert_eq!(item.original, "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
+        assert_eq!(std::str::from_utf8(&item.decoded).unwrap(), "0123456789abcdef0123456789abcdef");
         // "foo␠" is 4 bytes, so the start offset is 4
-        assert_eq!((item.pos_start, item.pos_end), (4, 4 + item.original.len()));
+        assert_eq!((item.pos_start, item.pos_end), (4, 4 + base64_payload.len()));
     }
 
     /// `compute_finding_fingerprint` must be stable (same input ⇒ same output)

@@ -156,7 +156,7 @@ mod tests {
                 },
                 SerializableCapture {
                     // This is group 2 (named "foo")
-                    name: Some("foo".to_string()),
+                    name: Some("foo"),
                     match_number: 2, // Corrected match_number
                     start: 1,
                     end: 4,
@@ -189,7 +189,7 @@ mod tests {
                 // We only get the explicit captures ("foo" and group 2).
                 SerializableCapture {
                     // This is group 1 (named "foo")
-                    name: Some("foo".to_string()),
+                    name: Some("foo"),
                     match_number: 1, // Corrected match_number
                     start: 0,
                     end: 2,

@@ -5,6 +5,8 @@
 *.sarif
 *.profile.json
 *.json
+!webserver/static/sample-report.json
+!docs/access-map-viewer/sample-report.json
 *.jsonl
 *.bson
 .prettierrc
@@ -13,6 +15,9 @@ logs/*
 *.patch
 *.orig
 *.rej
+*.html
+!docs/access-map-viewer/index.html
+*.dot
 
 ### macOS ###
 # General

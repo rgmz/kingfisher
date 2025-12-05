@@ -10,7 +10,10 @@ use reqwest::{header::HeaderValue, Client};
 use serde_json::Value as JsonValue;
 use sha2::Sha256;
 
-use crate::validation::{Cache, CachedResponse, VALIDATION_CACHE_SECONDS};
+use crate::{
+    validation::{Cache, CachedResponse, ValidationResponseBody, VALIDATION_CACHE_SECONDS},
+    validation_body,
+};
 
 pub fn generate_azure_cache_key(azure_json: &str) -> String {
     use sha1::{Digest, Sha1};
@@ -23,7 +26,7 @@ pub fn generate_azure_cache_key(azure_json: &str) -> String {
 pub async fn validate_azure_storage_credentials(
     azure_json: &str,
     cache: &Cache,
-) -> Result<(bool, String)> {
+) -> Result<(bool, ValidationResponseBody)> {
     let cache_key = generate_azure_cache_key(azure_json);
 
     /* ── short-circuit cached result ───────────────────────────── */
@@ -39,7 +42,8 @@ pub async fn validate_azure_storage_credentials(
     let storage_account = tok["storage_account"].as_str().unwrap_or("");
     let storage_key = tok["storage_key"].as_str().unwrap_or("");
     if storage_account.is_empty() || storage_key.is_empty() {
-        let msg = "Missing storage_account or storage_key".to_string();
+        let msg =
+            validation_body::from_string("Missing storage_account or storage_key".to_string());
         cache.insert(cache_key, CachedResponse::new(msg.clone(), StatusCode::BAD_REQUEST, false));
         return Ok((false, msg));
     }
@@ -86,7 +90,8 @@ pub async fn validate_azure_storage_credentials(
 
     if !status.is_success() {
         let body = format!("Azure Storage validation failed (HTTP {}): {body_txt}", status);
-        cache.insert(cache_key, CachedResponse::new(body.clone(), status, false));
+        let body_opt = validation_body::from_string(body.clone());
+        cache.insert(cache_key, CachedResponse::new(body_opt, status, false));
         return Err(anyhow!(body));
     }
 
@@ -111,6 +116,7 @@ pub async fn validate_azure_storage_credentials(
 
     /* ── success ─────────────────────────────────────────────── */
     let body = format!("Account: {}; Containers: {:?}", storage_account, names);
-    cache.insert(cache_key, CachedResponse::new(body.clone(), StatusCode::OK, true));
-    Ok((true, body))
+    let body_opt = validation_body::from_string(body);
+    cache.insert(cache_key, CachedResponse::new(body_opt.clone(), StatusCode::OK, true));
+    Ok((true, body_opt))
 }

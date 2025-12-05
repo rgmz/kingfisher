@@ -1,16 +1,22 @@
 use std::{
     fs,
-    sync::{Arc, Mutex},
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
 use anyhow::{bail, Context, Result};
+use crossbeam_channel;
 use crossbeam_skiplist::SkipMap;
 use indicatif::ProgressBar;
+use tokio::runtime::Handle;
 use tokio::time::{Duration, Instant};
 use tracing::{debug, error, error_span, info, trace};
 
 use crate::{
-    azure, bitbucket,
+    access_map, azure, bitbucket,
     cli::{commands::scan, global},
     findings_store,
     findings_store::{FindingsStore, FindingsStoreMessage},
@@ -20,10 +26,11 @@ use crate::{
     reporter::styles::Styles,
     rule_loader::RuleLoader,
     rule_profiling::ConcurrentRuleProfiler,
+    rules::rule::Validation,
     rules_database::RulesDatabase,
     safe_list,
     scanner::{
-        clone_or_update_git_repos, enumerate_azure_repos, enumerate_bitbucket_repos,
+        clone_or_update_git_repos_streaming, enumerate_azure_repos, enumerate_bitbucket_repos,
         enumerate_filesystem_inputs, enumerate_github_repos, enumerate_huggingface_repos,
         repos::{
             enumerate_gitea_repos, enumerate_gitlab_repos, fetch_confluence_pages,
@@ -31,7 +38,8 @@ use crate::{
             fetch_slack_messages,
         },
         run_secret_validation, save_docker_images,
-        summary::print_scan_summary,
+        summary::{compute_scan_totals, print_scan_summary},
+        AccessMapCollector,
     },
     util::set_redaction_enabled,
 };
@@ -122,7 +130,31 @@ pub async fn run_async_scan(
     repo_urls.sort();
     repo_urls.dedup();
 
-    let mut input_roots = clone_or_update_git_repos(args, global_args, &repo_urls, &datastore)?;
+    let mut input_roots = args.input_specifier_args.path_inputs.clone();
+    let (repo_tx, repo_rx) = crossbeam_channel::unbounded();
+    let repo_clone_handle = if repo_urls.is_empty() {
+        None
+    } else {
+        let clone_args = args.clone();
+        let clone_globals = global_args.clone();
+        let clone_repo_urls = repo_urls.clone();
+        let clone_datastore = Arc::clone(&datastore);
+        let clone_repo_tx = repo_tx.clone();
+        Some(std::thread::spawn(move || {
+            if let Err(e) = clone_or_update_git_repos_streaming(
+                &clone_args,
+                &clone_globals,
+                &clone_repo_urls,
+                &clone_datastore,
+                |path| {
+                    let _ = clone_repo_tx.send(path);
+                },
+            ) {
+                error!("Failed to fetch one or more Git repositories: {e}");
+            }
+        }))
+    };
+    drop(repo_tx);
 
     // Fetch issues, gists, and wikis if enabled
     let bitbucket_auth = bitbucket::AuthConfig::from_env();
@@ -176,14 +208,14 @@ pub async fn run_async_scan(
 
     let shared_profiler = Arc::new(ConcurrentRuleProfiler::new());
     let enable_profiling = args.rule_stats;
-    let matcher_stats = Mutex::new(MatcherStats::default());
+    let matcher_stats = Arc::new(Mutex::new(MatcherStats::default()));
 
     // Fetch S3 objects if requested (scanned immediately)
     fetch_s3_objects(
         args,
         &datastore,
         rules_db,
-        &matcher_stats,
+        matcher_stats.as_ref(),
         enable_profiling,
         Arc::clone(&shared_profiler),
         progress_enabled,
@@ -194,7 +226,7 @@ pub async fn run_async_scan(
         args,
         &datastore,
         rules_db,
-        &matcher_stats,
+        matcher_stats.as_ref(),
         enable_profiling,
         Arc::clone(&shared_profiler),
         progress_enabled,
@@ -203,55 +235,20 @@ pub async fn run_async_scan(
 
     let has_remote_objects = args.input_specifier_args.s3_bucket.is_some()
         || args.input_specifier_args.gcs_bucket.is_some();
-    if input_roots.is_empty() && !has_remote_objects {
+    if input_roots.is_empty() && repo_urls.is_empty() && !has_remote_objects {
         bail!("No inputs to scan");
     }
 
-    if !input_roots.is_empty() {
-        let _inputs = enumerate_filesystem_inputs(
-            args,
-            datastore.clone(),
-            &input_roots,
-            progress_enabled,
-            rules_db,
-            enable_profiling,
-            Arc::clone(&shared_profiler),
-            &matcher_stats,
-        )?;
-    }
-
-    if !args.no_dedup {
-        // Final deduplication step before validation (or before reporting)
-        let reporter = crate::reporter::DetailsReporter {
-            datastore: Arc::clone(&datastore),
-            styles: Styles::new(global_args.use_color(std::io::stdout())),
-            only_valid: args.only_valid,
-        };
-
-        // Retrieve all matches, regardless of filtering, from the datastore
-        let all_matches = reporter.get_unfiltered_matches(Some(false))?;
-        // Deduplicate the matches using the reporter’s helper
-        let deduped_matches = reporter.deduplicate_matches(all_matches, args.no_dedup);
-
-        let deduped_arcs: Vec<Arc<FindingsStoreMessage>> = deduped_matches
-            .into_iter()
-            .map(|rm| Arc::new((Arc::new(rm.origin), Arc::new(rm.blob_metadata), rm.m)))
-            .collect();
-        let mut ds = datastore.lock().unwrap();
-        ds.replace_matches(deduped_arcs);
-    }
-
-    // If baseline management is enabled, apply the baseline
-    if args.baseline_file.is_some() || args.manage_baseline {
-        let path = args
-            .baseline_file
+    let baseline_path = Arc::new(
+        args.baseline_file
             .clone()
-            .unwrap_or_else(|| std::path::PathBuf::from("baseline-file.yaml"));
-        let mut ds = datastore.lock().unwrap();
-        crate::baseline::apply_baseline(&mut ds, &path, args.manage_baseline, &input_roots)?;
-    }
+            .unwrap_or_else(|| std::path::PathBuf::from("baseline-file.yaml")),
+    );
 
     let mut skip_aws_accounts = args.skip_aws_account.clone();
+
+    let mut access_map_collector =
+        if args.access_map { Some(AccessMapCollector::default()) } else { None };
 
     if let Some(path) = args.skip_aws_account_file.as_ref() {
         let contents = fs::read_to_string(path).with_context(|| {
@@ -271,23 +268,349 @@ pub async fn run_async_scan(
 
     crate::validation::set_skip_aws_account_ids(skip_aws_accounts);
 
-    // If validation is enabled, run it as a second phase
-    if !args.no_validate {
+    let repo_roots = expand_repo_roots(&input_roots)?;
+    let git_repo_count =
+        repo_roots.iter().filter(|p| p.join(".git").is_dir()).count() + repo_urls.len();
+    let use_parallel_repo_scan = git_repo_count > 10;
+
+    let validation_deps = if !args.no_validate {
         info!("Starting secret validation phase...");
-        // Create validation dependencies
-        let client = reqwest::Client::builder()
-            .danger_accept_invalid_certs(global_args.ignore_certs)
-            .timeout(Duration::from_secs(30))
-            .build()?;
-        let parser = register_all(liquid::ParserBuilder::with_stdlib()).build()?;
-        let cache = Arc::new(SkipMap::new());
-        // Run validation
-        run_secret_validation(Arc::clone(&datastore), &parser, &client, &cache, args.num_jobs)
+        Some(Arc::new((
+            register_all(liquid::ParserBuilder::with_stdlib()).build()?,
+            reqwest::Client::builder()
+                .danger_accept_invalid_certs(global_args.ignore_certs)
+                .timeout(Duration::from_secs(30))
+                .build()?,
+            Arc::new(SkipMap::new()),
+        )))
+    } else {
+        None
+    };
+
+    if !use_parallel_repo_scan {
+        let mut streamed_roots = Vec::new();
+        if !input_roots.is_empty() {
+            let _inputs = enumerate_filesystem_inputs(
+                args,
+                datastore.clone(),
+                &input_roots,
+                progress_enabled,
+                rules_db,
+                enable_profiling,
+                Arc::clone(&shared_profiler),
+                matcher_stats.as_ref(),
+            )?;
+        }
+
+        for repo_root in repo_rx.clone().iter() {
+            enumerate_filesystem_inputs(
+                args,
+                datastore.clone(),
+                &[repo_root.clone()],
+                progress_enabled,
+                rules_db,
+                enable_profiling,
+                Arc::clone(&shared_profiler),
+                matcher_stats.as_ref(),
+            )?;
+            streamed_roots.push(repo_root);
+        }
+        input_roots.extend(streamed_roots);
+
+        if let Some(handle) = repo_clone_handle {
+            let _ = handle.join();
+        }
+
+        if !args.no_dedup {
+            let reporter = crate::reporter::DetailsReporter {
+                datastore: Arc::clone(&datastore),
+                styles: Styles::new(global_args.use_color(std::io::stdout())),
+                only_valid: args.only_valid,
+            };
+
+            let all_matches = reporter.get_unfiltered_matches(Some(false))?;
+            let deduped_matches = reporter.deduplicate_matches(all_matches, args.no_dedup);
+
+            let deduped_arcs: Vec<Arc<FindingsStoreMessage>> = deduped_matches
+                .into_iter()
+                .map(|rm| Arc::new((Arc::new(rm.origin), Arc::new(rm.blob_metadata), rm.m)))
+                .collect();
+            let mut ds = datastore.lock().unwrap();
+            ds.replace_matches(deduped_arcs);
+        }
+
+        if args.baseline_file.is_some() || args.manage_baseline {
+            let mut ds = datastore.lock().unwrap();
+            crate::baseline::apply_baseline(
+                &mut ds,
+                baseline_path.as_ref(),
+                args.manage_baseline,
+                &input_roots,
+            )?;
+        }
+
+        if let Some(validation) = &validation_deps {
+            let (parser, client, cache) = (&validation.0, &validation.1, &validation.2);
+            run_secret_validation(
+                Arc::clone(&datastore),
+                parser,
+                client,
+                cache,
+                args.num_jobs,
+                None,
+                access_map_collector.clone(),
+            )
             .await?;
+        }
+
+        if let Some(collector) = access_map_collector.take() {
+            finalize_access_map(&datastore, collector, args).await?;
+        }
+
+        crate::reporter::run(global_args, Arc::clone(&datastore), args)
+            .context("Failed to run report command")?;
+        print_scan_summary(
+            start_time,
+            scan_started_at,
+            &datastore,
+            global_args,
+            args,
+            rules_db,
+            matcher_stats.as_ref(),
+            if enable_profiling { Some(shared_profiler.as_ref()) } else { None },
+            update_status,
+            None,
+            None,
+        );
+        return Ok(());
     }
-    // // Call cmd_report here
-    crate::reporter::run(global_args, Arc::clone(&datastore), args)
-        .context("Failed to run report command")?;
+
+    let deduplicate_new_matches =
+        |store: &Arc<Mutex<FindingsStore>>, start_index: usize| -> Result<()> {
+            if args.no_dedup {
+                return Ok(());
+            }
+
+            let reporter = crate::reporter::DetailsReporter {
+                datastore: Arc::clone(store),
+                styles: Styles::new(global_args.use_color(std::io::stdout())),
+                only_valid: args.only_valid,
+            };
+
+            let all_matches = reporter.get_unfiltered_matches(Some(false))?;
+            if start_index >= all_matches.len() {
+                return Ok(());
+            }
+
+            let deduped_matches =
+                reporter.deduplicate_matches(all_matches[start_index..].to_vec(), args.no_dedup);
+
+            let deduped_arcs: Vec<Arc<FindingsStoreMessage>> = deduped_matches
+                .into_iter()
+                .map(|rm| Arc::new((Arc::new(rm.origin), Arc::new(rm.blob_metadata), rm.m)))
+                .collect();
+
+            let mut ds = store.lock().unwrap();
+            let mut preserved = ds.get_matches()[..start_index].to_vec();
+            preserved.extend(deduped_arcs);
+            ds.replace_matches(preserved);
+            Ok(())
+        };
+
+    deduplicate_new_matches(&datastore, 0)?;
+
+    if args.baseline_file.is_some() || args.manage_baseline {
+        let mut ds = datastore.lock().unwrap();
+        crate::baseline::apply_baseline(
+            &mut ds,
+            baseline_path.as_ref(),
+            args.manage_baseline,
+            &repo_roots,
+        )?;
+    }
+
+    if let Some(validation) = &validation_deps {
+        let (parser, client, cache) = (&validation.0, &validation.1, &validation.2);
+        let initial_match_count = { datastore.lock().unwrap().get_matches().len() };
+        if initial_match_count > 0 {
+            run_secret_validation(
+                Arc::clone(&datastore),
+                parser,
+                client,
+                cache,
+                args.num_jobs,
+                Some(0..initial_match_count),
+                access_map_collector.clone(),
+            )
+            .await?;
+        }
+    }
+
+    let repo_concurrency = std::cmp::max(1, args.num_jobs);
+    let rt_handle = Handle::current();
+
+    let base_clone_root = { datastore.lock().unwrap().clone_root() };
+    let repo_rules = datastore.lock().unwrap().get_rules()?;
+
+    let ran_repo_scan = Arc::new(AtomicBool::new(false));
+    let repo_errors: Arc<Mutex<Vec<anyhow::Error>>> = Arc::new(Mutex::new(Vec::new()));
+
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(repo_concurrency)
+        .build()
+        .context("Failed to build repo scan thread pool")?
+        .scope(|scope| {
+            let spawn_repo_scan = |root: PathBuf| {
+                let repo_rules = repo_rules.clone();
+                let base_clone_root = base_clone_root.clone();
+                let baseline_path = Arc::clone(&baseline_path);
+                let shared_profiler = Arc::clone(&shared_profiler);
+                let args = args.clone();
+                let root = root.clone();
+                let validation_deps = validation_deps.clone();
+                let matcher_stats = Arc::clone(&matcher_stats);
+                let rt_handle = rt_handle.clone();
+                let ran_repo_scan = Arc::clone(&ran_repo_scan);
+                let repo_errors = Arc::clone(&repo_errors);
+                let datastore = Arc::clone(&datastore);
+                let access_map = access_map_collector.clone();
+
+                scope.spawn(move |_| {
+                    let result: Result<()> = (|| {
+                        let repo_datastore =
+                            Arc::new(Mutex::new(FindingsStore::new(base_clone_root.clone())));
+                        {
+                            let mut ds = repo_datastore.lock().unwrap();
+                            ds.record_rules(&repo_rules);
+                        }
+
+                        let repo_matcher_stats = Mutex::new(MatcherStats::default());
+
+                        enumerate_filesystem_inputs(
+                            &args,
+                            Arc::clone(&repo_datastore),
+                            &[root.clone()],
+                            progress_enabled,
+                            rules_db,
+                            enable_profiling,
+                            Arc::clone(&shared_profiler),
+                            &repo_matcher_stats,
+                        )
+                        .and_then(|_| deduplicate_new_matches(&repo_datastore, 0))?;
+
+                        if args.baseline_file.is_some() || args.manage_baseline {
+                            let mut ds = repo_datastore.lock().unwrap();
+                            crate::baseline::apply_baseline(
+                                &mut ds,
+                                baseline_path.as_ref(),
+                                args.manage_baseline,
+                                &[root.clone()],
+                            )?;
+                        }
+
+                        if let Some(validation) = validation_deps.clone() {
+                            let (parser, client, cache) =
+                                (&validation.0, &validation.1, &validation.2);
+                            let match_count =
+                                { repo_datastore.lock().unwrap().get_matches().len() };
+                            if match_count > 0 {
+                                rt_handle.block_on(run_secret_validation(
+                                    Arc::clone(&repo_datastore),
+                                    parser,
+                                    client,
+                                    cache,
+                                    args.num_jobs,
+                                    Some(0..match_count),
+                                    access_map.clone(),
+                                ))?;
+                            }
+                        }
+
+                        {
+                            let mut global_stats = matcher_stats.lock().unwrap();
+                            global_stats.update(&repo_matcher_stats.lock().unwrap());
+                        }
+
+                        crate::reporter::run(global_args, Arc::clone(&repo_datastore), &args)
+                            .context("Failed to run report command")?;
+
+                        {
+                            let mut ds = datastore.lock().unwrap();
+                            ds.merge_from(&repo_datastore.lock().unwrap(), !args.no_dedup);
+                        }
+
+                        ran_repo_scan.store(true, Ordering::Relaxed);
+                        Ok(())
+                    })();
+
+                    if let Err(e) = result {
+                        error!("Repository scan failed: {e}");
+                        repo_errors.lock().unwrap().push(e);
+                    }
+                });
+            };
+
+            for root in repo_roots.clone() {
+                spawn_repo_scan(root);
+            }
+
+            for root in repo_rx.clone().iter() {
+                spawn_repo_scan(root);
+            }
+        });
+
+    if let Some(handle) = repo_clone_handle {
+        let _ = handle.join();
+    }
+
+    if let Some(err) = repo_errors.lock().unwrap().pop() {
+        return Err(err);
+    }
+
+    if !ran_repo_scan.load(Ordering::Relaxed) {
+        deduplicate_new_matches(&datastore, 0)?;
+
+        if args.baseline_file.is_some() || args.manage_baseline {
+            let mut ds = datastore.lock().unwrap();
+            crate::baseline::apply_baseline(
+                &mut ds,
+                baseline_path.as_ref(),
+                args.manage_baseline,
+                &repo_roots,
+            )?;
+        }
+
+        if let Some(validation) = &validation_deps {
+            let (parser, client, cache) = (&validation.0, &validation.1, &validation.2);
+            run_secret_validation(
+                Arc::clone(&datastore),
+                parser,
+                client,
+                cache,
+                args.num_jobs,
+                None,
+                access_map_collector.clone(),
+            )
+            .await?;
+        }
+
+        if let Some(collector) = access_map_collector.take() {
+            finalize_access_map(&datastore, collector, args).await?;
+        }
+
+        crate::reporter::run(global_args, Arc::clone(&datastore), args)
+            .context("Failed to run report command")?;
+    }
+
+    let aggregate_summary = if ran_repo_scan.load(Ordering::Relaxed) {
+        let totals = compute_scan_totals(&datastore, args, matcher_stats.as_ref());
+        let mut sorted: Vec<_> = datastore.lock().unwrap().get_summary().into_iter().collect();
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        Some((totals, sorted))
+    } else {
+        None
+    };
+
     print_scan_summary(
         start_time,
         scan_started_at,
@@ -295,11 +618,114 @@ pub async fn run_async_scan(
         global_args,
         args,
         rules_db,
-        &matcher_stats,
+        matcher_stats.as_ref(),
         if enable_profiling { Some(shared_profiler.as_ref()) } else { None },
         update_status,
+        None,
+        aggregate_summary,
     );
+
+    if let Some(collector) = access_map_collector {
+        finalize_access_map(&datastore, collector, args).await?;
+    } else {
+        maybe_hint_access_map(&datastore, args);
+    }
     Ok(())
+}
+
+async fn finalize_access_map(
+    datastore: &Arc<Mutex<FindingsStore>>,
+    collector: AccessMapCollector,
+    args: &scan::ScanArgs,
+) -> Result<()> {
+    let requests = collector.into_requests();
+
+    if requests.is_empty() {
+        debug!("access-map enabled but no validated AWS or GCP credentials were collected; skipping report output");
+        let mut ds = datastore.lock().unwrap();
+        ds.set_access_map_results(Vec::new());
+        return Ok(());
+    }
+
+    let results = access_map::map_requests(requests).await;
+
+    {
+        let mut ds = datastore.lock().unwrap();
+        ds.set_access_map_results(results.clone());
+    }
+
+    if let Some(html_path) = &args.access_map_html {
+        access_map::write_reports(&results, html_path)?;
+        info!("wrote access-map HTML report to {}", html_path.display());
+    }
+
+    // if args.access_map_html.is_none() {
+    //     eprintln!(
+    //         "Tip: rerun with --access-map-html /path/to/report.html for an interactive access-map viewer."
+    //     );
+    // }
+
+    Ok(())
+}
+
+fn expand_repo_roots(input_roots: &[PathBuf]) -> Result<Vec<PathBuf>> {
+    let mut repo_roots = Vec::new();
+
+    for root in input_roots {
+        if root.join(".git").is_dir() {
+            repo_roots.push(root.clone());
+            continue;
+        }
+
+        if !root.is_dir() {
+            repo_roots.push(root.clone());
+            continue;
+        }
+
+        let mut child_roots = Vec::new();
+        let mut non_repo_children = Vec::new();
+        for entry in fs::read_dir(root).with_context(|| {
+            format!("Failed to read directory while expanding repo roots: {}", root.display())
+        })? {
+            let entry = entry?;
+            let child_path = entry.path();
+            if child_path.join(".git").is_dir() {
+                child_roots.push(child_path);
+            } else {
+                non_repo_children.push(child_path);
+            }
+        }
+
+        if child_roots.is_empty() {
+            repo_roots.push(root.clone());
+        } else {
+            repo_roots.extend(child_roots);
+            repo_roots.extend(non_repo_children);
+        }
+    }
+
+    Ok(repo_roots)
+}
+
+fn maybe_hint_access_map(datastore: &Arc<Mutex<FindingsStore>>, args: &scan::ScanArgs) {
+    if args.access_map || args.no_validate {
+        return;
+    }
+
+    let has_mappable_identities = {
+        let ds = datastore.lock().unwrap();
+        ds.get_matches().iter().any(|entry| {
+            let rule = &entry.2.rule;
+            entry.2.validation_success
+                && matches!(rule.syntax().validation, Some(Validation::AWS | Validation::GCP))
+        })
+    };
+
+    if has_mappable_identities {
+        eprintln!(
+            "Access map not requested. Rerun with --access-map to include resource-level permissions."
+        );
+    }
 }
 
 fn initialize_environment() -> Result<()> {

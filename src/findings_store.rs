@@ -11,6 +11,7 @@ use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::{
+    access_map::AccessMapResult,
     blob::{BlobId, BlobMetadata},
     finding_data,
     git_url::GitUrl,
@@ -58,7 +59,9 @@ pub struct FindingsStore {
     confluence_links: FxHashMap<PathBuf, String>,
     s3_buckets: FxHashMap<PathBuf, String>,
     repo_links: FxHashMap<PathBuf, String>,
+    access_map_results: Vec<AccessMapResult>,
 }
+
 impl FindingsStore {
     pub fn new(clone_dir: PathBuf) -> Self {
         let expected_items = 10_000_000; // tune to your largest scan
@@ -80,6 +83,7 @@ impl FindingsStore {
             confluence_links: FxHashMap::default(),
             s3_buckets: FxHashMap::default(),
             repo_links: FxHashMap::default(),
+            access_map_results: Vec::new(),
         }
     }
 
@@ -125,6 +129,14 @@ impl FindingsStore {
 
     pub fn get_matches_mut(&mut self) -> &mut Vec<Arc<FindingsStoreMessage>> {
         &mut self.matches
+    }
+
+    pub fn set_access_map_results(&mut self, results: Vec<AccessMapResult>) {
+        self.access_map_results = results;
+    }
+
+    pub fn access_map_results(&self) -> &[AccessMapResult] {
+        &self.access_map_results
     }
 
     pub fn record_rules(&mut self, rules: &[Arc<Rule>]) {
@@ -283,7 +295,7 @@ impl FindingsStore {
         self.matches
             .iter()
             .filter(|msg| {
-                let (_, _, match_item) = &***msg;
+                let (_, _, match_item) = msg.as_ref();
                 match_item.visible
             })
             .count()
@@ -348,6 +360,39 @@ impl FindingsStore {
         &self.s3_buckets
     }
 
+    pub fn merge_from(&mut self, other: &FindingsStore, dedup: bool) {
+        for (dir, link) in other.repo_links() {
+            self.repo_links.entry(dir.clone()).or_insert_with(|| link.clone());
+        }
+
+        for (dir, bucket) in other.s3_buckets() {
+            self.s3_buckets.entry(dir.clone()).or_insert_with(|| bucket.clone());
+        }
+
+        for (dir, image) in other.docker_images() {
+            self.docker_images.entry(dir.clone()).or_insert_with(|| image.clone());
+        }
+
+        for (dir, link) in other.slack_links() {
+            self.slack_links.entry(dir.clone()).or_insert_with(|| link.clone());
+        }
+
+        for (dir, link) in other.confluence_links() {
+            self.confluence_links.entry(dir.clone()).or_insert_with(|| link.clone());
+        }
+
+        let batch: Vec<_> = other
+            .get_matches()
+            .iter()
+            .map(|msg| {
+                let (origin, blob_md, m) = msg.as_ref();
+                (origin.clone(), blob_md.clone(), m.clone())
+            })
+            .collect();
+
+        self.record(batch, dedup);
+    }
+
     pub fn get_finding_data_iter(
         &self,
     ) -> impl Iterator<Item = finding_data::FindingMetadata> + '_ {
@@ -373,7 +418,7 @@ impl FindingsStore {
         self.matches
             .iter()
             .filter(|msg| {
-                let (_, _, match_item) = &***msg;
+                let (_, _, match_item) = msg.as_ref();
                 match_item.rule.name() == metadata.rule_name
             })
             .map(|msg| {

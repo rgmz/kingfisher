@@ -6,9 +6,9 @@ impl DetailsReporter {
         mut writer: W,
         args: &cli::commands::scan::ScanArgs,
     ) -> Result<()> {
-        let records = self.build_finding_records(args)?;
-        if !records.is_empty() {
-            serde_json::to_writer_pretty(&mut writer, &records)?;
+        let envelope = self.build_report_envelope(args)?;
+        if !envelope.findings.is_empty() || envelope.access_map.is_some() {
+            serde_json::to_writer_pretty(&mut writer, &envelope)?;
             writeln!(writer)?;
         }
         Ok(())
@@ -19,9 +19,15 @@ impl DetailsReporter {
         mut writer: W,
         args: &cli::commands::scan::ScanArgs,
     ) -> Result<()> {
-        let records = self.build_finding_records(args)?;
-        for record in records {
+        let envelope = self.build_report_envelope(args)?;
+        for record in envelope.findings {
             serde_json::to_writer(&mut writer, &record)?;
+            writeln!(writer)?;
+        }
+
+        if let Some(access_map) = envelope.access_map {
+            let payload = serde_json::json!({ "access_map": access_map });
+            serde_json::to_writer(&mut writer, &payload)?;
             writeln!(writer)?;
         }
         Ok(())
@@ -52,6 +58,7 @@ mod tests {
         matcher::Match,
         origin::Origin,
         reporter::styles::Styles,
+        validation_body,
     };
     use smallvec::smallvec;
     use std::{
@@ -166,6 +173,8 @@ mod tests {
             },
             confidence: ConfidenceLevel::Medium,
             no_validate: false,
+            access_map: false,
+            access_map_html: None,
             rule_stats: false,
             only_valid: false,
             min_entropy: None,
@@ -201,16 +210,16 @@ mod tests {
         };
         let rule = Arc::new(Rule::new(syntax));
         Match {
-            location: Location {
-                offset_span: OffsetSpan { start: 10, end: 20 },
-                source_span: SourceSpan {
+            location: Location::with_source_span(
+                OffsetSpan { start: 10, end: 20 },
+                Some(SourceSpan {
                     start: SourcePoint { line: 5, column: 10 },
                     end: SourcePoint { line: 5, column: 20 },
-                },
-            },
+                }),
+            ),
             groups: SerializableCaptures {
                 captures: smallvec![SerializableCapture {
-                    name: Some("token".to_string()),
+                    name: Some("token"),
                     match_number: 1,
                     start: 10,
                     end: 20,
@@ -220,7 +229,7 @@ mod tests {
             blob_id: BlobId::new(b"mock_blob"),
             finding_fingerprint: 0123,
             rule,
-            validation_response_body: "validation response".to_string(),
+            validation_response_body: validation_body::from_string("validation response"),
             validation_response_status: 200,
             validation_success,
             calculated_entropy: 4.5,
@@ -275,16 +284,18 @@ mod tests {
             comment: None,
             match_confidence: Confidence::Medium,
             visible: true,
-            validation_response_body: "validation response".to_string(),
+            validation_response_body: validation_body::from_string("validation response"),
             validation_response_status: 200,
             validation_success: true,
         }];
         let reporter = setup_mock_reporter(matches);
         let mut output = Cursor::new(Vec::new());
         reporter.json_format(&mut output, &create_default_args())?;
-        let json_output: Vec<serde_json::Value> = serde_json::from_slice(&output.into_inner())?;
-        assert!(!json_output.is_empty(), "JSON output should not be empty");
-        let first = &json_output[0];
+        let json_output: serde_json::Value = serde_json::from_slice(&output.into_inner())?;
+        let findings =
+            json_output.get("findings").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+        assert!(!findings.is_empty(), "JSON output should not be empty");
+        let first = &findings[0];
         assert_eq!(first["rule"]["name"], "MockRule");
         assert_eq!(first["finding"]["language"], "Rust");
         Ok(())
@@ -310,16 +321,18 @@ mod tests {
                 comment: None,
                 match_confidence: Confidence::Medium,
                 visible: true,
-                validation_response_body: "validation response".to_string(),
+                validation_response_body: validation_body::from_string("validation response"),
                 validation_response_status: 200,
                 validation_success,
             }];
             let reporter = setup_mock_reporter(matches);
             let mut output = Cursor::new(Vec::new());
             reporter.json_format(&mut output, &create_default_args())?;
-            let json_output: Vec<serde_json::Value> = serde_json::from_slice(&output.into_inner())?;
-            assert!(!json_output.is_empty(), "JSON output should not be empty");
-            let first = &json_output[0];
+            let json_output: serde_json::Value = serde_json::from_slice(&output.into_inner())?;
+            let findings =
+                json_output.get("findings").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            assert!(!findings.is_empty(), "JSON output should not be empty");
+            let first = &findings[0];
             let validation_status = first["finding"]["validation"]["status"].as_str().unwrap();
             assert_eq!(validation_status, expected_status);
         }

@@ -61,8 +61,9 @@ impl DetailsReporter {
         _no_dedup: bool,
         args: &cli::commands::scan::ScanArgs,
     ) -> Result<()> {
-        let records = self.build_finding_records(args)?;
-        let finding_rule_ids: HashSet<_> = records.iter().map(|r| r.rule.name.clone()).collect();
+        let envelope = self.build_report_envelope(args)?;
+        let finding_rule_ids: HashSet<_> =
+            envelope.findings.iter().map(|r| r.rule.name.clone()).collect();
         let rules: Vec<sarif::ReportingDescriptor> = get_builtin_rules(None)?
             .iter_rules()
             .par_bridge()
@@ -106,9 +107,21 @@ impl DetailsReporter {
             .build()?;
 
         let sarif_results: Vec<sarif::Result> =
-            records.iter().filter_map(|r| self.record_to_sarif_result(r).ok()).collect();
+            envelope.findings.iter().filter_map(|r| self.record_to_sarif_result(r).ok()).collect();
 
-        let run = sarif::RunBuilder::default().tool(tool).results(sarif_results).build()?;
+        let mut run_builder = sarif::RunBuilder::default();
+        run_builder.tool(tool);
+        run_builder.results(sarif_results);
+
+        if let Some(access_map) = envelope.access_map {
+            let mut props = BTreeMap::new();
+            props.insert("access_map".to_string(), serde_json::to_value(access_map)?);
+            let property_bag =
+                sarif::PropertyBagBuilder::default().additional_properties(props).build()?;
+            run_builder.properties(property_bag);
+        }
+
+        let run = run_builder.build()?;
         let sarif = sarif::SarifBuilder::default()
             .version(sarif::Version::V2_1_0.to_string())
             .schema(sarif::SCHEMA_URL)

@@ -10,10 +10,17 @@ impl DetailsReporter {
         mut writer: W,
         args: &cli::commands::scan::ScanArgs,
     ) -> Result<()> {
-        let records = self.build_finding_records(args)?;
-        let num_findings = records.len();
-        for (index, record) in records.iter().enumerate() {
+        let envelope = self.build_report_envelope(args)?;
+        let num_findings = envelope.findings.len();
+        for (index, record) in envelope.findings.iter().enumerate() {
             self.write_finding_record(&mut writer, record, index + 1, num_findings)?;
+            if index + 1 != num_findings {
+                writeln!(writer)?;
+            }
+        }
+
+        if let Some(access_map) = envelope.access_map {
+            self.write_access_map(&mut writer, &access_map)?;
         }
         Ok(())
     }
@@ -39,7 +46,36 @@ impl DetailsReporter {
             writeln!(writer, "{}", self.style_finding_heading(formatted_heading))?;
         }
         writeln!(writer, "{}", PrettyFindingRecord(self, record))?;
-        writeln!(writer)?;
+        Ok(())
+    }
+
+    fn write_access_map<W: std::io::Write>(
+        &self,
+        writer: &mut W,
+        entries: &[AccessMapEntry],
+    ) -> Result<()> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+
+        writeln!(writer, " |{}", self.style_heading("ACCESS MAP"))?;
+        for entry in entries {
+            for group in &entry.groups {
+                writeln!(writer, " |_service.......: {}", entry.provider.to_uppercase())?;
+                if let Some(account) = &entry.account {
+                    writeln!(writer, " |__account.....: {}", account)?;
+                }
+                for resource in &group.resources {
+                    writeln!(writer, " |____resource....: {}", resource)?;
+                }
+                if !group.permissions.is_empty() {
+                    writeln!(writer, " |____permission..: {}", group.permissions.join(","))?;
+                }
+            }
+
+            writeln!(writer)?;
+        }
+
         Ok(())
     }
 
@@ -101,7 +137,7 @@ impl<'a> Display for PrettyFindingRecord<'a> {
         let finding = &record.finding;
         writeln!(f, " |Finding.......: {}", style_fn(&finding.snippet))?;
         if let Some(enc) = &finding.encoding {
-            writeln!(f, " |Encoding.....: {}", enc)?;
+            writeln!(f, " |Encoding......: {}", enc)?;
         }
         writeln!(f, " |Fingerprint...: {}", finding.fingerprint)?;
         writeln!(f, " |Confidence....: {}", finding.confidence)?;

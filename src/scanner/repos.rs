@@ -4,7 +4,9 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use crossbeam_channel;
 use indicatif::{HumanCount, ProgressBar, ProgressStyle};
+use rayon::ThreadPoolBuilder;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 use url::Url;
@@ -32,20 +34,25 @@ use crate::{
 
 pub type DatastoreMessage = (OriginSet, BlobMetadata, Vec<(Option<f64>, Match)>);
 
-pub fn clone_or_update_git_repos(
+pub fn clone_or_update_git_repos_streaming<F>(
     args: &scan::ScanArgs,
     global_args: &global::GlobalArgs,
     repo_urls: &[GitUrl],
     datastore: &Arc<Mutex<findings_store::FindingsStore>>,
-) -> Result<Vec<PathBuf>> {
-    let mut input_roots = args.input_specifier_args.path_inputs.clone();
+    mut on_repo_ready: F,
+) -> Result<()>
+where
+    F: FnMut(PathBuf) + Send,
+{
     if repo_urls.is_empty() {
-        return Ok(input_roots);
+        return Ok(());
     }
+
     info!("{} Git URLs to fetch", repo_urls.len());
     for repo_url in repo_urls {
         debug!("Need to fetch {repo_url}")
     }
+
     let clone_mode = if args.input_specifier_args.git_history == GitHistoryMode::None {
         CloneMode::Checkout
     } else {
@@ -54,7 +61,6 @@ pub fn clone_or_update_git_repos(
             GitCloneMode::Bare => CloneMode::Bare,
         }
     };
-    let git = Git::new(global_args.ignore_certs);
 
     let progress = if global_args.use_progress() {
         let style = ProgressStyle::with_template(
@@ -70,56 +76,89 @@ pub fn clone_or_update_git_repos(
         ProgressBar::hidden()
     };
 
-    for repo_url in repo_urls {
-        let output_dir = {
-            let datastore = datastore.lock().unwrap();
-            datastore.clone_destination(repo_url)
-        };
-        if output_dir.is_dir() {
-            progress.suspend(|| info!("Updating clone of {repo_url}..."));
-            match git.update_clone(repo_url, &output_dir) {
-                Ok(()) => {
-                    input_roots.push(output_dir);
-                    progress.inc(1);
-                    continue;
-                }
-                Err(e) => {
-                    progress.suspend(|| {
-                        debug!(
-                            "Failed to update clone of {repo_url} at {}: {e}",
-                            output_dir.display()
-                        )
-                    });
-                    if let Err(e) = std::fs::remove_dir_all(&output_dir) {
-                        progress.suspend(|| {
-                            debug!(
-                                "Failed to remove clone directory at {}: {e}",
-                                output_dir.display()
-                            )
-                        });
+    let (ready_tx, ready_rx) = crossbeam_channel::unbounded();
+    let clone_concurrency = std::cmp::max(1, args.num_jobs);
+    let ignore_certs = global_args.ignore_certs;
+
+    ThreadPoolBuilder::new()
+        .num_threads(clone_concurrency)
+        .build()
+        .context("Failed to build git clone thread pool")?
+        .scope(|scope| {
+            for repo_url in repo_urls {
+                let ready_tx = ready_tx.clone();
+                let datastore = Arc::clone(datastore);
+                let repo_url = repo_url.clone();
+                let progress = progress.clone();
+                scope.spawn(move |_| {
+                    let git = Git::new(ignore_certs);
+                    let output_dir = {
+                        let datastore = datastore.lock().unwrap();
+                        datastore.clone_destination(&repo_url)
+                    };
+
+                    if output_dir.is_dir() {
+                        progress.suspend(|| info!("Updating clone of {repo_url}..."));
+                        match git.update_clone(&repo_url, &output_dir) {
+                            Ok(()) => {
+                                let _ = ready_tx.send(output_dir);
+                                progress.inc(1);
+                                return;
+                            }
+                            Err(e) => {
+                                progress.suspend(|| {
+                                    debug!(
+                                        "Failed to update clone of {repo_url} at {}: {e}",
+                                        output_dir.display()
+                                    )
+                                });
+                                if let Err(e) = std::fs::remove_dir_all(&output_dir) {
+                                    progress.suspend(|| {
+                                        debug!(
+                                            "Failed to remove clone directory at {}: {e}",
+                                            output_dir.display()
+                                        )
+                                    });
+                                }
+                            }
+                        }
                     }
-                }
+
+                    progress.suspend(|| info!("Cloning {repo_url}..."));
+                    if let Err(e) = git.create_fresh_clone(&repo_url, &output_dir, clone_mode) {
+                        progress.suspend(|| {
+                            if repo_url.as_str().ends_with(".wiki.git") {
+                                info!("Wiki repository not found for {repo_url}, skipping");
+                                debug!(
+                                    "Failed to clone {repo_url} to {}: {e}",
+                                    output_dir.display()
+                                );
+                            } else {
+                                error!(
+                                    "Failed to clone {repo_url} to {}: {e}",
+                                    output_dir.display()
+                                );
+                            }
+                            debug!("Skipping scan of {repo_url}");
+                        });
+                        progress.inc(1);
+                        return;
+                    }
+
+                    let _ = ready_tx.send(output_dir);
+                    progress.inc(1);
+                });
             }
-        }
-        progress.suspend(|| info!("Cloning {repo_url}..."));
-        if let Err(e) = git.create_fresh_clone(repo_url, &output_dir, clone_mode) {
-            progress.suspend(|| {
-                if repo_url.as_str().ends_with(".wiki.git") {
-                    info!("Wiki repository not found for {repo_url}, skipping");
-                    debug!("Failed to clone {repo_url} to {}: {e}", output_dir.display());
-                } else {
-                    error!("Failed to clone {repo_url} to {}: {e}", output_dir.display());
-                }
-                debug!("Skipping scan of {repo_url}");
-            });
-            progress.inc(1);
-            continue;
-        }
-        input_roots.push(output_dir);
-        progress.inc(1);
-    }
+
+            drop(ready_tx);
+
+            for repo_root in ready_rx.iter() {
+                on_repo_ready(repo_root);
+            }
+        });
+
     progress.finish();
-    Ok(input_roots)
+    Ok(())
 }
 
 pub async fn enumerate_github_repos(
@@ -195,7 +234,7 @@ pub async fn enumerate_gitlab_repos(
 
     let mut repo_urls = args.input_specifier_args.git_url.clone();
     if !repo_specifiers.is_empty() {
-        let mut progress = if global_args.use_progress() {
+        let progress = if global_args.use_progress() {
             let style =
                 ProgressStyle::with_template("{spinner} {msg} {human_len} [{elapsed_precise}]")
                     .expect("progress bar style template should compile");

@@ -23,6 +23,29 @@ use crate::{
     update::{UpdateCheckStatus, UpdateStatus},
 };
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ScanSummaryTotals {
+    pub findings: usize,
+    pub successful_validations: usize,
+    pub failed_validations: usize,
+    pub blobs_scanned: u64,
+    pub bytes_scanned: u64,
+}
+
+impl ScanSummaryTotals {
+    pub fn delta_since(&self, baseline: &Self) -> Self {
+        Self {
+            findings: self.findings.saturating_sub(baseline.findings),
+            successful_validations: self
+                .successful_validations
+                .saturating_sub(baseline.successful_validations),
+            failed_validations: self.failed_validations.saturating_sub(baseline.failed_validations),
+            blobs_scanned: self.blobs_scanned.saturating_sub(baseline.blobs_scanned),
+            bytes_scanned: self.bytes_scanned.saturating_sub(baseline.bytes_scanned),
+        }
+    }
+}
+
 macro_rules! safe_println {
     ($($arg:tt)*) => {
         if let Err(e) = writeln!(io::stdout(), $($arg)*) {
@@ -37,6 +60,59 @@ macro_rules! safe_println {
     };
 }
 
+pub fn compute_scan_totals(
+    datastore: &Arc<Mutex<findings_store::FindingsStore>>,
+    args: &scan::ScanArgs,
+    matcher_stats: &Mutex<MatcherStats>,
+) -> ScanSummaryTotals {
+    let ds = datastore.lock().unwrap();
+
+    let all_matches = ds.get_matches();
+
+    let total_findings = if args.no_dedup {
+        all_matches.iter().fold(0, |count, msg| {
+            let (origin_set, _, match_item) = &**msg;
+            if match_item.validation_success {
+                count + origin_set.len()
+            } else {
+                count + 1
+            }
+        })
+    } else {
+        ds.get_num_matches()
+    };
+
+    let (successful_validations, failed_validations) =
+        all_matches.iter().fold((0, 0), |(success, fail), msg| {
+            let (origin_set, _, match_item) = &**msg;
+            if match_item.validation_success {
+                if match_item.validation_response_status != StatusCode::CONTINUE.as_u16() {
+                    if args.no_dedup {
+                        (success + origin_set.len(), fail)
+                    } else {
+                        (success + 1, fail)
+                    }
+                } else {
+                    (success, fail)
+                }
+            } else if match_item.validation_response_status != StatusCode::CONTINUE.as_u16() {
+                (success, fail + 1)
+            } else {
+                (success, fail)
+            }
+        });
+
+    let matcher_stats = matcher_stats.lock().unwrap();
+
+    ScanSummaryTotals {
+        findings: total_findings,
+        successful_validations,
+        failed_validations,
+        blobs_scanned: matcher_stats.blobs_scanned,
+        bytes_scanned: matcher_stats.bytes_scanned,
+    }
+}
+
 pub fn print_scan_summary(
     start_time: Instant,
     scan_started_at: chrono::DateTime<Local>,
@@ -48,6 +124,8 @@ pub fn print_scan_summary(
     matcher_stats: &Mutex<MatcherStats>,
     profiler: Option<&ConcurrentRuleProfiler>,
     update_status: &UpdateStatus,
+    repo_context: Option<(&str, ScanSummaryTotals)>,
+    precomputed_summary: Option<(ScanSummaryTotals, Vec<(&'static str, usize)>)>,
 ) {
     if global_args.quiet {
         if args.rule_stats {
@@ -86,71 +164,50 @@ pub fn print_scan_summary(
         return;
     }
 
-    let ds = datastore.lock().unwrap();
-
-    let num_rules = rules_db.num_rules();
-    let findings_by_rule = ds.get_summary();
-    let mut sorted_findings: Vec<_> = findings_by_rule.into_iter().collect();
-    sorted_findings.sort_by(|a, b| b.1.cmp(&a.1));
+    let (num_rules, sorted_findings) = if let Some((_, findings)) = &precomputed_summary {
+        (rules_db.num_rules(), findings.clone())
+    } else {
+        let ds = datastore.lock().unwrap();
+        let num_rules = rules_db.num_rules();
+        let findings_by_rule = ds.get_summary();
+        let mut sorted: Vec<_> = findings_by_rule.into_iter().collect();
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        (num_rules, sorted)
+    };
     let duration = start_time.elapsed();
 
-    let all_matches = ds.get_matches();
-
-    let total_findings = if args.no_dedup {
-        all_matches.iter().fold(0, |count, msg| {
-            let (origin_set, _, match_item) = &**msg;
-            if match_item.validation_success {
-                count + origin_set.len()
-            } else {
-                count + 1
-            }
-        })
+    let totals = if let Some((totals, _)) = &precomputed_summary {
+        *totals
     } else {
-        ds.get_num_matches()
+        compute_scan_totals(datastore, args, matcher_stats)
     };
+    let delta_totals = repo_context.map(|(_, baseline)| totals.delta_since(&baseline));
 
-    let (successful_validations, failed_validations) =
-        all_matches.iter().fold((0, 0), |(success, fail), msg| {
-            let (origin_set, _, match_item) = &**msg;
-            if match_item.validation_success {
-                if match_item.validation_response_status != StatusCode::CONTINUE.as_u16() {
-                    if args.no_dedup {
-                        (success + origin_set.len(), fail)
-                    } else {
-                        (success + 1, fail)
-                    }
-                } else {
-                    (success, fail)
-                }
-            } else if match_item.validation_response_status != StatusCode::CONTINUE.as_u16() {
-                (success, fail + 1)
-            } else {
-                (success, fail)
-            }
-        });
-    let matcher_stats = matcher_stats.lock().unwrap();
+    let should_print_overall = repo_context.is_none();
 
     if args.output_args.format == ReportOutputFormat::Json
         || args.output_args.format == ReportOutputFormat::Jsonl
     {
-        let summary = json!({
-            "findings": total_findings,
-            "successful_validations": successful_validations,
-            "failed_validations": failed_validations,
-            "rules_applied": num_rules,
-            "blobs_scanned": matcher_stats.blobs_scanned,
-            "bytes_scanned": matcher_stats.bytes_scanned,
-            "scan_duration": duration.as_secs_f64(),
-            "scan_date": scan_started_at.to_rfc3339(),
-            "kingfisher": {
-                "version_used": update_status.running_version.clone(),
-                "latest_version": update_status.latest_version.clone(),
-                "update_check_status": update_status.check_status.as_str(),
-                "update_check_message": update_status.message.clone(),
-            },
-            "findings_by_rule": sorted_findings
-        });
-        safe_println!("{}", summary.to_string());
+        if should_print_overall {
+            let summary = json!({
+                "findings": totals.findings,
+                "successful_validations": totals.successful_validations,
+                "failed_validations": totals.failed_validations,
+                "rules_applied": num_rules,
+                "blobs_scanned": totals.blobs_scanned,
+                "bytes_scanned": totals.bytes_scanned,
+                "scan_duration": duration.as_secs_f64(),
+                "scan_date": scan_started_at.to_rfc3339(),
+                "kingfisher": {
+                    "version_used": update_status.running_version.clone(),
+                    "latest_version": update_status.latest_version.clone(),
+                    "update_check_status": update_status.check_status.as_str(),
+                    "update_check_message": update_status.message.clone(),
+                },
+                "findings_by_rule": sorted_findings
+            });
+            safe_println!("{}", summary.to_string());
+        }
     } else if args.output_args.format == ReportOutputFormat::Pretty
         || args.output_args.output.is_some()
     {
@@ -163,34 +220,67 @@ pub fn print_scan_summary(
             }
         };
 
-        safe_println!("\n==========================================");
-        safe_println!("Scan Summary:");
-        safe_println!("==========================================");
-        safe_println!(" |Findings....................: {}", total_findings.separate_with_commas());
-        safe_println!(
-            " |__Successful Validations....: {}",
-            successful_validations.separate_with_commas()
-        );
-        safe_println!(
-            " |__Failed Validations........: {}",
-            failed_validations.separate_with_commas()
-        );
-        safe_println!(" |Rules Applied...............: {}", num_rules.separate_with_commas());
-        safe_println!(
-            " |__Blobs Scanned.............: {}",
-            matcher_stats.blobs_scanned.separate_with_commas()
-        );
-        safe_println!(
-            " |Bytes Scanned...............: {}",
-            HumanBytes(matcher_stats.bytes_scanned)
-        );
-        safe_println!(" |Scan Duration...............: {}", humantime::format_duration(duration));
-        safe_println!(" |Scan Date...................: {}", scan_date);
-        safe_println!(" |Kingfisher Version..........: {}", &update_status.running_version);
-        safe_println!(" |__Latest Version............: {}", latest_version);
+        if let Some((repo_name, baseline)) = repo_context {
+            let delta = delta_totals.unwrap_or_default();
+            safe_println!("\n==========================================");
+            safe_println!("Repository Summary: {}", repo_name);
+            safe_println!("==========================================");
+            safe_println!(
+                " |Findings added..............: {}",
+                delta.findings.separate_with_commas()
+            );
+            safe_println!(
+                " |__Successful Validations....: {}",
+                delta.successful_validations.separate_with_commas()
+            );
+            safe_println!(
+                " |__Failed Validations........: {}",
+                delta.failed_validations.separate_with_commas()
+            );
+            safe_println!(
+                " |Blobs Scanned (delta)......: {}",
+                delta.blobs_scanned.separate_with_commas()
+            );
+            safe_println!(" |Bytes Scanned (delta)......: {}", HumanBytes(delta.bytes_scanned));
+            safe_println!(
+                " |Baseline findings...........: {}",
+                baseline.findings.separate_with_commas()
+            );
+        }
+
+        if should_print_overall {
+            safe_println!("\n==========================================");
+            safe_println!("Scan Summary:");
+            safe_println!("==========================================");
+            safe_println!(
+                " |Findings....................: {}",
+                totals.findings.separate_with_commas()
+            );
+            safe_println!(
+                " |__Successful Validations....: {}",
+                totals.successful_validations.separate_with_commas()
+            );
+            safe_println!(
+                " |__Failed Validations........: {}",
+                totals.failed_validations.separate_with_commas()
+            );
+            safe_println!(" |Rules Applied...............: {}", num_rules.separate_with_commas());
+            safe_println!(
+                " |__Blobs Scanned.............: {}",
+                totals.blobs_scanned.separate_with_commas()
+            );
+            safe_println!(" |Bytes Scanned...............: {}", HumanBytes(totals.bytes_scanned));
+            safe_println!(
+                " |Scan Duration...............: {}",
+                humantime::format_duration(duration)
+            );
+            safe_println!(" |Scan Date...................: {}", scan_date);
+            safe_println!(" |Kingfisher Version..........: {}", &update_status.running_version);
+            safe_println!(" |__Latest Version............: {}", latest_version);
+        }
     }
 
-    if args.rule_stats {
+    if should_print_overall && args.rule_stats {
         if let Some(prof) = profiler {
             let stats = prof.generate_report();
             if !stats.is_empty() {

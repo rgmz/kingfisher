@@ -15,7 +15,12 @@ use rand::TryRngCore;
 use reqwest::{Client, StatusCode, Url};
 use sha1::{Digest, Sha1};
 
-use crate::validation::{httpvalidation, Cache, CachedResponse, VALIDATION_CACHE_SECONDS};
+use crate::{
+    validation::{
+        httpvalidation, Cache, CachedResponse, ValidationResponseBody, VALIDATION_CACHE_SECONDS,
+    },
+    validation_body,
+};
 
 pub fn generate_coinbase_cache_key(cred_name: &str, private_key: &str) -> String {
     let mut h = Sha1::new();
@@ -31,7 +36,7 @@ pub async fn validate_cdp_api_key(
     client: &Client,
     parser: &liquid::Parser,
     cache: &Cache,
-) -> Result<(bool, String)> {
+) -> Result<(bool, ValidationResponseBody)> {
     let cache_key = generate_coinbase_cache_key(cred_name, private_key_pem);
     if let Some(entry) = cache.get(&cache_key) {
         let c = entry.value();
@@ -61,7 +66,7 @@ pub async fn validate_cdp_api_key(
     let status = resp.status();
     let body = resp.text().await.unwrap_or_default();
     let ok = status == StatusCode::OK;
-    let msg = body;
+    let msg = validation_body::from_string(body);
 
     cache.insert(cache_key.clone(), CachedResponse::new(msg.clone(), status, ok));
 

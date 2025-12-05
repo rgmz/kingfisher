@@ -1,3 +1,4 @@
+pub mod access_map;
 pub mod azure;
 pub mod baseline;
 pub mod binary;
@@ -44,6 +45,7 @@ pub mod snippet;
 pub mod update;
 pub mod util;
 pub mod validation;
+pub mod validation_body;
 
 use std::path::{Path, PathBuf};
 

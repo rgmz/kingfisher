@@ -7,9 +7,14 @@ impl DetailsReporter {
         mut writer: W,
         args: &cli::commands::scan::ScanArgs,
     ) -> Result<()> {
-        let records = self.build_finding_records(args)?;
-        for record in records {
+        let envelope = self.build_report_envelope(args)?;
+        for record in envelope.findings {
             let doc = bson::to_document(&record)?;
+            doc.to_writer(&mut writer)?;
+        }
+
+        if let Some(access_map) = envelope.access_map {
+            let doc = bson::to_document(&serde_json::json!({ "access_map": access_map }))?;
             doc.to_writer(&mut writer)?;
         }
         Ok(())

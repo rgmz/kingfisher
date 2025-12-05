@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.69.0]
+- Reduced per-match memory usage by compacting stored source locations and interning repeated capture names.
+- Stored optional validation response bodies as boxed strings to avoid allocating empty payloads and to streamline validator caches.
+- Parallelized git cloning based on the configured job count and begin scanning repositories as soon as each clone finishes to reduce end-to-end scan times.
+- Combined per-repository results into a single aggregate summary after scans complete.
+- Added initial access-map support and report viewer html file. Currently beta features.
+
 ## [v1.68.0]
 - Fixed Bitbucket authenticated cloning bug
 
