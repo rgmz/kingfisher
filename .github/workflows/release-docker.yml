@@ -32,8 +32,14 @@ permissions:
 ###############################################################################
 jobs:
   build-and-push:
-    # Only run on workflow_run if the upstream workflow succeeded
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # Run if:
+    # - event is NOT workflow_run (release, workflow_dispatch)
+    # - OR workflow_run completed successfully
+    # - OR this is a re-run (run_attempt > 1) so we force it to run
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' ||
+      github.run_attempt > 1
     runs-on: ubuntu-latest
 
     steps:
