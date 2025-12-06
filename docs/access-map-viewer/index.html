@@ -1694,13 +1694,159 @@
       container.appendChild(span);
     }
 
+    function setDetailName(text, link) {
+      const nameEl = document.getElementById("am-detail-name");
+      nameEl.innerHTML = "";
+
+      if (link) {
+        const anchor = document.createElement("a");
+        anchor.href = link;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.textContent = text;
+        nameEl.appendChild(anchor);
+      } else {
+        nameEl.textContent = text;
+      }
+    }
+
+    function extractResourceParts(label) {
+      if (!label) return { resourceType: "", resourceName: "" };
+      const idx = label.indexOf(":");
+      if (idx === -1) return { resourceType: "", resourceName: label };
+      return { resourceType: label.slice(0, idx), resourceName: label.slice(idx + 1) };
+    }
+
+    function buildResourceConsoleLink(provider, resourceType, resourceName) {
+      if (!provider || !resourceName) return null;
+      const normalizedProvider = provider.toLowerCase();
+      if (normalizedProvider === "aws") return awsResourceConsoleLink(resourceName);
+      if (normalizedProvider === "gcp") return gcpResourceConsoleLink(resourceName);
+      return null;
+    }
+
+    function awsResourceConsoleLink(resource) {
+      if (!resource || !resource.startsWith("arn:")) return null;
+      const parts = resource.split(":");
+      if (parts.length < 6) return null;
+      const service = parts[2];
+      const region = parts[3];
+      const resourcePart = parts[5] || "";
+
+      if (service === "s3") {
+        const bucket = resourcePart.replace(/^\/*/, "");
+        return `https://console.aws.amazon.com/s3/buckets/${encodeURIComponent(bucket)}`;
+      }
+
+      if (service === "iam") {
+        const match = resource.match(/^arn:aws:iam::\d+:([^/]+)\/(.+)$/);
+        const kind = match ? match[1] : null;
+        const res = match ? match[2] : null;
+        if (kind === "role") {
+          return `https://console.aws.amazon.com/iam/home?#/roles/${encodeURIComponent(res)}`;
+        }
+        if (kind === "user") {
+          return `https://console.aws.amazon.com/iam/home?#/users/${encodeURIComponent(res)}`;
+        }
+        return null;
+      }
+
+      if (service === "lambda") {
+        const match = resourcePart.match(/^function[:\/](.+)$/);
+        if (match && match[1]) {
+          const fnName = match[1];
+          const regionQuery = region ? `?region=${encodeURIComponent(region)}` : "";
+          return `https://console.aws.amazon.com/lambda/home${regionQuery}#/functions/${encodeURIComponent(fnName)}`;
+        }
+        return null;
+      }
+
+      if (service === "ec2") {
+        const match = resourcePart.match(/^instance\/(.+)$/);
+        if (match && match[1]) {
+          const instanceId = match[1];
+          return `https://console.aws.amazon.com/ec2/v2/home?#InstanceDetails:instanceId=${encodeURIComponent(instanceId)}`;
+        }
+        return null;
+      }
+
+      if (service === "kms") {
+        const match = resourcePart.match(/^(?:key|alias)\/(.+)$/);
+        if (match && match[1]) {
+          return `https://console.aws.amazon.com/kms/home?#/kms/keys/${encodeURIComponent(match[1])}`;
+        }
+        return null;
+      }
+
+      if (service === "secretsmanager") {
+        return `https://console.aws.amazon.com/secretsmanager/home?#/secret?name=${encodeURIComponent(resource)}`;
+      }
+
+      if (service === "dynamodb") {
+        const match = resourcePart.match(/^(?:table\/(.+)|table:(.+))/);
+        const tableRaw = match ? match[1] || match[2] : null;
+        const table = tableRaw ? tableRaw.split("/")[0] : null;
+        if (table) {
+          const regionQuery = region ? `?region=${encodeURIComponent(region)}` : "";
+          return `https://console.aws.amazon.com/dynamodbv2/home${regionQuery}#/table/${encodeURIComponent(table)}/items`;
+        }
+        return null;
+      }
+
+      return null;
+    }
+
+    function gcpResourceConsoleLink(resource) {
+      if (!resource) return null;
+      const projectMatch = resource.match(/^projects\/([^/]+)/);
+      const project = projectMatch ? projectMatch[1] : null;
+
+      if (resource.includes("/buckets/")) {
+        const bucketMatch = resource.match(/\/buckets\/([^/]+)/);
+        const bucket = bucketMatch ? bucketMatch[1] : null;
+        if (bucket && project) {
+          return `https://console.cloud.google.com/storage/browser/${encodeURIComponent(bucket)}?project=${encodeURIComponent(project)}`;
+        }
+      }
+
+      if (resource.includes("/datasets/")) {
+        const datasetMatch = resource.match(/\/datasets\/([^/]+)/);
+        const dataset = datasetMatch ? datasetMatch[1] : null;
+        if (dataset && project) {
+          return `https://console.cloud.google.com/bigquery?project=${encodeURIComponent(project)}&p=${encodeURIComponent(project)}&d=${encodeURIComponent(dataset)}&page=dataset`;
+        }
+      }
+
+      if (resource.includes("/secrets/")) {
+        const secretMatch = resource.match(/\/secrets\/([^/:]+)/);
+        const secret = secretMatch ? secretMatch[1] : null;
+        if (secret && project) {
+          return `https://console.cloud.google.com/security/secret-manager/secret/${encodeURIComponent(secret)}/versions?project=${encodeURIComponent(project)}`;
+        }
+      }
+
+      if (resource.includes("/functions/")) {
+        const fnMatch = resource.match(/\/locations\/([^/]+)\/functions\/([^/]+)/);
+        if (fnMatch && project) {
+          const region = fnMatch[1];
+          const fnName = fnMatch[2];
+          return `https://console.cloud.google.com/functions/details/${encodeURIComponent(region)}/${encodeURIComponent(fnName)}?project=${encodeURIComponent(project)}`;
+        }
+      }
+
+      if (project) {
+        return `https://console.cloud.google.com/home/dashboard?project=${encodeURIComponent(project)}`;
+      }
+
+      return null;
+    }
+
     function showAccessDetail(type, data) {
       document.getElementById("am-empty-state").classList.add("hidden");
       const view = document.getElementById("am-detail-view");
       view.classList.remove("hidden");
 
       const icon = document.getElementById("am-detail-icon");
-      const nameEl = document.getElementById("am-detail-name");
       const meta = document.getElementById("am-detail-meta");
       const typeField = document.getElementById("am-detail-type");
       const cloudField = document.getElementById("am-detail-cloud");
@@ -1711,10 +1857,13 @@
       permsList.innerHTML = "";
       permsContainer.classList.add("hidden");
 
+      let detailName = "";
+      let detailLink = null;
+
       if (type === "identity") {
         icon.textContent = "👤";
         icon.className = "detail-icon-lg";
-        nameEl.textContent = data.account || "(unknown identity)";
+        detailName = data.account || "(unknown identity)";
         typeField.textContent = "Identity";
         const provider = (data.provider || "unknown").toUpperCase();
         cloudField.textContent = provider;
@@ -1724,7 +1873,10 @@
       } else if (type === "resource") {
         icon.textContent = "📦";
         icon.className = "detail-icon-lg";
-        nameEl.textContent = data.name || "(resource)";
+        const resourceLabel = data.name || "(resource)";
+        const { resourceType, resourceName } = extractResourceParts(resourceLabel);
+        detailName = resourceLabel;
+        detailLink = buildResourceConsoleLink(data.provider, resourceType, resourceName);
         typeField.textContent = "Resource";
         const provider = (data.provider || "unknown").toUpperCase();
         cloudField.textContent = provider;
@@ -1741,10 +1893,12 @@
       } else if (type === "permission") {
         icon.textContent = "🔑";
         icon.className = "detail-icon-lg";
-        nameEl.textContent = data.name || "(permission)";
+        detailName = data.name || "(permission)";
         typeField.textContent = "Permission string";
         cloudField.textContent = "-";
       }
+
+      setDetailName(detailName, detailLink);
     }
   </script>
 </body>
