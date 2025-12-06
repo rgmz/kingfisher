@@ -294,7 +294,10 @@ fn body_looks_like_html(body: &str, headers: &HeaderMap) -> bool {
         .unwrap_or(false);
 
     // ---- 2. early-body scan (<=1024 bytes) --------------------------------
-    let probe = body[..body.len().min(1024)].to_ascii_lowercase();
+    let probe = &body[..body.len().min(1024)];
+    // Trim any leading whitespace so we still catch HTML that starts after newlines/indentation.
+    let trimmed = probe.trim_start_matches(|c: char| c.is_whitespace());
+    let probe = trimmed.to_ascii_lowercase();
     let body_looks_htmlish = probe.starts_with('<') && probe.contains("<html");
 
     // ⇒ Only HTML if **both** header and body agree
@@ -525,5 +528,40 @@ mod tests {
 
         // 4It *should* be valid (true) because all matcher conditions hold
         assert!(ok, "Slack webhook response should be considered ACTIVE");
+    }
+
+    #[test]
+    fn test_body_looks_like_html_trims_whitespace() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html; charset=utf-8"),
+        );
+
+        let body = "\n\n   \n<!DOCTYPE html>\n<html lang=\"en\"><body>page</body></html>";
+
+        assert!(body_looks_like_html(body, &headers));
+    }
+
+    #[test]
+    fn test_html_response_rejected_when_not_allowed() {
+        let matchers = vec![ResponseMatcher::StatusMatch {
+            r#type: "status-match".to_string(),
+            status: vec![StatusCode::OK],
+            match_all_status: false,
+            negative: false,
+        }];
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html; charset=utf-8"),
+        );
+
+        let body = "\n<html><body>Sign in</body></html>";
+
+        let ok = validate_response(&matchers, body, &StatusCode::OK, &headers, false);
+
+        assert!(!ok, "HTML responses should be rejected unless explicitly allowed");
     }
 }
