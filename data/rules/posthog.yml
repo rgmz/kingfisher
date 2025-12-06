@@ -21,6 +21,10 @@ rules:
           body: |
             {"token": "{{ TOKEN }}", "distinct_id": "validation_check"}
           response_matcher:
+            - type: WordMatch
+              words:
+                - '"isAuthenticated":false'
+              negative: true
             - type: StatusMatch
               status: [200]
   - name: PostHog Personal API Key
