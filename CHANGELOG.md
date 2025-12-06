@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.70.0]
+- Added new rules for AWS Bedrock, Voyage.ai
+
 ## [v1.69.0]
 - Reduced per-match memory usage by compacting stored source locations and interning repeated capture names.
 - Stored optional validation response bodies as boxed strings to avoid allocating empty payloads and to streamline validator caches.

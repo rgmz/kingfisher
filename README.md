@@ -78,6 +78,7 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Display only secrets confirmed active by third‑party APIs](#display-only-secrets-confirmed-active-by-thirdparty-apis)
     - [Output JSON and capture to a file](#output-json-and-capture-to-a-file)
     - [Output SARIF directly to disk](#output-sarif-directly-to-disk)
+    - [Access map outputs and viewer](#access-map-outputs-and-viewer)
     - [Pipe any text directly into Kingfisher by passing `-`](#pipe-any-text-directly-into-kingfisher-by-passing--)
     - [Limit maximum file size scanned (`--max-file-size`)](#limit-maximum-file-size-scanned---max-file-size)
     - [Scan using a rule _family_ with one flag](#scan-using-a-rule-family-with-one-flag)
@@ -413,6 +414,12 @@ kingfisher scan . --format json | tee kingfisher.json
 ```bash
 kingfisher scan /path/to/repo --format sarif --output findings.sarif
 ```
+
+### Access map outputs and viewer
+
+- Add `--access-map` to enrich JSON, JSONL, BSON, pretty, and SARIF reports with an `access_map` array containing providers, accounts/projects, resources, and the permissions available for each resource (grouped when identical).
+- If you validated cloud credentials without `--access-map`, Kingfisher will remind you on stderr to rerun with the flag so the access map appears in the output.
+- Open `docs/access-map-viewer/index.html` in a browser to explore a report locally; the viewer accepts the same JSON/JSONL payloads and includes a bundled sample (`sample-report.json`).
 
 ### Pipe any text directly into Kingfisher by passing `-`
 
