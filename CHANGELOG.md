@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [v1.70.0]
-- Added new rules for AWS Bedrock, Voyage.ai
+- Added new rules for AWS Bedrock, Voyage.ai, Posthog
 
 ## [v1.69.0]
 - Reduced per-match memory usage by compacting stored source locations and interning repeated capture names.

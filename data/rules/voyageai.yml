@@ -3,7 +3,8 @@ rules:
     id: kingfisher.voyageai.api_key
     description: Detects Voyage AI API keys used for embedding and retrieval models.
     # Matches keys starting with 'pa-' followed by 43 URL-safe base64 characters
-    pattern: (?x)
+    pattern: |
+      (?x)
       (
         pa-[a-zA-Z0-9\-_]{43}
       )
