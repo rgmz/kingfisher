@@ -68,7 +68,7 @@ rules:
       (
         [A-Z0-9]{50}
       )
-    min_entropy: 4.5
+    min_entropy: 4.0
     examples:
       - "TWITTER_SECRET=ZGwXeK2DNCqv49Z9ofwYdqlBgeoHDyh8uoAgHju6OeYC7wTQJq"
     references:

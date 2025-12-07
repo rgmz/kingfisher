@@ -11,7 +11,7 @@ rules:
     pattern_requirements:
       min_digits: 2
     confidence: medium
-    min_entropy: 4.5
+    min_entropy: 4.0
     validation:
       type: Http
       content:

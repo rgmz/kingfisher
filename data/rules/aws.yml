@@ -47,7 +47,7 @@ rules:
       ignore_if_contains:
         - "EXAMPLE"
         - "TEST"
-    min_entropy: 4.5
+    min_entropy: 4.0
     confidence: medium
     examples:
       - foo.backup.archive.aws.secretkey=sBmHlDFrNcsz35N+LRjwlUxF8/wypT4tiJCQ0wP4

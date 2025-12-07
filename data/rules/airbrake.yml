@@ -14,7 +14,7 @@ rules:
       min_digits: 2
       min_uppercase: 1
       min_lowercase: 1
-    min_entropy: 4.5
+    min_entropy: 4.0
     confidence: medium
     examples:
       - airbrake secretKey= a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0
