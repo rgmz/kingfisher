@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [v1.70.0]
 - Added `--staged` argument to support new `pre-commit` behavior and added integration coverage to ensure validated secrets block commits when used as pre-commit hook
 - Added new rules for AWS Bedrock, Voyage.ai, Posthog, Atlassian
-- Added a `kingfisher view` subcommand that serves the bundled access-map HTML viewer from the binary so users can load JSON or JSONL reports passed on the CLI (or upload them in the browser) over a configurable local-only port.
+- Added an embedded web-based report and access-map viewer via `kingfisher view` subcommand that can load JSON or JSONL reports passed on the CLI (or upload them in the browser) 
 
 ## [v1.69.0]
 - Reduced per-match memory usage by compacting stored source locations and interning repeated capture names.
