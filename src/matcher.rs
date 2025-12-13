@@ -663,14 +663,9 @@ fn filter_match<'b>(
                 has_named_captures || capture_count > 2
             };
 
-            let validation_bytes = if use_full_match {
-                full_bytes
-            } else {
-                entropy_bytes
-            };
+            let validation_bytes = if use_full_match { full_bytes } else { entropy_bytes };
 
             match char_reqs.validate(validation_bytes, Some(context), respect_ignore_if_contains) {
-
                 //
                 // --- END FIX ---
                 PatternValidationResult::Passed => {}

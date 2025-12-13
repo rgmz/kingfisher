@@ -23,8 +23,14 @@
       --radius: 8px;
       --hover: #1f2937;
       --table-header: #0f172a;
-      --code-bg: #0f172a;
+      --code-bg: #0d1526;
       --code-border: #1f2937;
+      --code-border-strong: rgba(56, 189, 248, 0.4);
+      --code-text: #e2e8f0;
+      --code-accent: rgba(56, 189, 248, 0.08);
+      --link-strong: #a5f3fc;
+      --link-strong-hover: #e0f2fe;
+      --link-underline: rgba(255, 255, 255, 0.35);
     }
 
     :root[data-theme="light"] {
@@ -44,8 +50,14 @@
       --success: #059669;
       --hover: #e5e7eb;
       --table-header: #f9fafb;
-      --code-bg: #0f172a;
-      --code-border: #1f2937;
+      --code-bg: #f8fafc;
+      --code-border: #e5e7eb;
+      --code-border-strong: rgba(14, 124, 86, 0.2);
+      --code-text: #0f172a;
+      --code-accent: rgba(14, 124, 86, 0.08);
+      --link-strong: #1d4ed8;
+      --link-strong-hover: #1e3a8a;
+      --link-underline: rgba(30, 64, 175, 0.35);
     }
 
     * { box-sizing: border-box; }
@@ -408,15 +420,26 @@
 
     /* Finding detail snippet */
     .snippet-box {
-      background: var(--code-bg);
-      color: #e5e7eb;
+      position: relative;
+      background: linear-gradient(90deg, var(--code-accent), transparent), var(--code-bg);
+      color: var(--code-text);
       padding: 16px;
-      border-radius: 6px;
+      border-radius: 8px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 12px;
       overflow-x: auto;
       white-space: pre;
       border: 1px solid var(--code-border);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--code-border-strong);
+    }
+
+    .snippet-box::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      pointer-events: none;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
     }
 
     #fd-validation-box {
@@ -458,12 +481,16 @@
     .link-mono a {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 12px;
-      color: #1d4ed8;
-      text-decoration: none;
+      color: var(--link-strong);
+      text-decoration: underline;
+      text-decoration-color: var(--link-underline);
+      text-decoration-thickness: 2px;
+      font-weight: 600;
       word-break: break-all;
     }
     .link-mono a:hover {
-      text-decoration: underline;
+      color: var(--link-strong-hover);
+      text-decoration-color: currentColor;
     }
 
     /* Search & pagination */
