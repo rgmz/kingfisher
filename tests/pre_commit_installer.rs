@@ -19,6 +19,23 @@ fn copy_scripts(dest: &Path) {
     fs::copy(src, dst).unwrap();
 }
 
+fn bash_path() -> Option<PathBuf> {
+    let mut candidates = vec![PathBuf::from("bash")];
+
+    if cfg!(windows) {
+        candidates.push(PathBuf::from(r"C:\\Program Files\\Git\\bin\\bash.exe"));
+        candidates.push(PathBuf::from(r"C:\\Program Files (x86)\\Git\\bin\\bash.exe"));
+    }
+
+    candidates.into_iter().find(|candidate| {
+        StdCommand::new(candidate)
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    })
+}
+
 fn init_repo() -> (TempDir, PathBuf, PathBuf) {
     let dir = tempfile::tempdir().unwrap();
     let repo = dir.path().to_path_buf();
@@ -34,7 +51,12 @@ fn init_repo() -> (TempDir, PathBuf, PathBuf) {
 }
 
 fn install(repo: &Path, hooks_path: &Path) {
-    Command::new("bash")
+    let Some(bash) = bash_path() else {
+        eprintln!("skipping install: no bash found");
+        return;
+    };
+
+    Command::new(bash)
         .arg(repo.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--hooks-path")
         .arg(hooks_path)
@@ -266,7 +288,12 @@ fn init_fake_global() -> (TempDir, PathBuf, PathBuf) {
 fn global_semantics_installs_wrapper_and_inner_hook() {
     let (_tmp, root, hooks) = init_fake_global();
 
-    Command::new("bash")
+    let Some(bash) = bash_path() else {
+        eprintln!("skipping global_semantics_installs_wrapper_and_inner_hook: no bash found");
+        return;
+    };
+
+    Command::new(bash)
         .arg(root.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--hooks-path")
         .arg(&hooks)
@@ -285,7 +312,12 @@ fn global_semantics_preserves_existing_hook_and_backup() {
     fs::write(&legacy, "#!/usr/bin/env bash\necho global-legacy\n").unwrap();
     StdCommand::new("chmod").args(["+x", legacy.to_str().unwrap()]).assert().success();
 
-    Command::new("bash")
+    let Some(bash) = bash_path() else {
+        eprintln!("skipping global_semantics_preserves_existing_hook_and_backup: no bash found");
+        return;
+    };
+
+    Command::new(bash)
         .arg(root.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--hooks-path")
         .arg(&hooks)
@@ -305,14 +337,19 @@ fn global_semantics_uninstall_restores_or_removes() {
     fs::write(&legacy, "#!/usr/bin/env bash\necho global-legacy\n").unwrap();
     StdCommand::new("chmod").args(["+x", legacy.to_str().unwrap()]).assert().success();
 
-    Command::new("bash")
+    let Some(bash) = bash_path() else {
+        eprintln!("skipping global_semantics_uninstall_restores_or_removes: no bash found");
+        return;
+    };
+
+    Command::new(&bash)
         .arg(root.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--hooks-path")
         .arg(&hooks)
         .assert()
         .success();
 
-    Command::new("bash")
+    Command::new(&bash)
         .arg(root.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--uninstall")
         .arg("--hooks-path")
@@ -326,14 +363,14 @@ fn global_semantics_uninstall_restores_or_removes() {
 
     // case 2: no existing legacy, fresh install then uninstall
     let (_tmp2, root2, hooks2) = init_fake_global();
-    Command::new("bash")
+    Command::new(&bash)
         .arg(root2.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--hooks-path")
         .arg(&hooks2)
         .assert()
         .success();
 
-    Command::new("bash")
+    Command::new(&bash)
         .arg(root2.join("scripts/install-kingfisher-pre-commit.sh"))
         .arg("--uninstall")
         .arg("--hooks-path")
