@@ -2,7 +2,9 @@ use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use chrono::Utc;
 use ipnet::IpNet;
-use jsonwebtoken::{decode, decode_header, jwk::JwkSet, DecodingKey, Validation as JwtValidation};
+use jsonwebtoken::{
+    decode, decode_header, jwk::JwkSet, Algorithm, DecodingKey, Validation as JwtValidation,
+};
 use once_cell::sync::Lazy;
 use reqwest::{redirect::Policy, Client, Url};
 use serde::Deserialize;
@@ -123,6 +125,11 @@ pub async fn validate_jwt_with(token: &str, opts: &ValidateOptions) -> Result<(b
     let header = decode_header(token).map_err(|e| anyhow!("decode header: {e}"))?;
     let alg = header.alg;
 
+    // Proactively skip HMAC-signed JWTs to avoid ambiguous liveness results.
+    if matches!(alg, Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512) {
+        return Ok((false, format!("HMAC-signed JWTs are not validated ({alg:?})")));
+    }
+
     let issuer = claims.iss.clone().unwrap_or_default();
     let aud_strings = extract_aud_strings(&claims);
 
@@ -155,6 +162,11 @@ pub async fn validate_jwt_with(token: &str, opts: &ValidateOptions) -> Result<(b
     }
 
     // --- With `iss`: OIDC discovery + JWKS verification path -------------------
+    // require kid before any network I/O
+    let Some(kid) = header.kid.clone() else {
+        return Ok((false, "no kid in header".into()));
+    };
+
     // build discovery URL and fetch it (redirects disabled)
     let config_url = format!("{}/.well-known/openid-configuration", issuer.trim_end_matches('/'));
     let cfg_resp = NO_REDIRECT_CLIENT
@@ -216,7 +228,6 @@ pub async fn validate_jwt_with(token: &str, opts: &ValidateOptions) -> Result<(b
     let jwk_set: JwkSet = jwks_resp.json().await.map_err(|e| anyhow!("invalid jwks json: {e}"))?;
 
     // select key by kid
-    let kid = header.kid.ok_or_else(|| anyhow!("no kid in header"))?;
     let jwk = jwk_set
         .keys
         .iter()
@@ -256,6 +267,7 @@ mod tests {
     use super::{validate_jwt, validate_jwt_with, ValidateOptions};
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     use chrono::{Duration as ChronoDuration, Utc};
+    use jsonwebtoken::{encode, EncodingKey, Header};
 
     fn build_unsigned_token(exp_offset: i64) -> String {
         let header = URL_SAFE_NO_PAD.encode(r#"{"alg":"none"}"#);
@@ -268,6 +280,40 @@ mod tests {
             }}"#
         ));
         format!("{header}.{payload}.")
+    }
+
+    #[tokio::test]
+    async fn hmac_signed_tokens_skipped() {
+        let mut header = Header::new(jsonwebtoken::Algorithm::HS256);
+        header.kid = Some("dummy".into());
+
+        let payload = serde_json::json!({
+            "iss": "https://example.com",
+            "exp": (Utc::now() + ChronoDuration::minutes(5)).timestamp(),
+        });
+
+        let token = encode(&header, &payload, &EncodingKey::from_secret(b"secret")).unwrap();
+        let res = validate_jwt(&token).await.unwrap();
+        assert!(!res.0);
+        assert!(res.1.contains("HMAC-signed JWTs are not validated"));
+    }
+
+    #[tokio::test]
+    async fn missing_kid_short_circuits_before_network() {
+        let header = URL_SAFE_NO_PAD.encode(r#"{"alg":"RS256"}"#);
+        let payload = URL_SAFE_NO_PAD.encode(format!(
+            r#"{{
+                "exp": {},
+                "iss": "https://example.com"
+            }}"#,
+            (Utc::now() + ChronoDuration::minutes(5)).timestamp()
+        ));
+        let signature = URL_SAFE_NO_PAD.encode("sig");
+        let token = format!("{header}.{payload}.{signature}");
+
+        let res = validate_jwt(&token).await.unwrap();
+        assert!(!res.0);
+        assert!(res.1.contains("no kid in header"));
     }
 
     #[tokio::test]
