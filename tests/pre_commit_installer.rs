@@ -234,6 +234,7 @@ fn pre_commit_framework_invokes_kingfisher() {
     assert!(log_contents.contains("--redact"));
 }
 
+#[cfg(not(windows))]
 #[test]
 fn installer_hook_executes_kingfisher_command() {
     let (_tmp, repo, hooks_path) = init_repo();

@@ -382,6 +382,7 @@ pub async fn run_async_scan(
             None,
             None,
         );
+        maybe_hint_access_map(&datastore, args);
         return Ok(());
     }
 
@@ -711,9 +712,9 @@ fn maybe_hint_access_map(datastore: &Arc<Mutex<FindingsStore>>, args: &scan::Sca
     };
 
     if has_mappable_identities {
-        eprintln!(
-            "Access map not requested. Rerun with --access-map to include resource-level permissions."
-        );
+        info!(
+                             "Access map not requested. Rerun with --access-map to include resource-level permissions, if authorized."
+                        );
     }
 }
 

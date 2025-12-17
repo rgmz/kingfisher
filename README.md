@@ -48,6 +48,15 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
   <img src="docs/runtime-comparison.png" alt="Kingfisher Runtime Comparison" style="vertical-align: center;" />
 </p>
 
+## Basic Usage Demo
+![alt text](docs/kingfisher-usage-01.gif)
+
+## Report Viewer Demo
+Explore Kingfisher’s built-in report viewer and its `--access-map` feature for visualizing access relationships: [Access map outputs and viewer](#access-map-outputs-and-viewer)
+
+![alt text](docs/kingfisher-usage-access-map.gif)
+
+
 # Table of Contents
 
 <details>
@@ -57,6 +66,8 @@ See ([docs/COMPARISON.md](docs/COMPARISON.md))
     - [Multiple Scan Targets](#multiple-scan-targets)
     - [Performance, Accuracy, and Hundreds of Rules](#performance-accuracy-and-hundreds-of-rules)
 - [Benchmark Results](#benchmark-results)
+  - [Basic Usage Demo](#basic-usage-demo)
+  - [Report Viewer Demo](#report-viewer-demo)
 - [Table of Contents](#table-of-contents)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
@@ -551,8 +562,11 @@ kingfisher scan /path/to/repo --format sarif --output findings.sarif
 
 - Add `--access-map` to enrich JSON, JSONL, BSON, pretty, and SARIF reports with an `access_map` array containing providers, accounts/projects, resources, and the permissions available for each resource (grouped when identical).
 - If you validated cloud credentials without `--access-map`, Kingfisher will remind you on stderr to rerun with the flag so the access map appears in the output.
-- Use the access map functionality only when you are authorized to inspect the target account, as Kingfisher will issue additional network requests to determine what access the secret grants.
 - Run `kingfisher view ./kingfisher.json` to explore a report locally in a local web UI
+
+> **Use the access map functionality only when you are authorized to inspect the target account, as Kingfisher will issue additional network requests to determine what access the secret grants**
+
+![alt text](docs/kingfisher-usage-access-map.gif)
 
 ### View access-map reports locally
 
