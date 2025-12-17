@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
-use jira_query::{Auth, JiraInstance, Pagination};
+use gouqi::{r#async::Jira, Credentials, SearchOptions};
 use reqwest::Client;
+use std::path::PathBuf;
 use url::Url;
 
-// Re-export the Issue type from jira_query so callers don't depend on the crate.
-pub use jira_query::Issue as JiraIssue;
+// Re-export the Issue type from gouqi so callers don't depend on the crate.
+pub use gouqi::Issue as JiraIssue;
 pub async fn fetch_issues(
     jira_url: Url,
     jql: &str,
@@ -19,19 +20,18 @@ pub async fn fetch_issues(
         .build()
         .context("Failed to build HTTP client")?;
 
-    let mut jira = JiraInstance::at(base.to_string())? // no trailing slash here
-        .with_client(client)
-        .paginate(Pagination::MaxResults(max_results as u32));
+    let credentials = match std::env::var("KF_JIRA_TOKEN") {
+        Ok(token) => Credentials::Bearer(token),
+        Err(_) => Credentials::Anonymous,
+    };
 
-    if let Ok(token) = std::env::var("KF_JIRA_TOKEN") {
-        jira = jira.authenticate(Auth::ApiKey(token));
-    }
+    let jira = Jira::from_client(base.to_string(), credentials, client)?;
 
-    let issues = jira.search(jql).await?;
-    Ok(issues)
+    let search_options = SearchOptions::builder().max_results(max_results as u64).build();
+
+    let results = jira.search().list(jql, &search_options).await?;
+    Ok(results.issues)
 }
-
-use std::path::PathBuf;
 
 pub async fn download_issues_to_dir(
     jira_url: Url,
