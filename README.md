@@ -341,8 +341,7 @@ kingfisher scan . --staged --quiet --no-update-check
 
 When `--staged` is set, Kingfisher snapshots the staged index into a temporary
 commit, diffs it against `HEAD` (or an empty tree if no commits exist yet), and
-scans only those staged changes. This mirrors how gitleaks and TruffleHog handle
-pre-commit workflows while keeping everything inside the Kingfisher binary.
+scans only those staged changes.
 
 > Exit codes: Kingfisher exits `0` when no findings are present and returns
 > `205` when validated credentials are discovered (other findings use codes in
